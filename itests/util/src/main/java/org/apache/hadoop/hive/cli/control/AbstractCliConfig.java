@@ -37,6 +37,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestUtil.FsType;
 import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
+import org.apache.hadoop.hive.ql.dataset.Dataset;
+import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
+import org.apache.hadoop.hive.ql.dataset.DatasetParser;
+
 import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
 
@@ -70,9 +74,10 @@ public abstract class AbstractCliConfig {
   // moved...this may change
   private Set<String> includeQueryFileNames;
   private Class<? extends CliAdapter> cliAdapter;
+  private DatasetCollection datasets;
 
   public AbstractCliConfig(Class<? extends CliAdapter> adapter) {
-    cliAdapter=adapter;
+    cliAdapter = adapter;
     clusterType = MiniClusterType.none;
     queryFile = getSysPropValue("qfile");
     queryFileRegex = getSysPropValue("qfile_regex");
@@ -85,7 +90,7 @@ public abstract class AbstractCliConfig {
       try {
         candidateSiblings.add(new File(System.getProperty("hive.root")).getCanonicalPath());
       } catch (IOException e) {
-        throw new RuntimeException("error getting hive.root",e);
+        throw new RuntimeException("error getting hive.root", e);
       }
     }
     candidateSiblings.add(new File(".").getAbsolutePath());
@@ -160,7 +165,6 @@ public abstract class AbstractCliConfig {
   protected void excludeQuery(String qFile) {
     excludedQueryFileNames.add(qFile);
   }
-
 
   private static final Splitter TEST_SPLITTER =
       Splitter.onPattern("[, ]").trimResults().omitEmptyStrings();
@@ -261,9 +265,25 @@ public abstract class AbstractCliConfig {
       testFiles.remove(new File(queryDir, qFileName));
     }
 
+    prepareDatasets(testFiles);
+
     return testFiles;
   }
 
+  private void prepareDatasets(Set<File> testFiles) {
+    DatasetParser parser = new DatasetParser();
+
+    for (File testFile : testFiles) {
+      parser.parse(testFile);
+    }
+
+    this.datasets = parser.getDatasets();
+  }
+
+  public DatasetCollection getDatasets(){
+    return datasets;
+  }
+  
   private void prepareDirs() throws Exception {
     File hiveRootDir = new File(HIVE_ROOT);
     if (!hiveRootDir.exists()) {

@@ -22,9 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.base.Strings;
-import org.apache.hadoop.hive.cli.control.AbstractCliConfig.MetastoreType;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
@@ -35,6 +32,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Stopwatch;
+import com.google.common.base.Strings;
 
 public class CoreCliDriver extends CliAdapter {
 
@@ -55,6 +55,7 @@ public class CoreCliDriver extends CliAdapter {
     final String hiveConfDir = cliConfig.getHiveConfDir();
     final String initScript = cliConfig.getInitScript();
     final String cleanupScript = cliConfig.getCleanupScript();
+
     try {
       final String hadoopVer = cliConfig.getHadoopVersion();
 
@@ -62,7 +63,7 @@ public class CoreCliDriver extends CliAdapter {
         @Override
         public QTestUtil invokeInternal() throws Exception {
           return new QTestUtil((cliConfig.getResultsDir()), (cliConfig.getLogDir()), miniMR,
-              hiveConfDir, hadoopVer, initScript, cleanupScript, true, cliConfig.getFsType());
+              hiveConfDir, hadoopVer, initScript, cleanupScript, true, cliConfig.getFsType(), cliConfig.getDatasets());
         }
       }.invoke("QtestUtil instance created", LOG, true);
 

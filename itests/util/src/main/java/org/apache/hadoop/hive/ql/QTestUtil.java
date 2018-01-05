@@ -100,6 +100,8 @@ import org.apache.hadoop.hive.llap.daemon.MiniLlapCluster;
 import org.apache.hadoop.hive.llap.io.api.LlapProxy;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.Index;
+import org.apache.hadoop.hive.ql.dataset.Dataset;
+import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.Utilities;
@@ -167,6 +169,7 @@ public class QTestUtil {
 
   private String testWarehouse;
   private final String testFiles;
+  private final File datasetDir;
   protected final String outDir;
   protected String overrideResultsDir;
   protected final String logDir;
@@ -181,6 +184,7 @@ public class QTestUtil {
   private static final String SORT_SUFFIX = ".sorted";
   private final Set<String> srcTables;
   private final Set<String> srcUDFs;
+  private final DatasetCollection datasets;
   private final MiniClusterType clusterType;
   private final FsType fsType;
   private ParseDriver pd;
@@ -534,18 +538,18 @@ public class QTestUtil {
                    String confDir, String hadoopVer, String initScript, String cleanupScript,
                    boolean withLlapIo) throws Exception {
     this(outDir, logDir, clusterType, confDir, hadoopVer, initScript, cleanupScript,
-        withLlapIo, null);
+        withLlapIo, null, null);
   }
 
   public QTestUtil(String outDir, String logDir, MiniClusterType clusterType,
       String confDir, String hadzoopVer, String initScript, String cleanupScript,
-      boolean withLlapIo, FsType fsType)
+      boolean withLlapIo, FsType fsType, DatasetCollection datasets)
     throws Exception {
     LOG.info("Setting up QTestUtil with outDir={}, logDir={}, clusterType={}, confDir={}," +
         " hadoopVer={}, initScript={}, cleanupScript={}, withLlapIo={}," +
-            " fsType={}"
+            " fsType={}, datasets={}"
         , outDir, logDir, clusterType, confDir, hadoopVer, initScript, cleanupScript,
-        withLlapIo, fsType);
+        withLlapIo, fsType, datasets);
     Preconditions.checkNotNull(clusterType, "ClusterType cannot be null");
     if (fsType != null) {
       this.fsType = fsType;
@@ -556,7 +560,8 @@ public class QTestUtil {
     this.logDir = logDir;
     this.srcTables=getSrcTables();
     this.srcUDFs = getSrcUDFs();
-
+    this.datasets = datasets == null ? new DatasetCollection() : datasets;
+    
     // HIVE-14443 move this fall-back logic to CliConfigs
     if (confDir != null && !confDir.isEmpty()) {
       HiveConf.setHiveSiteLocation(new URL("file://"+ new File(confDir).toURI().getPath() + "/hive-site.xml"));
@@ -601,6 +606,11 @@ public class QTestUtil {
     }
     testFiles = dataDir;
 
+    // Use the current directory if it is not specified
+    datasetDir = conf.get("test.data.set.files") == null
+      ? new File(new File(".").getAbsolutePath() + "/data/datasets")
+      : new File(conf.get("test.data.set.files"));
+    
     // Use the current directory if it is not specified
     String scriptsDir = conf.get("test.data.scripts");
     if (scriptsDir == null) {
@@ -1101,6 +1111,7 @@ public class QTestUtil {
       cliDriver = new CliDriver();
     }
     cliDriver.processLine("set test.data.dir=" + testFiles + ";");
+    
     File scriptFile = new File(this.initScript);
     if (!scriptFile.isFile()) {
       LOG.info("No init script detected. Skipping");
@@ -1108,6 +1119,13 @@ public class QTestUtil {
     }
     conf.setBoolean("hive.test.init.phase", true);
 
+    initFromScript(scriptFile);
+    initFromDatasets();
+    
+    conf.setBoolean("hive.test.init.phase", false);
+  }
+
+  private void initFromScript(File scriptFile) throws IOException {
     String initCommands = readEntireFileIntoString(scriptFile);
     LOG.info("Initial setup (" + initScript + "):\n" + initCommands);
 
@@ -1116,10 +1134,21 @@ public class QTestUtil {
     if (result != 0) {
       Assert.fail("Failed during createSources processLine with code=" + result);
     }
-
-    conf.setBoolean("hive.test.init.phase", false);
   }
 
+  private void initFromDatasets() throws IOException {
+    for (String table : datasets.getTables()){
+      File tableFile = new File(new File(datasetDir, table), Dataset.TABLE_FILE_NAME);
+      String commands = readEntireFileIntoString(tableFile);
+
+      int result = cliDriver.processLine(commands);
+      LOG.info("Result from cliDrriver.processLine in initFromDatasets=" + result);
+      if (result != 0) {
+        Assert.fail("Failed during initFromDatasets processLine with code=" + result);
+      }
+    } 
+  }
+  
   public void init() throws Exception {
 
     // Create remote dirs once.

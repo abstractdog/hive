@@ -37,8 +37,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestUtil.FsType;
 import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
-import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
-import org.apache.hadoop.hive.ql.dataset.DatasetParser;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
@@ -73,7 +71,6 @@ public abstract class AbstractCliConfig {
   // moved...this may change
   private Set<String> includeQueryFileNames;
   private Class<? extends CliAdapter> cliAdapter;
-  private DatasetCollection datasets;
 
   public AbstractCliConfig(Class<? extends CliAdapter> adapter) {
     cliAdapter = adapter;
@@ -264,25 +261,9 @@ public abstract class AbstractCliConfig {
       testFiles.remove(new File(queryDir, qFileName));
     }
 
-    prepareDatasets(testFiles);
-
     return testFiles;
   }
 
-  private void prepareDatasets(Set<File> testFiles) {
-    DatasetParser parser = new DatasetParser();
-
-    for (File testFile : testFiles) {
-      parser.parse(testFile);
-    }
-
-    this.datasets = parser.getDatasets();
-  }
-
-  public DatasetCollection getDatasets(){
-    return datasets;
-  }
-  
   private void prepareDirs() throws Exception {
     File hiveRootDir = new File(HIVE_ROOT);
     if (!hiveRootDir.exists()) {

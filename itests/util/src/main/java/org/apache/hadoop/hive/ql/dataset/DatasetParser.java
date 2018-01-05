@@ -26,7 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * DatasetParser: a parser which could parse dataset "hooks" from q files, 
+ * DatasetParser: a parser which could parse dataset "hooks" from q files,
  * --!qt:dataset:mydataset
  */
 public class DatasetParser {
@@ -39,7 +39,7 @@ public class DatasetParser {
       for (String line = br.readLine(); line != null; line = br.readLine()) {
          if(line.trim().startsWith(DATASET_PREFIX)){
            Set<String> strDatasets = parseDatasetsFromLine(line);
-           
+
            for (String strDataset : strDatasets){
              datasets.add(strDataset);
            }
@@ -53,10 +53,10 @@ public class DatasetParser {
   public DatasetCollection getDatasets(){
     return datasets;
   }
-  
+
   public static Set<String> parseDatasetsFromLine(String input) {
     Set<String> datasets = new HashSet<String>();
-    
+
     input = input.substring(DATASET_PREFIX.length());
     if (!input.trim().isEmpty()){
       datasets.addAll(Arrays.asList(input.split(",")));
@@ -64,5 +64,5 @@ public class DatasetParser {
 
     return datasets;
   }
-  
+
 }

@@ -20,19 +20,24 @@ package org.apache.hadoop.hive.ql.dataset;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-public class DatasetCollection implements Dataset {
-  private Set<String> tables = new HashSet<String>();
+public class DatasetCollection {
+  private Set<Dataset> coll = new HashSet<Dataset>();
 
   public void add(Dataset dataset) {
-    tables.addAll(dataset.getTables());
+    coll.add(dataset);
   }
-  
-  public void add(String dataset) {
-    tables.add(dataset);
+
+  public void add(String table) {
+    add(new Dataset(table));
+  }
+
+  public Set<Dataset> getDatasets() {
+    return coll;
   }
 
   public Set<String> getTables() {
-    return tables;
+    return coll.stream().map(d -> d.getTable()).collect(Collectors.toSet());
   }
 }

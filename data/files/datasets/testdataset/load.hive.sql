@@ -1,12 +1,9 @@
-set hive.stats.dbclass=fs;
 --
 -- Table testdataset
 --
-DROP TABLE IF EXISTS testdataset;
-
 CREATE TABLE testdataset (key STRING COMMENT 'default', value STRING COMMENT 'default') STORED AS TEXTFILE;
 
-LOAD DATA LOCAL INPATH "${hiveconf:test.data.dir}/testdataset.txt" INTO TABLE testdataset;
+LOAD DATA LOCAL INPATH "${hiveconf:test.data.dir}/kv1.txt" INTO TABLE testdataset;
 
 ANALYZE TABLE testdataset COMPUTE STATISTICS;
 

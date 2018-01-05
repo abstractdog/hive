@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.cli.control;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
@@ -63,7 +64,7 @@ public class CoreCliDriver extends CliAdapter {
         @Override
         public QTestUtil invokeInternal() throws Exception {
           return new QTestUtil((cliConfig.getResultsDir()), (cliConfig.getLogDir()), miniMR,
-              hiveConfDir, hadoopVer, initScript, cleanupScript, true, cliConfig.getFsType(), cliConfig.getDatasets());
+              hiveConfDir, hadoopVer, initScript, cleanupScript, true, cliConfig.getFsType());
         }
       }.invoke("QtestUtil instance created", LOG, true);
 
@@ -155,7 +156,7 @@ public class CoreCliDriver extends CliAdapter {
           + "or ./itests/qtest/target/surefire-reports/ for specific test cases logs.";
 
   @Override
-  public void runTest(String tname, String fname, String fpath) throws Exception {
+  public void runTest(String testName, String fname, String fpath) throws Exception {
     Stopwatch sw = Stopwatch.createStarted();
     boolean skipped = false;
     boolean failed = false;
@@ -172,7 +173,7 @@ public class CoreCliDriver extends CliAdapter {
         return;
       }
 
-      qt.cliInit(fname, false);
+      qt.cliInit(new File(fpath), false);
       int ecode = qt.executeClient(fname);
       if (ecode != 0) {
         failed = true;
@@ -190,7 +191,7 @@ public class CoreCliDriver extends CliAdapter {
       failed = true;
       qt.failed(e, fname, debugHint);
     } finally {
-      String message = "Done query" + fname + ". succeeded=" + !failed + ", skipped=" + skipped +
+      String message = "Done query " + fname + ". succeeded=" + !failed + ", skipped=" + skipped +
           ". ElapsedTime(ms)=" + sw.stop().elapsed(TimeUnit.MILLISECONDS);
       LOG.info(message);
       System.err.println(message);

@@ -59,7 +59,7 @@ public abstract class CliAdapter {
   // HIVE-14444 pending rename: afterClass
   abstract public void shutdown() throws Exception;
 
-  abstract public void runTest(String name, String name2, String absolutePath) throws Exception;
+  abstract public void runTest(String name, String fileName, String absolutePath) throws Exception;
 
   public final TestRule buildClassRule() {
     return new TestRule() {

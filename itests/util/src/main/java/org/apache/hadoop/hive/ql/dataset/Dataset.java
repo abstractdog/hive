@@ -17,11 +17,17 @@
  */
 package org.apache.hadoop.hive.ql.dataset;
 
-import java.util.Set;
+public class Dataset {
+  public static final String INIT_FILE_NAME = "load.hive.sql";
+  public static final String CLEANUP_FILE_NAME = "cleanup.hive.sql";
 
-public interface Dataset {
-  String INIT_FILE_NAME = "load.hive.sql";
-  String CLEANUP_FILE_NAME = "cleanup.hive.sql";
-
-  Set<String> getTables();
+  private String table;
+  
+  public Dataset(String table) {
+    this.table = table;
+  }
+  
+  public String getTable(){
+    return table;
+  }
 }

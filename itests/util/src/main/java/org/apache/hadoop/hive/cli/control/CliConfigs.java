@@ -476,26 +476,6 @@ public class CliConfigs {
     }
   }
 
-  public static class DatasetTestConfig extends AbstractCliConfig {
-    public DatasetTestConfig() {
-      super(CoreCliDriver.class);
-      try {
-        setQueryDir("ql/src/test/queries/clientpositive/dataset");
-
-        setResultsDir("ql/src/test/results/clientpositive/dataset");
-        setLogDir("itests/qtest/target/qfile-results/dataset");
-
-        //setInitScript("q_test_init_src.sql"); // we won't need this any more: HIVE-18051
-        setCleanupScript("q_test_cleanup_src.sql");
-
-        setHiveConfDir("");
-        setClusterType(MiniClusterType.none);
-      } catch (Exception e) {
-        throw new RuntimeException("can't construct cliconfig", e);
-      }
-    }
-  }
-  
   public static class AccumuloCliConfig extends AbstractCliConfig {
     public AccumuloCliConfig() {
       super(CoreAccumuloCliDriver.class);

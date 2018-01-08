@@ -485,7 +485,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive/dataset");
         setLogDir("itests/qtest/target/qfile-results/dataset");
 
-        //setInitScript("q_test_init_src.sql"); // we don't need this any more
+        //setInitScript("q_test_init_src.sql"); // we won't need this any more: HIVE-18051
         setCleanupScript("q_test_cleanup_src.sql");
 
         setHiveConfDir("");

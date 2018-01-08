@@ -606,9 +606,9 @@ public class QTestUtil {
     }
     testFiles = dataDir;
 
-    // Use the current directory if it is not specified
+    // Use path relative to dataDir directory if it is not specified
     datasetDir = conf.get("test.data.set.files") == null
-      ? new File(new File(".").getAbsolutePath() + "/data/datasets")
+      ? new File(new File(dataDir).getAbsolutePath() + "/datasets")
       : new File(conf.get("test.data.set.files"));
     
     // Use the current directory if it is not specified
@@ -1112,20 +1112,24 @@ public class QTestUtil {
     }
     cliDriver.processLine("set test.data.dir=" + testFiles + ";");
     
+
+    conf.setBoolean("hive.test.init.phase", true);
+
+    initFromScript();
+    
+    initFromDatasets();
+    srcTables.addAll(datasets.getTables());
+    
+    conf.setBoolean("hive.test.init.phase", false);
+  }
+  
+  private void initFromScript() throws IOException {
     File scriptFile = new File(this.initScript);
     if (!scriptFile.isFile()) {
       LOG.info("No init script detected. Skipping");
       return;
     }
-    conf.setBoolean("hive.test.init.phase", true);
-
-    initFromScript(scriptFile);
-    initFromDatasets();
     
-    conf.setBoolean("hive.test.init.phase", false);
-  }
-
-  private void initFromScript(File scriptFile) throws IOException {
     String initCommands = readEntireFileIntoString(scriptFile);
     LOG.info("Initial setup (" + initScript + "):\n" + initCommands);
 

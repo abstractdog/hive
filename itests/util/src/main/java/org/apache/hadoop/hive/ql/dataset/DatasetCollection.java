@@ -21,11 +21,15 @@ package org.apache.hadoop.hive.ql.dataset;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DatasetCollection {
+public class DatasetCollection implements Dataset {
   private Set<String> tables = new HashSet<String>();
 
   public void add(Dataset dataset) {
     tables.addAll(dataset.getTables());
+  }
+  
+  public void add(String dataset) {
+    tables.add(dataset);
   }
 
   public Set<String> getTables() {

@@ -37,7 +37,7 @@ public class DatasetParser {
            Set<String> strDatasets = parseDatasetsFromLine(line);
            
            for (String strDataset : strDatasets){
-             datasets.add(new TableDataset(strDataset));
+             datasets.add(strDataset);
            }
          }
       }

@@ -1116,9 +1116,7 @@ public class QTestUtil {
     conf.setBoolean("hive.test.init.phase", true);
 
     initFromScript();
-    
     initFromDatasets();
-    srcTables.addAll(datasets.getTables());
     
     conf.setBoolean("hive.test.init.phase", false);
   }

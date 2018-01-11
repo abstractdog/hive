@@ -218,7 +218,15 @@ public class QTestUtil {
   private HBaseTestingUtility utility;
 
   public static Set<String> getSrcTables() {
-    HashSet<String> srcTables = new HashSet<String>();
+    if (srcTables == null){
+      initSrcTables();
+    }
+
+    return Collections.unmodifiableSet(srcTables);
+  }
+
+  private static void initSrcTables(){
+    srcTables = new HashSet<String>();
     // FIXME: moved default value to here...for now
     // i think this features is never really used from the command line
     String defaultTestSrcTables = "src,src1,srcbucket,srcbucket2,src_json,src_thrift," +
@@ -233,8 +241,15 @@ public class QTestUtil {
     if (srcTables.isEmpty()) {
       throw new RuntimeException("Source tables cannot be empty");
     }
-    return srcTables;
   }
+
+  private CliDriver getCliDriver() {
+    if(cliDriver == null){
+      cliDriver = new CliDriver();
+    }
+    return cliDriver;
+  }
+
 
   /**
    * Returns the default UDF names which should not be removed when resetting the test database
@@ -561,7 +576,8 @@ public class QTestUtil {
     this.srcTables=getSrcTables();
     this.srcUDFs = getSrcUDFs();
     this.datasets = datasets == null ? new DatasetCollection() : datasets;
-    
+    srcTables.addAll(datasets.getTables());
+
     // HIVE-14443 move this fall-back logic to CliConfigs
     if (confDir != null && !confDir.isEmpty()) {
       HiveConf.setHiveSiteLocation(new URL("file://"+ new File(confDir).toURI().getPath() + "/hive-site.xml"));
@@ -610,7 +626,7 @@ public class QTestUtil {
     datasetDir = conf.get("test.data.set.files") == null
       ? new File(new File(dataDir).getAbsolutePath() + "/datasets")
       : new File(conf.get("test.data.set.files"));
-    
+
     // Use the current directory if it is not specified
     String scriptsDir = conf.get("test.data.scripts");
     if (scriptsDir == null) {
@@ -1075,6 +1091,22 @@ public class QTestUtil {
     FunctionRegistry.unregisterTemporaryUDF("test_error");
   }
 
+  private void cleanupFromFile() throws IOException {
+    File cleanupFile = new File(cleanupScript);
+    if (cleanupFile.isFile()) {
+      String cleanupCommands = readEntireFileIntoString(cleanupFile);
+      LOG.info("Cleanup (" + cleanupScript + "):\n" + cleanupCommands);
+
+      int result = getCliDriver().processLine(cleanupCommands);
+      if (result != 0) {
+        LOG.error("Failed during cleanup processLine with code={}. Ignoring", result);
+        // TODO Convert this to an Assert.fail once HIVE-14682 is fixed
+      }
+    } else {
+      LOG.info("No cleanup script detected. Skipping.");
+    }
+  }
+
   protected void runCreateTableCmd(String createTableCmd) throws Exception {
     int ecode = 0;
     ecode = drv.run(createTableCmd).getResponseCode();
@@ -1111,23 +1143,23 @@ public class QTestUtil {
       cliDriver = new CliDriver();
     }
     cliDriver.processLine("set test.data.dir=" + testFiles + ";");
-    
+
 
     conf.setBoolean("hive.test.init.phase", true);
 
     initFromScript();
-    initFromDatasets();
-    
+    initDatasets();
+
     conf.setBoolean("hive.test.init.phase", false);
   }
-  
+
   private void initFromScript() throws IOException {
     File scriptFile = new File(this.initScript);
     if (!scriptFile.isFile()) {
       LOG.info("No init script detected. Skipping");
       return;
     }
-    
+
     String initCommands = readEntireFileIntoString(scriptFile);
     LOG.info("Initial setup (" + initScript + "):\n" + initCommands);
 
@@ -1148,9 +1180,28 @@ public class QTestUtil {
       if (result != 0) {
         Assert.fail("Failed during initFromDatasets processLine with code=" + result);
       }
-    } 
+    }
   }
-  
+
+  private void cleanupDatasets() throws IOException {
+    for (String table : datasets.getTables()) {
+      File cleanupFile = new File(new File(datasetDir, table), Dataset.CLEANUP_FILE_NAME);
+      if (cleanupFile.isFile()) {
+        String cleanupCommands = readEntireFileIntoString(cleanupFile);
+
+        LOG.info("Cleanup (" + table + "):\n" + cleanupCommands);
+
+        int result = getCliDriver().processLine(cleanupCommands);
+        if (result != 0) {
+          LOG.error("Failed during cleanup processLine with code={}. Ignoring", result);
+        }
+      } else {
+        LOG.info(
+            String.format("No cleanup script detected for dataset table: '%s'. Skipping.", table));
+      }
+    }
+  }
+
   public void init() throws Exception {
 
     // Create remote dirs once.

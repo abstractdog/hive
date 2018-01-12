@@ -6,12 +6,12 @@ PREHOOK: query: DROP TABLE orcfile_merge3b
 PREHOOK: type: DROPTABLE
 POSTHOOK: query: DROP TABLE orcfile_merge3b
 POSTHOOK: type: DROPTABLE
-PREHOOK: query: CREATE TABLE orcfile_merge3a (key int, value string) 
+PREHOOK: query: CREATE TABLE orcfile_merge3a (key int, value string)
     PARTITIONED BY (ds string) STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge3a
-POSTHOOK: query: CREATE TABLE orcfile_merge3a (key int, value string) 
+POSTHOOK: query: CREATE TABLE orcfile_merge3a (key int, value string)
     PARTITIONED BY (ds string) STORED AS TEXTFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -69,7 +69,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1 
+        Map 1
             Map Operator Tree:
                 TableScan
                   alias: orcfile_merge3a
@@ -114,7 +114,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work 
+        Spark Merge File Work
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -125,7 +125,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work 
+        Spark Merge File Work
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -155,7 +155,7 @@ POSTHOOK: Output: default@orcfile_merge3b
 POSTHOOK: Lineage: orcfile_merge3b.key SIMPLE [(orcfile_merge3a)orcfile_merge3a.FieldSchema(name:key, type:int, comment:null), ]
 POSTHOOK: Lineage: orcfile_merge3b.value SIMPLE [(orcfile_merge3a)orcfile_merge3a.FieldSchema(name:value, type:string, comment:null), ]
 Found 1 items
--rw-r--r--   3 hiveptest supergroup       4859 2018-01-04 20:19 hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup       4859 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: SELECT SUM(HASH(c)) FROM (
     SELECT TRANSFORM(key, value) USING 'tr \t _' AS (c)
     FROM orcfile_merge3a

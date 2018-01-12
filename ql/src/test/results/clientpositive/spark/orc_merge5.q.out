@@ -36,7 +36,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1 
+        Map 1
             Map Operator Tree:
                 TableScan
                   alias: orc_merge5
@@ -94,9 +94,9 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@orc_merge5b
 POSTHOOK: Output: default@orc_merge5b
 Found 3 items
--rw-r--r--   3 hiveptest supergroup        649 2018-01-04 20:14 hdfs://### HDFS PATH ###
--rw-r--r--   3 hiveptest supergroup          0 2018-01-04 20:14 hdfs://### HDFS PATH ###
--rw-r--r--   3 hiveptest supergroup        601 2018-01-04 20:14 hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        649 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup          0 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        601 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: select * from orc_merge5b
 PREHOOK: type: QUERY
 PREHOOK: Input: default@orc_merge5b
@@ -127,7 +127,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1 
+        Map 1
             Map Operator Tree:
                 TableScan
                   alias: orc_merge5
@@ -176,7 +176,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work 
+        Spark Merge File Work
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -187,7 +187,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work 
+        Spark Merge File Work
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -222,7 +222,7 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@orc_merge5b
 POSTHOOK: Output: default@orc_merge5b
 Found 1 items
--rw-r--r--   3 hiveptest supergroup       1022 2018-01-04 20:14 hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup       1022 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: select * from orc_merge5b
 PREHOOK: type: QUERY
 PREHOOK: Input: default@orc_merge5b
@@ -256,9 +256,9 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@orc_merge5b
 POSTHOOK: Output: default@orc_merge5b
 Found 3 items
--rw-r--r--   3 hiveptest supergroup        649 2018-01-04 20:14 hdfs://### HDFS PATH ###
--rw-r--r--   3 hiveptest supergroup          0 2018-01-04 20:14 hdfs://### HDFS PATH ###
--rw-r--r--   3 hiveptest supergroup        601 2018-01-04 20:14 hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        649 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup          0 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        601 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: select * from orc_merge5b
 PREHOOK: type: QUERY
 PREHOOK: Input: default@orc_merge5b
@@ -313,7 +313,7 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@orc_merge5b
 POSTHOOK: Output: default@orc_merge5b
 Found 1 items
--rw-r--r--   3 hiveptest supergroup       1022 2018-01-04 20:14 hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup       1022 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: select * from orc_merge5b
 PREHOOK: type: QUERY
 PREHOOK: Input: default@orc_merge5b

@@ -27,7 +27,8 @@ import org.junit.Test;
  * This class contains unit tests for QTestUtil
  */
 public class TestQTestUtil {
-  private static final String HDFS_MASK = "###";
+  private static final String HDFS_MASK = "###HDFS###";
+  private static final String HDFS_DATE_MASK = "###HDFS_DATE###";
 
   @Test
   public void testSelectiveHdfsPatternMaskOnlyHdfsPath() {
@@ -53,6 +54,20 @@ public class TestQTestUtil {
         String.format(
             "some text before [name=hdfs://%s]] some text between hdfs://%s some text after",
             HDFS_MASK, HDFS_MASK));
+    
+    line = maskHdfsWithDate(
+        "-rw-r--r--   3 hiveptest supergroup       2557 2018-01-11 17:09 hdfs://hello_hdfs_path");
+    Assert.assertEquals(line,
+        String.format(
+            "-rw-r--r--   3 hiveptest supergroup       2557 %s hdfs://%s",
+            HDFS_DATE_MASK, HDFS_MASK));
+    
+    line = maskHdfs(maskHdfsWithDate(
+        "-rw-r--r--   3 hiveptest supergroup       2557 2018-01-11 17:09 hdfs://hello_hdfs_path"));
+    Assert.assertEquals(line,
+        String.format(
+            "-rw-r--r--   3 hiveptest supergroup       2557 %s hdfs://%s",
+            HDFS_DATE_MASK, HDFS_MASK));
   }
 
   private String maskHdfs(String line) {
@@ -60,6 +75,16 @@ public class TestQTestUtil {
 
     if (matcher.find()) {
       line = matcher.replaceAll(String.format("$1%s", HDFS_MASK));
+    }
+    
+    return line;
+  }
+
+  private String maskHdfsWithDate(String line) {
+    Matcher matcher = Pattern.compile(QTestUtil.PATH_HDFS_WITH_DATE_BEFORE_REGEX).matcher(line);
+
+    if (matcher.find()) {
+      line = matcher.replaceAll(String.format("%s $2%s", HDFS_DATE_MASK, HDFS_MASK));
     }
 
     return line;

@@ -10,32 +10,32 @@ PREHOOK: query: DROP TABLE orcfile_merge1c
 PREHOOK: type: DROPTABLE
 POSTHOOK: query: DROP TABLE orcfile_merge1c
 POSTHOOK: type: DROPTABLE
-PREHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING) 
+PREHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING)
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC tblproperties("orc.compress"="SNAPPY","orc.compress.size"="4096")
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1
-POSTHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING) 
+POSTHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING)
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC tblproperties("orc.compress"="SNAPPY","orc.compress.size"="4096")
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge1
-PREHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING) 
+PREHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING)
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC tblproperties("orc.compress"="SNAPPY","orc.compress.size"="4096")
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1b
-POSTHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING) 
+POSTHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING)
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC tblproperties("orc.compress"="SNAPPY","orc.compress.size"="4096")
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge1b
-PREHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING) 
+PREHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING)
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC tblproperties("orc.compress"="SNAPPY","orc.compress.size"="4096")
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1c
-POSTHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING) 
+POSTHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING)
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC tblproperties("orc.compress"="SNAPPY","orc.compress.size"="4096")
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -64,7 +64,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1 
+        Map 1
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -99,7 +99,7 @@ STAGE PLANS:
                           value expressions: _col2 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
             Execution mode: llap
             LLAP IO: no inputs
-        Reducer 2 
+        Reducer 2
             Execution mode: llap
             Reduce Operator Tree:
               Group By Operator
@@ -128,7 +128,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part 
+            part
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -162,9 +162,9 @@ POSTHOOK: Lineage: orcfile_merge1 PARTITION(ds=1,part=0).value SIMPLE [(src)src.
 POSTHOOK: Lineage: orcfile_merge1 PARTITION(ds=1,part=1).key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: orcfile_merge1 PARTITION(ds=1,part=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 Found 3 items
--rw-r--r--   3 hiveptest supergroup        933 2018-01-04 20:06 hdfs://### HDFS PATH ###
--rw-r--r--   3 hiveptest supergroup        861 2018-01-04 20:06 hdfs://### HDFS PATH ###
--rw-r--r--   3 hiveptest supergroup        842 2018-01-04 20:06 hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        933 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        861 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-r--r--   3 hiveptest supergroup        842 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: EXPLAIN
     INSERT OVERWRITE TABLE orcfile_merge1b PARTITION (ds='1', part)
         SELECT key, value, PMOD(HASH(key), 2) as part
@@ -194,7 +194,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1 
+        Map 1
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -229,7 +229,7 @@ STAGE PLANS:
                           value expressions: _col2 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
             Execution mode: llap
             LLAP IO: no inputs
-        Reducer 2 
+        Reducer 2
             Execution mode: llap
             Reduce Operator Tree:
               Group By Operator
@@ -267,7 +267,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part 
+            part
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -287,7 +287,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge 
+        File Merge
             Map Operator Tree:
                 TableScan
                   File Output Operator
@@ -302,7 +302,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge 
+        File Merge
             Map Operator Tree:
                 TableScan
                   File Output Operator
@@ -337,7 +337,7 @@ POSTHOOK: Lineage: orcfile_merge1b PARTITION(ds=1,part=0).value SIMPLE [(src)src
 POSTHOOK: Lineage: orcfile_merge1b PARTITION(ds=1,part=1).key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: orcfile_merge1b PARTITION(ds=1,part=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 Found 1 items
--rw-rw-rw-   3 hiveptest supergroup       1740 2018-01-04 20:06 hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 hiveptest supergroup       1740 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: EXPLAIN
     INSERT OVERWRITE TABLE orcfile_merge1c PARTITION (ds='1', part)
         SELECT key, value, PMOD(HASH(key), 2) as part
@@ -367,7 +367,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1 
+        Map 1
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -402,7 +402,7 @@ STAGE PLANS:
                           value expressions: _col2 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
             Execution mode: llap
             LLAP IO: no inputs
-        Reducer 2 
+        Reducer 2
             Execution mode: llap
             Reduce Operator Tree:
               Group By Operator
@@ -440,7 +440,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part 
+            part
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -460,7 +460,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge 
+        File Merge
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -471,7 +471,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge 
+        File Merge
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -502,7 +502,7 @@ POSTHOOK: Lineage: orcfile_merge1c PARTITION(ds=1,part=0).value SIMPLE [(src)src
 POSTHOOK: Lineage: orcfile_merge1c PARTITION(ds=1,part=1).key EXPRESSION [(src)src.FieldSchema(name:key, type:string, comment:default), ]
 POSTHOOK: Lineage: orcfile_merge1c PARTITION(ds=1,part=1).value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
 Found 1 items
--rw-rw-rw-   3 hiveptest supergroup       2384 2018-01-04 20:06 hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 hiveptest supergroup       2384 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: SELECT SUM(HASH(c)) FROM (
     SELECT TRANSFORM(*) USING 'tr \t _' AS (c)
     FROM orcfile_merge1 WHERE ds='1'
@@ -605,7 +605,7 @@ POSTHOOK: type: ALTER_PARTITION_MERGE
 POSTHOOK: Input: default@orcfile_merge1
 POSTHOOK: Output: default@orcfile_merge1@ds=1/part=0
 Found 1 items
--rw-rw-rw-   3 hiveptest supergroup       2384 2018-01-04 20:06 hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 hiveptest supergroup       2384 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: SELECT SUM(HASH(c)) FROM (
     SELECT TRANSFORM(*) USING 'tr \t _' AS (c)
     FROM orcfile_merge1c WHERE ds='1'
@@ -714,7 +714,7 @@ Stripes:
     Encoding column 1: DIRECT_V2
     Encoding column 2: DIRECT_V2
     Row group indices for column 0:
-      Entry 0: count: 90 hasNull: false positions: 
+      Entry 0: count: 90 hasNull: false positions:
     Row group indices for column 1:
       Entry 0: count: 90 hasNull: false min: 0 max: 495 sum: 22736 positions: 0,0,0
     Row group indices for column 2:
@@ -730,7 +730,7 @@ Stripes:
     Encoding column 1: DIRECT_V2
     Encoding column 2: DIRECT_V2
     Row group indices for column 0:
-      Entry 0: count: 78 hasNull: false positions: 
+      Entry 0: count: 78 hasNull: false positions:
     Row group indices for column 1:
       Entry 0: count: 78 hasNull: false min: 0 max: 497 sum: 18371 positions: 0,0,0
     Row group indices for column 2:
@@ -746,7 +746,7 @@ Stripes:
     Encoding column 1: DIRECT_V2
     Encoding column 2: DIRECT_V2
     Row group indices for column 0:
-      Entry 0: count: 74 hasNull: false positions: 
+      Entry 0: count: 74 hasNull: false positions:
     Row group indices for column 1:
       Entry 0: count: 74 hasNull: false min: 2 max: 493 sum: 19663 positions: 0,0,0
     Row group indices for column 2:
@@ -803,7 +803,7 @@ Stripes:
     Encoding column 1: DIRECT_V2
     Encoding column 2: DIRECT_V2
     Row group indices for column 0:
-      Entry 0: count: 90 hasNull: false positions: 
+      Entry 0: count: 90 hasNull: false positions:
     Row group indices for column 1:
       Entry 0: count: 90 hasNull: false min: 0 max: 495 sum: 22736 positions: 0,0,0
     Row group indices for column 2:
@@ -819,7 +819,7 @@ Stripes:
     Encoding column 1: DIRECT_V2
     Encoding column 2: DIRECT_V2
     Row group indices for column 0:
-      Entry 0: count: 78 hasNull: false positions: 
+      Entry 0: count: 78 hasNull: false positions:
     Row group indices for column 1:
       Entry 0: count: 78 hasNull: false min: 0 max: 497 sum: 18371 positions: 0,0,0
     Row group indices for column 2:
@@ -835,7 +835,7 @@ Stripes:
     Encoding column 1: DIRECT_V2
     Encoding column 2: DIRECT_V2
     Row group indices for column 0:
-      Entry 0: count: 74 hasNull: false positions: 
+      Entry 0: count: 74 hasNull: false positions:
     Row group indices for column 1:
       Entry 0: count: 74 hasNull: false min: 2 max: 493 sum: 19663 positions: 0,0,0
     Row group indices for column 2:

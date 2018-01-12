@@ -25,6 +25,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * DatasetParser: a parser which could parse dataset "hooks" from q files, 
+ * --!qt:dataset:mydataset
+ */
 public class DatasetParser {
 
   private DatasetCollection datasets = new DatasetCollection();

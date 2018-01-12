@@ -20,6 +20,8 @@ package org.apache.hadoop.hive.ql.dataset;
 import java.util.Set;
 
 public interface Dataset {
-  final String TABLE_FILE_NAME = "load.hive.sql";
+  String INIT_FILE_NAME = "load.hive.sql";
+  String CLEANUP_FILE_NAME = "cleanup.hive.sql";
+
   Set<String> getTables();
 }

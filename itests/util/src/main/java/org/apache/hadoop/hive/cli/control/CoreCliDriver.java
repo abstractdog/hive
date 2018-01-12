@@ -149,8 +149,10 @@ public class CoreCliDriver extends CliAdapter {
     }
   }
 
-  static String debugHint = "\nSee ./ql/target/tmp/log/hive.log or ./itests/qtest/target/tmp/log/hive.log, "
-     + "or check ./ql/target/surefire-reports or ./itests/qtest/target/surefire-reports/ for specific test cases logs.";
+  private static String debugHint =
+      "\nSee ./ql/target/tmp/log/hive.log or ./itests/qtest/target/tmp/log/hive.log, "
+          + "or check ./ql/target/surefire-reports "
+          + "or ./itests/qtest/target/surefire-reports/ for specific test cases logs.";
 
   @Override
   public void runTest(String tname, String fname, String fpath) throws Exception {
@@ -179,8 +181,13 @@ public class CoreCliDriver extends CliAdapter {
       QTestProcessExecResult result = qt.checkCliDriverResults(fname);
       if (result.getReturnCode() != 0) {
         failed = true;
+<<<<<<< HEAD
         String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ?
             debugHint : "\r\n" + result.getCapturedOutput();
+=======
+        String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ? debugHint
+            : "\r\n" + result.getCapturedOutput();
+>>>>>>> f79f8cb963... HIVE-18051 fix format warnings
         qt.failedDiff(result.getReturnCode(), fname, message);
       }
     }

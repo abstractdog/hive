@@ -37,7 +37,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestUtil.FsType;
 import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
-import org.apache.hadoop.hive.ql.dataset.Dataset;
 import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
 import org.apache.hadoop.hive.ql.dataset.DatasetParser;
 

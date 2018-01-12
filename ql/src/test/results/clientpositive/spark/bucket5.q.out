@@ -39,7 +39,7 @@ STAGE PLANS:
         Reducer 3 <- Map 5 (PARTITION-LEVEL SORT, 2)
 #### A masked pattern was here ####
       Vertices:
-        Map 4 
+        Map 4
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -85,7 +85,7 @@ STAGE PLANS:
                     totalSize 5812
 #### A masked pattern was here ####
                   serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-                
+
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
                     properties:
@@ -111,7 +111,7 @@ STAGE PLANS:
                   name: default.src
             Truncated Path -> Alias:
               /src [src]
-        Map 5 
+        Map 5
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -133,7 +133,7 @@ STAGE PLANS:
             Path -> Alias:
               hdfs://### HDFS PATH ### [src]
             Path -> Partition:
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: src
                   input format: org.apache.hadoop.mapred.TextInputFormat
@@ -157,7 +157,7 @@ STAGE PLANS:
                     totalSize 5812
 #### A masked pattern was here ####
                   serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-                
+
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
                     properties:
@@ -183,7 +183,7 @@ STAGE PLANS:
                   name: default.src
             Truncated Path -> Alias:
               /src [src]
-        Reducer 2 
+        Reducer 2
             Needs Tagging: false
             Reduce Operator Tree:
               Select Operator
@@ -207,7 +207,7 @@ STAGE PLANS:
                         bucket_field_name key
                         column.name.delimiter ,
                         columns key,value
-                        columns.comments 
+                        columns.comments
                         columns.types int:string
 #### A masked pattern was here ####
                         location hdfs://### HDFS PATH ###
@@ -225,7 +225,7 @@ STAGE PLANS:
                   TotalFiles: 1
                   GatherStats: true
                   MultiFileSpray: false
-        Reducer 3 
+        Reducer 3
             Needs Tagging: false
             Reduce Operator Tree:
               Select Operator
@@ -247,7 +247,7 @@ STAGE PLANS:
                         bucket_count -1
                         column.name.delimiter ,
                         columns key,value
-                        columns.comments 
+                        columns.comments
                         columns.types int:string
 #### A masked pattern was here ####
                         location hdfs://### HDFS PATH ###
@@ -281,7 +281,7 @@ STAGE PLANS:
                 bucket_field_name key
                 column.name.delimiter ,
                 columns key,value
-                columns.comments 
+                columns.comments
                 columns.types int:string
 #### A masked pattern was here ####
                 location hdfs://### HDFS PATH ###
@@ -315,7 +315,7 @@ STAGE PLANS:
                 bucket_count -1
                 column.name.delimiter ,
                 columns key,value
-                columns.comments 
+                columns.comments
                 columns.types int:string
 #### A masked pattern was here ####
                 location hdfs://### HDFS PATH ###
@@ -360,35 +360,35 @@ PREHOOK: Input: default@bucketed_table
 POSTHOOK: query: DESC FORMATTED bucketed_table
 POSTHOOK: type: DESCTABLE
 POSTHOOK: Input: default@bucketed_table
-# col_name            	data_type           	comment             
-key                 	int                 	                    
-value               	string              	                    
-	 	 
-# Detailed Table Information	 	 
-Database:           	default             	 
+# col_name            	data_type           	comment
+key                 	int
+value               	string
+
+# Detailed Table Information
+Database:           	default
 #### A masked pattern was here ####
-Retention:          	0                   	 
+Retention:          	0
 #### A masked pattern was here ####
-Table Type:         	MANAGED_TABLE       	 
-Table Parameters:	 	 
+Table Type:         	MANAGED_TABLE
+Table Parameters:
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
-	SORTBUCKETCOLSPREFIX	TRUE                
-	numFiles            	2                   
-	numRows             	500                 
-	rawDataSize         	5312                
-	totalSize           	5812                
+	SORTBUCKETCOLSPREFIX	TRUE
+	numFiles            	2
+	numRows             	500
+	rawDataSize         	5312
+	totalSize           	5812
 #### A masked pattern was here ####
-	 	 
-# Storage Information	 	 
-SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
-InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
-OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
-Compressed:         	No                  	 
-Num Buckets:        	2                   	 
-Bucket Columns:     	[key]               	 
-Sort Columns:       	[Order(col:key, order:1)]	 
-Storage Desc Params:	 	 
-	serialization.format	1                   
+
+# Storage Information
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+Compressed:         	No
+Num Buckets:        	2
+Bucket Columns:     	[key]
+Sort Columns:       	[Order(col:key, order:1)]
+Storage Desc Params:
+	serialization.format	1
 PREHOOK: query: SELECT * FROM bucketed_table TABLESAMPLE (BUCKET 1 OUT OF 2) s LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@bucketed_table

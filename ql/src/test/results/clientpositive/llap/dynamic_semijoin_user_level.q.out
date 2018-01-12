@@ -845,7 +845,7 @@ STAGE PLANS:
               hdfs://### HDFS PATH ### [srcpart_date]
               hdfs://### HDFS PATH ### [srcpart_date]
             Path -> Partition:
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: ds=2008-04-08
                   input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -890,7 +890,7 @@ STAGE PLANS:
                     serde: org.apache.hadoop.hive.ql.io.orc.OrcSerde
                     name: default.srcpart_date
                   name: default.srcpart_date
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: ds=2008-04-09
                   input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -984,7 +984,7 @@ STAGE PLANS:
               hdfs://### HDFS PATH ### [srcpart_small]
               hdfs://### HDFS PATH ### [srcpart_small]
             Path -> Partition:
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: ds=2008-04-08
                   input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -1029,7 +1029,7 @@ STAGE PLANS:
                     serde: org.apache.hadoop.hive.ql.io.orc.OrcSerde
                     name: default.srcpart_small
                   name: default.srcpart_small
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: ds=2008-04-09
                   input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat

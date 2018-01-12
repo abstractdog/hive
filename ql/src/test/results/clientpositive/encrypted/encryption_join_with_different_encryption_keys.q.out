@@ -118,7 +118,7 @@ STAGE PLANS:
               bucket_count -1
               column.name.delimiter ,
               columns key,value
-              columns.comments 
+              columns.comments
               columns.types int:string
 #### A masked pattern was here ####
               location hdfs://### HDFS PATH ###
@@ -132,7 +132,7 @@ STAGE PLANS:
               totalSize 5812
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-          
+
               input format: org.apache.hadoop.mapred.TextInputFormat
               output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
               properties:
@@ -140,7 +140,7 @@ STAGE PLANS:
                 bucket_count -1
                 column.name.delimiter ,
                 columns key,value
-                columns.comments 
+                columns.comments
                 columns.types int:string
 #### A masked pattern was here ####
                 location hdfs://### HDFS PATH ###
@@ -156,7 +156,7 @@ STAGE PLANS:
               serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
               name: default.table_key_1
             name: default.table_key_1
-        hdfs://### HDFS PATH ###
+        hdfs://### HDFS PATH ### 
           Partition
             base file name: table_key_2
             input format: org.apache.hadoop.mapred.TextInputFormat
@@ -166,7 +166,7 @@ STAGE PLANS:
               bucket_count -1
               column.name.delimiter ,
               columns key,value
-              columns.comments 
+              columns.comments
               columns.types int:string
 #### A masked pattern was here ####
               location hdfs://### HDFS PATH ###
@@ -180,7 +180,7 @@ STAGE PLANS:
               totalSize 5812
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-          
+
               input format: org.apache.hadoop.mapred.TextInputFormat
               output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
               properties:
@@ -188,7 +188,7 @@ STAGE PLANS:
                 bucket_count -1
                 column.name.delimiter ,
                 columns key,value
-                columns.comments 
+                columns.comments
                 columns.types int:string
 #### A masked pattern was here ####
                 location hdfs://### HDFS PATH ###

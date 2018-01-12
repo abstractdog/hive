@@ -48,7 +48,7 @@ STAGE PLANS:
             Path -> Alias:
               hdfs://### HDFS PATH ### [src]
             Path -> Partition:
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: src
                   input format: org.apache.hadoop.mapred.TextInputFormat

@@ -82,7 +82,7 @@ STAGE PLANS:
             Path -> Alias:
               hdfs://### HDFS PATH ### [acidtbldefault]
             Path -> Partition:
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: acidtbldefault
                   input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat

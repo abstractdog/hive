@@ -576,7 +576,7 @@ public class QTestUtil {
     this.srcTables=getSrcTables();
     this.srcUDFs = getSrcUDFs();
     this.datasets = datasets == null ? new DatasetCollection() : datasets;
-    srcTables.addAll(datasets.getTables());
+    srcTables.addAll(this.datasets.getTables());
 
     // HIVE-14443 move this fall-back logic to CliConfigs
     if (confDir != null && !confDir.isEmpty()) {

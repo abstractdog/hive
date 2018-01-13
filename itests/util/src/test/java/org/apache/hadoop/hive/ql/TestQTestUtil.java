@@ -79,7 +79,6 @@ public class TestQTestUtil {
     Matcher matcher = Pattern.compile(QTestUtil.PATH_HDFS_WITH_DATE_USER_GROUP_REGEX).matcher(line);
 
     if (matcher.find()) {
-      System.out.println("maskHdfsWithDateUserGroup");
       line = matcher.replaceAll(String.format("%s %s$3$4 %s $6%s", TEST_HDFS_USER_MASK,
           TEST_HDFS_GROUP_MASK, TEST_HDFS_DATE_MASK, TEST_HDFS_MASK));
     }

@@ -10,32 +10,32 @@ PREHOOK: query: DROP TABLE orcfile_merge1c
 PREHOOK: type: DROPTABLE
 POSTHOOK: query: DROP TABLE orcfile_merge1c
 POSTHOOK: type: DROPTABLE
-PREHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING)
+PREHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1
-POSTHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING)
+POSTHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge1
-PREHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING)
+PREHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1b
-POSTHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING)
+POSTHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge1b
-PREHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING)
+PREHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1c
-POSTHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING)
+POSTHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -64,7 +64,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -99,7 +99,7 @@ STAGE PLANS:
                           value expressions: _col2 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
             Execution mode: llap
             LLAP IO: no inputs
-        Reducer 2
+        Reducer 2 
             Execution mode: llap
             Reduce Operator Tree:
               Group By Operator
@@ -128,7 +128,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part
+            part 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -197,7 +197,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -232,7 +232,7 @@ STAGE PLANS:
                           value expressions: _col2 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
             Execution mode: llap
             LLAP IO: no inputs
-        Reducer 2
+        Reducer 2 
             Execution mode: llap
             Reduce Operator Tree:
               Group By Operator
@@ -270,7 +270,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part
+            part 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -290,7 +290,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge
+        File Merge 
             Map Operator Tree:
                 TableScan
                   File Output Operator
@@ -305,7 +305,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge
+        File Merge 
             Map Operator Tree:
                 TableScan
                   File Output Operator
@@ -370,7 +370,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -405,7 +405,7 @@ STAGE PLANS:
                           value expressions: _col2 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
             Execution mode: llap
             LLAP IO: no inputs
-        Reducer 2
+        Reducer 2 
             Execution mode: llap
             Reduce Operator Tree:
               Group By Operator
@@ -443,7 +443,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part
+            part 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -463,7 +463,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge
+        File Merge 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -474,7 +474,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Vertices:
-        File Merge
+        File Merge 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator

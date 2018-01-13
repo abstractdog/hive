@@ -10,32 +10,32 @@ PREHOOK: query: DROP TABLE orcfile_merge1c
 PREHOOK: type: DROPTABLE
 POSTHOOK: query: DROP TABLE orcfile_merge1c
 POSTHOOK: type: DROPTABLE
-PREHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING)
+PREHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1
-POSTHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING)
+POSTHOOK: query: CREATE TABLE orcfile_merge1 (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge1
-PREHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING)
+PREHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1b
-POSTHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING)
+POSTHOOK: query: CREATE TABLE orcfile_merge1b (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge1b
-PREHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING)
+PREHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@orcfile_merge1c
-POSTHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING)
+POSTHOOK: query: CREATE TABLE orcfile_merge1c (key INT, value STRING) 
     PARTITIONED BY (ds STRING, part STRING) STORED AS ORC
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -60,7 +60,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -83,7 +83,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part
+            part 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -140,7 +140,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -172,7 +172,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part
+            part 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -188,7 +188,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
             Map Operator Tree:
                 TableScan
                   File Output Operator
@@ -203,7 +203,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
             Map Operator Tree:
                 TableScan
                   File Output Operator
@@ -264,7 +264,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -296,7 +296,7 @@ STAGE PLANS:
       tables:
           partition:
             ds 1
-            part
+            part 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -312,7 +312,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -323,7 +323,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator

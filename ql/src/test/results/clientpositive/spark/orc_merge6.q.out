@@ -36,7 +36,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: orc_merge5
@@ -174,7 +174,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: orc_merge5
@@ -226,7 +226,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -237,7 +237,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator

@@ -28,7 +28,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -76,7 +76,7 @@ STAGE PLANS:
                     totalSize 5812
 #### A masked pattern was here ####
                   serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-
+                
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
                     properties:
@@ -102,7 +102,7 @@ STAGE PLANS:
                   name: default.src
             Truncated Path -> Alias:
               /src [src]
-        Reducer 2
+        Reducer 2 
             Execution mode: llap
             Needs Tagging: false
             Reduce Operator Tree:
@@ -126,7 +126,7 @@ STAGE PLANS:
                         bucket_field_name key
                         column.name.delimiter ,
                         columns key,value
-                        columns.comments
+                        columns.comments 
                         columns.types string:string
 #### A masked pattern was here ####
                         location hdfs://### HDFS PATH ###
@@ -197,7 +197,7 @@ STAGE PLANS:
                 bucket_field_name key
                 column.name.delimiter ,
                 columns key,value
-                columns.comments
+                columns.comments 
                 columns.types string:string
 #### A masked pattern was here ####
                 location hdfs://### HDFS PATH ###
@@ -316,7 +316,7 @@ STAGE PLANS:
         Reducer 3 <- Reducer 2 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: complex_tbl_2
@@ -352,7 +352,7 @@ STAGE PLANS:
                           tag: -1
                           value expressions: _col0 (type: string), _col1 (type: string), _col2 (type: int), _col3 (type: string), _col4 (type: bigint), _col5 (type: string), _col6 (type: string)
                           auto parallelism: true
-        Reducer 2
+        Reducer 2 
             Needs Tagging: false
             Reduce Operator Tree:
               Select Operator
@@ -387,7 +387,7 @@ STAGE PLANS:
                           bucket_count -1
                           column.name.delimiter ,
                           columns aid,bid,t,ctime,etime,l,et
-                          columns.comments
+                          columns.comments 
                           columns.types string:string:int:string:bigint:string:string
 #### A masked pattern was here ####
                           location hdfs://### HDFS PATH ###
@@ -422,7 +422,7 @@ STAGE PLANS:
                         tag: -1
                         value expressions: _col1 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>), _col2 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>), _col3 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col4 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>), _col5 (type: struct<columntype:string,min:bigint,max:bigint,countnulls:bigint,bitvector:binary>), _col6 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>), _col7 (type: struct<columntype:string,maxlength:bigint,sumlength:bigint,count:bigint,countnulls:bigint,bitvector:binary>)
                         auto parallelism: true
-        Reducer 3
+        Reducer 3 
             Execution mode: llap
             Needs Tagging: false
             Reduce Operator Tree:
@@ -476,7 +476,7 @@ STAGE PLANS:
                 bucket_count -1
                 column.name.delimiter ,
                 columns aid,bid,t,ctime,etime,l,et
-                columns.comments
+                columns.comments 
                 columns.types string:string:int:string:bigint:string:string
 #### A masked pattern was here ####
                 location hdfs://### HDFS PATH ###
@@ -499,3 +499,4 @@ STAGE PLANS:
           Column Types: string, string, int, string, bigint, string, string
           Table: default.complex_tbl_1
           Is Table Level Stats: false
+

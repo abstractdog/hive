@@ -76,7 +76,7 @@ STAGE PLANS:
             Path -> Alias:
               hdfs://### HDFS PATH ### [src]
             Path -> Partition:
-              hdfs://### HDFS PATH ###
+              hdfs://### HDFS PATH ### 
                 Partition
                   base file name: src
                   input format: org.apache.hadoop.mapred.TextInputFormat
@@ -219,7 +219,7 @@ Sort Columns:       	[]
 Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[103], [484], [51]]	 
-Skewed Value to Path:	{[103]=hdfs://### HDFS PATH ###, [484]=hdfs://### HDFS PATH ###, [51]=hdfs://### HDFS PATH ###}
+Skewed Value to Path:	{[103]=hdfs://### HDFS PATH ###, [484]=hdfs://### HDFS PATH ###, [51]=hdfs://### HDFS PATH ###}	 
 Skewed Value to Truncated Path:	{[103]=/list_bucketing_static_part/ds=2008-04-08/hr=11/key=103, [484]=/list_bucketing_static_part/ds=2008-04-08/hr=11/key=484, [51]=/list_bucketing_static_part/ds=2008-04-08/hr=11/key=51}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   

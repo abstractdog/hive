@@ -36,7 +36,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: orc_merge5
@@ -58,7 +58,7 @@ STAGE PLANS:
     Move Operator
       tables:
           partition:
-            st
+            st 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat

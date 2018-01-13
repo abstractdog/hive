@@ -15,12 +15,12 @@ POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@orcfile_merge2a
 PREHOOK: query: EXPLAIN INSERT OVERWRITE TABLE orcfile_merge2a PARTITION (one='1', two, three)
-    SELECT key, value, PMOD(HASH(key), 10) as two,
+    SELECT key, value, PMOD(HASH(key), 10) as two, 
         PMOD(HASH(value), 10) as three
     FROM src
 PREHOOK: type: QUERY
 POSTHOOK: query: EXPLAIN INSERT OVERWRITE TABLE orcfile_merge2a PARTITION (one='1', two, three)
-    SELECT key, value, PMOD(HASH(key), 10) as two,
+    SELECT key, value, PMOD(HASH(key), 10) as two, 
         PMOD(HASH(value), 10) as three
     FROM src
 POSTHOOK: type: QUERY
@@ -39,7 +39,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: src
@@ -71,8 +71,8 @@ STAGE PLANS:
       tables:
           partition:
             one 1
-            three
-            two
+            three 
+            two 
           replace: true
           table:
               input format: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
@@ -88,7 +88,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -99,7 +99,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Spark Merge File Work
+        Spark Merge File Work 
           Merge File Operator
             Map Operator Tree:
                 ORC File Merge Operator
@@ -113,14 +113,14 @@ STAGE PLANS:
           destination: hdfs://### HDFS PATH ###
 
 PREHOOK: query: INSERT OVERWRITE TABLE orcfile_merge2a PARTITION (one='1', two, three)
-    SELECT key, value, PMOD(HASH(key), 10) as two,
+    SELECT key, value, PMOD(HASH(key), 10) as two, 
         PMOD(HASH(value), 10) as three
     FROM src
 PREHOOK: type: QUERY
 PREHOOK: Input: default@src
 PREHOOK: Output: default@orcfile_merge2a@one=1
 POSTHOOK: query: INSERT OVERWRITE TABLE orcfile_merge2a PARTITION (one='1', two, three)
-    SELECT key, value, PMOD(HASH(key), 10) as two,
+    SELECT key, value, PMOD(HASH(key), 10) as two, 
         PMOD(HASH(value), 10) as three
     FROM src
 POSTHOOK: type: QUERY
@@ -243,7 +243,7 @@ POSTHOOK: Input: default@orcfile_merge2a@one=1/two=9/three=7
 POSTHOOK: Output: hdfs://### HDFS PATH ###
 -4209012844
 PREHOOK: query: SELECT SUM(HASH(c)) FROM (
-    SELECT TRANSFORM(key, value, '1', PMOD(HASH(key), 10),
+    SELECT TRANSFORM(key, value, '1', PMOD(HASH(key), 10), 
         PMOD(HASH(value), 10)) USING 'tr \t _' AS (c)
     FROM src
 ) t
@@ -251,7 +251,7 @@ PREHOOK: type: QUERY
 PREHOOK: Input: default@src
 PREHOOK: Output: hdfs://### HDFS PATH ###
 POSTHOOK: query: SELECT SUM(HASH(c)) FROM (
-    SELECT TRANSFORM(key, value, '1', PMOD(HASH(key), 10),
+    SELECT TRANSFORM(key, value, '1', PMOD(HASH(key), 10), 
         PMOD(HASH(value), 10)) USING 'tr \t _' AS (c)
     FROM src
 ) t

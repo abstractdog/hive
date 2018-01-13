@@ -163,7 +163,7 @@ public class QTestUtil {
   private static final String BUILD_DIR_PROPERTY = "build.dir"; // typically target
 
   public static final String PATH_HDFS_REGEX = "(hdfs://)([a-zA-Z0-9:/_\\-\\.=])+";
-  public static final String PATH_HDFS_WITH_DATE_BEFORE_REGEX = "([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}) " + PATH_HDFS_REGEX;
+  public static final String PATH_HDFS_WITH_DATE_USER_GROUP_REGEX = "([a-z]+) ([a-z]+)([ ]+)([0-9]+) ([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}) " + PATH_HDFS_REGEX;
 
   private String testWarehouse;
   private final String testFiles;
@@ -1731,8 +1731,8 @@ public class QTestUtil {
         {
           add(toPatternPair("(pblob|s3.?|swift|wasb.?).*hive-staging.*",
               "### BLOBSTORE_STAGING_PATH ###"));
-          add(toPatternPair(PATH_HDFS_WITH_DATE_BEFORE_REGEX,
-              "### HDFS DATE ### $2### HDFS PATH ###"));
+          add(toPatternPair(PATH_HDFS_WITH_DATE_USER_GROUP_REGEX,
+              "### USER ### ### GROUP ###$3$4 ### HDFS DATE ### $6### HDFS PATH ###"));
           add(toPatternPair(PATH_HDFS_REGEX, "$1### HDFS PATH ###"));
         }
       };

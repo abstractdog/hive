@@ -370,10 +370,10 @@ POSTHOOK: Lineage: over10k_orc_bucketed.si SIMPLE [(over10k)over10k.FieldSchema(
 POSTHOOK: Lineage: over10k_orc_bucketed.t SIMPLE [(over10k)over10k.FieldSchema(name:t, type:tinyint, comment:null), ]
 POSTHOOK: Lineage: over10k_orc_bucketed.ts SIMPLE [(over10k)over10k.FieldSchema(name:ts, type:timestamp, comment:null), ]
 Found 4 items
--rw-rw-rw-   3 hiveptest supergroup       7838 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7786 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7419 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       8035 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7838 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7786 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7419 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       8035 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: insert into over10k_orc_bucketed select * from over10k
 PREHOOK: type: QUERY
 PREHOOK: Input: default@over10k
@@ -394,14 +394,14 @@ POSTHOOK: Lineage: over10k_orc_bucketed.si SIMPLE [(over10k)over10k.FieldSchema(
 POSTHOOK: Lineage: over10k_orc_bucketed.t SIMPLE [(over10k)over10k.FieldSchema(name:t, type:tinyint, comment:null), ]
 POSTHOOK: Lineage: over10k_orc_bucketed.ts SIMPLE [(over10k)over10k.FieldSchema(name:ts, type:timestamp, comment:null), ]
 Found 8 items
--rw-rw-rw-   3 hiveptest supergroup       7838 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7838 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7786 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7786 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7419 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       7419 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       8035 ### HDFS DATE ### hdfs://### HDFS PATH ###
--rw-rw-rw-   3 hiveptest supergroup       8035 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7838 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7838 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7786 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7786 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7419 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       7419 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       8035 ### HDFS DATE ### hdfs://### HDFS PATH ###
+-rw-rw-rw-   3 ### USER ### ### GROUP ###       8035 ### HDFS DATE ### hdfs://### HDFS PATH ###
 PREHOOK: query: select distinct 7 as seven, INPUT__FILE__NAME from over10k_orc_bucketed
 PREHOOK: type: QUERY
 PREHOOK: Input: default@over10k_orc_bucketed

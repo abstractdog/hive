@@ -93,14 +93,13 @@ STAGE PLANS:
               Map Reduce Local Work
                 Bucket Mapjoin Context:
                     Alias Bucket File Name Mapping:
-                      b {hdfs://### HDFS PATH ###[hdfs://### HDFS PATH ###], hdfs://### HDFS PATH ###[hdfs://### HDFS PATH ###]}
+#### A masked pattern was here ####
                     Alias Bucket Output File Name Mapping:
-                      hdfs://### HDFS PATH ### 0
-                      hdfs://### HDFS PATH ### 1
+#### A masked pattern was here ####
             Path -> Alias:
-              hdfs://### HDFS PATH ### [b]
+#### A masked pattern was here ####
             Path -> Partition:
-              hdfs://### HDFS PATH ### 
+#### A masked pattern was here ####
                 Partition
                   base file name: hr=0
                   input format: org.apache.hadoop.mapred.TextInputFormat
@@ -116,7 +115,6 @@ STAGE PLANS:
                     columns.comments 
                     columns.types int:string
 #### A masked pattern was here ####
-                    location hdfs://### HDFS PATH ###
                     name default.srcbucket_mapjoin_part_2
                     numFiles 2
                     numRows 0
@@ -140,7 +138,6 @@ STAGE PLANS:
                       columns.comments 
                       columns.types int:string
 #### A masked pattern was here ####
-                      location hdfs://### HDFS PATH ###
                       name default.srcbucket_mapjoin_part_2
                       partition_columns ds/hr
                       partition_columns.types string:string
@@ -199,14 +196,13 @@ STAGE PLANS:
               Map Reduce Local Work
                 Bucket Mapjoin Context:
                     Alias Bucket File Name Mapping:
-                      b {hdfs://### HDFS PATH ###[hdfs://### HDFS PATH ###], hdfs://### HDFS PATH ###[hdfs://### HDFS PATH ###]}
+#### A masked pattern was here ####
                     Alias Bucket Output File Name Mapping:
-                      hdfs://### HDFS PATH ### 0
-                      hdfs://### HDFS PATH ### 1
+#### A masked pattern was here ####
             Path -> Alias:
-              hdfs://### HDFS PATH ### [a]
+#### A masked pattern was here ####
             Path -> Partition:
-              hdfs://### HDFS PATH ### 
+#### A masked pattern was here ####
                 Partition
                   base file name: hr=0
                   input format: org.apache.hadoop.mapred.TextInputFormat
@@ -222,7 +218,6 @@ STAGE PLANS:
                     columns.comments 
                     columns.types int:string
 #### A masked pattern was here ####
-                    location hdfs://### HDFS PATH ###
                     name default.srcbucket_mapjoin_part_1
                     numFiles 2
                     numRows 0
@@ -246,7 +241,6 @@ STAGE PLANS:
                       columns.comments 
                       columns.types int:string
 #### A masked pattern was here ####
-                      location hdfs://### HDFS PATH ###
                       name default.srcbucket_mapjoin_part_1
                       partition_columns ds/hr
                       partition_columns.types string:string
@@ -272,10 +266,10 @@ STAGE PLANS:
                   File Output Operator
                     compressed: false
                     GlobalTableId: 0
-                    directory: hdfs://### HDFS PATH ###
+#### A masked pattern was here ####
                     NumFilesPerFileSink: 1
                     Statistics: Num rows: 1 Data size: 403 Basic stats: COMPLETE Column stats: NONE
-                    Stats Publishing Key Prefix: hdfs://### HDFS PATH ###
+#### A masked pattern was here ####
                     table:
                         input format: org.apache.hadoop.mapred.SequenceFileInputFormat
                         output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
@@ -307,7 +301,7 @@ PREHOOK: Input: default@srcbucket_mapjoin_part_1
 PREHOOK: Input: default@srcbucket_mapjoin_part_1@ds=2008-04-08/hr=0
 PREHOOK: Input: default@srcbucket_mapjoin_part_2
 PREHOOK: Input: default@srcbucket_mapjoin_part_2@ds=2008-04-08/hr=0
-PREHOOK: Output: hdfs://### HDFS PATH ###
+#### A masked pattern was here ####
 POSTHOOK: query: SELECT /*+ MAPJOIN(b) */ a.key, b.value
 FROM srcbucket_mapjoin_part_1 a JOIN srcbucket_mapjoin_part_2 b
 ON a.key = b.key AND a.ds = '2008-04-08' AND b.ds = '2008-04-08'
@@ -317,5 +311,5 @@ POSTHOOK: Input: default@srcbucket_mapjoin_part_1
 POSTHOOK: Input: default@srcbucket_mapjoin_part_1@ds=2008-04-08/hr=0
 POSTHOOK: Input: default@srcbucket_mapjoin_part_2
 POSTHOOK: Input: default@srcbucket_mapjoin_part_2@ds=2008-04-08/hr=0
-POSTHOOK: Output: hdfs://### HDFS PATH ###
+#### A masked pattern was here ####
 0	val_0

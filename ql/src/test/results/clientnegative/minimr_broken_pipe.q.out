@@ -2,4 +2,5 @@ PREHOOK: query: SELECT TRANSFORM(*) USING 'true' AS a, b FROM (SELECT TRANSFORM(
 PREHOOK: type: QUERY
 PREHOOK: Input: default@src
 PREHOOK: Output: hdfs://### HDFS PATH ###
+#### A masked pattern was here ####
 FAILED: Execution Error, return code 20003 from org.apache.hadoop.hive.ql.exec.mr.MapRedTask. An error occurred when trying to close the Operator running your custom script.

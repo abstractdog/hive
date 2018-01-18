@@ -1,9 +1,9 @@
-PREHOOK: query: CREATE TABLE srcbucket_mapjoin_part_1 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING)
+PREHOOK: query: CREATE TABLE srcbucket_mapjoin_part_1 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING) 
 CLUSTERED BY (key) INTO 2 BUCKETS STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@srcbucket_mapjoin_part_1
-POSTHOOK: query: CREATE TABLE srcbucket_mapjoin_part_1 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING)
+POSTHOOK: query: CREATE TABLE srcbucket_mapjoin_part_1 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING) 
 CLUSTERED BY (key) INTO 2 BUCKETS STORED AS TEXTFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -25,12 +25,12 @@ POSTHOOK: query: LOAD DATA LOCAL INPATH '../../data/files/bmj/000001_0' INTO TAB
 POSTHOOK: type: LOAD
 #### A masked pattern was here ####
 POSTHOOK: Output: default@srcbucket_mapjoin_part_1@ds=2008-04-08/hr=0
-PREHOOK: query: CREATE TABLE srcbucket_mapjoin_part_2 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING)
+PREHOOK: query: CREATE TABLE srcbucket_mapjoin_part_2 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING) 
 CLUSTERED BY (key) INTO 2 BUCKETS STORED AS TEXTFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@srcbucket_mapjoin_part_2
-POSTHOOK: query: CREATE TABLE srcbucket_mapjoin_part_2 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING)
+POSTHOOK: query: CREATE TABLE srcbucket_mapjoin_part_2 (key INT, value STRING) PARTITIONED BY (ds STRING, hr STRING) 
 CLUSTERED BY (key) INTO 2 BUCKETS STORED AS TEXTFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -74,7 +74,7 @@ STAGE PLANS:
     Spark
 #### A masked pattern was here ####
       Vertices:
-        Map 3
+        Map 3 
             Map Operator Tree:
                 TableScan
                   alias: b
@@ -96,7 +96,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
                     Alias Bucket Output File Name Mapping:
 #### A masked pattern was here ####
-#### A masked pattern was here ####
             Path -> Alias:
 #### A masked pattern was here ####
             Path -> Partition:
@@ -113,9 +112,8 @@ STAGE PLANS:
                     bucket_field_name key
                     column.name.delimiter ,
                     columns key,value
-                    columns.comments
+                    columns.comments 
                     columns.types int:string
-#### A masked pattern was here ####
 #### A masked pattern was here ####
                     name default.srcbucket_mapjoin_part_2
                     numFiles 2
@@ -129,7 +127,7 @@ STAGE PLANS:
                     totalSize 2750
 #### A masked pattern was here ####
                   serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-
+                
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
                     properties:
@@ -137,9 +135,8 @@ STAGE PLANS:
                       bucket_field_name key
                       column.name.delimiter ,
                       columns key,value
-                      columns.comments
+                      columns.comments 
                       columns.types int:string
-#### A masked pattern was here ####
 #### A masked pattern was here ####
                       name default.srcbucket_mapjoin_part_2
                       partition_columns ds/hr
@@ -160,7 +157,7 @@ STAGE PLANS:
         Reducer 2 <- Map 1 (SORT, 1)
 #### A masked pattern was here ####
       Vertices:
-        Map 1
+        Map 1 
             Map Operator Tree:
                 TableScan
                   alias: a
@@ -202,7 +199,6 @@ STAGE PLANS:
 #### A masked pattern was here ####
                     Alias Bucket Output File Name Mapping:
 #### A masked pattern was here ####
-#### A masked pattern was here ####
             Path -> Alias:
 #### A masked pattern was here ####
             Path -> Partition:
@@ -219,9 +215,8 @@ STAGE PLANS:
                     bucket_field_name key
                     column.name.delimiter ,
                     columns key,value
-                    columns.comments
+                    columns.comments 
                     columns.types int:string
-#### A masked pattern was here ####
 #### A masked pattern was here ####
                     name default.srcbucket_mapjoin_part_1
                     numFiles 2
@@ -235,7 +230,7 @@ STAGE PLANS:
                     totalSize 2750
 #### A masked pattern was here ####
                   serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-
+                
                     input format: org.apache.hadoop.mapred.TextInputFormat
                     output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
                     properties:
@@ -243,9 +238,8 @@ STAGE PLANS:
                       bucket_field_name key
                       column.name.delimiter ,
                       columns key,value
-                      columns.comments
+                      columns.comments 
                       columns.types int:string
-#### A masked pattern was here ####
 #### A masked pattern was here ####
                       name default.srcbucket_mapjoin_part_1
                       partition_columns ds/hr
@@ -259,7 +253,7 @@ STAGE PLANS:
                   name: default.srcbucket_mapjoin_part_1
             Truncated Path -> Alias:
               /srcbucket_mapjoin_part_1/ds=2008-04-08/hr=0 [a]
-        Reducer 2
+        Reducer 2 
             Needs Tagging: false
             Reduce Operator Tree:
               Select Operator

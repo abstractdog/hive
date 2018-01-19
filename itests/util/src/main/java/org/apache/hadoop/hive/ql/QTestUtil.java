@@ -52,6 +52,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -182,7 +183,7 @@ public class QTestUtil {
   private final Set<String> qNoSessionReuseQuerySet;
   private final Set<String> qJavaVersionSpecificOutput;
   private static final String SORT_SUFFIX = ".sorted";
-  private final Set<String> srcTables;
+  private static Set<String> srcTables;
   private final Set<String> srcUDFs;
   private final DatasetCollection datasets;
   private final MiniClusterType clusterType;
@@ -222,7 +223,7 @@ public class QTestUtil {
       initSrcTables();
     }
 
-    return Collections.unmodifiableSet(srcTables);
+    return srcTables;
   }
 
   private static void initSrcTables(){
@@ -573,10 +574,9 @@ public class QTestUtil {
     }
     this.outDir = outDir;
     this.logDir = logDir;
-    this.srcTables=getSrcTables();
     this.srcUDFs = getSrcUDFs();
     this.datasets = datasets == null ? new DatasetCollection() : datasets;
-    srcTables.addAll(this.datasets.getTables());
+    getSrcTables().addAll(this.datasets.getTables());
 
     // HIVE-14443 move this fall-back logic to CliConfigs
     if (confDir != null && !confDir.isEmpty()) {
@@ -1054,23 +1054,7 @@ public class QTestUtil {
     clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
 
-    File cleanupFile = new File(cleanupScript);
-    if (cleanupFile.isFile()) {
-      String cleanupCommands = readEntireFileIntoString(cleanupFile);
-      LOG.info("Cleanup (" + cleanupScript + "):\n" + cleanupCommands);
-      if(cliDriver == null) {
-        cliDriver = new CliDriver();
-      }
-      SessionState.get().getConf().setBoolean("hive.test.shutdown.phase", true);
-      int result = cliDriver.processLine(cleanupCommands);
-      if (result != 0) {
-        LOG.error("Failed during cleanup processLine with code={}. Ignoring", result);
-        // TODO Convert this to an Assert.fail once HIVE-14682 is fixed
-      }
-      SessionState.get().getConf().setBoolean("hive.test.shutdown.phase", false);
-    } else {
-      LOG.info("No cleanup script detected. Skipping.");
-    }
+    cleanupFromFile();
 
     // delete any contents in the warehouse dir
     Path p = new Path(testWarehouse);
@@ -1148,7 +1132,7 @@ public class QTestUtil {
     conf.setBoolean("hive.test.init.phase", true);
 
     initFromScript();
-    initDatasets();
+    initFromDatasets();
 
     conf.setBoolean("hive.test.init.phase", false);
   }
@@ -1172,32 +1156,13 @@ public class QTestUtil {
 
   private void initFromDatasets() throws IOException {
     for (String table : datasets.getTables()){
-      File tableFile = new File(new File(datasetDir, table), Dataset.TABLE_FILE_NAME);
+      File tableFile = new File(new File(datasetDir, table), Dataset.INIT_FILE_NAME);
       String commands = readEntireFileIntoString(tableFile);
 
       int result = cliDriver.processLine(commands);
       LOG.info("Result from cliDrriver.processLine in initFromDatasets=" + result);
       if (result != 0) {
         Assert.fail("Failed during initFromDatasets processLine with code=" + result);
-      }
-    }
-  }
-
-  private void cleanupDatasets() throws IOException {
-    for (String table : datasets.getTables()) {
-      File cleanupFile = new File(new File(datasetDir, table), Dataset.CLEANUP_FILE_NAME);
-      if (cleanupFile.isFile()) {
-        String cleanupCommands = readEntireFileIntoString(cleanupFile);
-
-        LOG.info("Cleanup (" + table + "):\n" + cleanupCommands);
-
-        int result = getCliDriver().processLine(cleanupCommands);
-        if (result != 0) {
-          LOG.error("Failed during cleanup processLine with code={}. Ignoring", result);
-        }
-      } else {
-        LOG.info(
-            String.format("No cleanup script detected for dataset table: '%s'. Skipping.", table));
       }
     }
   }

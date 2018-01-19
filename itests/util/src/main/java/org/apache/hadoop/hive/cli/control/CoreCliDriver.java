@@ -181,13 +181,8 @@ public class CoreCliDriver extends CliAdapter {
       QTestProcessExecResult result = qt.checkCliDriverResults(fname);
       if (result.getReturnCode() != 0) {
         failed = true;
-<<<<<<< HEAD
-        String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ?
-            debugHint : "\r\n" + result.getCapturedOutput();
-=======
         String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ? debugHint
             : "\r\n" + result.getCapturedOutput();
->>>>>>> f79f8cb963... HIVE-18051 fix format warnings
         qt.failedDiff(result.getReturnCode(), fname, message);
       }
     }

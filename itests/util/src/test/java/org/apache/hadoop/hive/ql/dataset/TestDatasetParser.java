@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,9 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * TestDatasetParser: test class for DataSetParser
+ */
 public class TestDatasetParser {
 
   @Test

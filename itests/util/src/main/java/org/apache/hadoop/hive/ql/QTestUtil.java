@@ -1092,7 +1092,11 @@ public class QTestUtil {
       String cleanupCommands = readEntireFileIntoString(cleanupFile);
       LOG.info("Cleanup (" + cleanupScript + "):\n" + cleanupCommands);
 
-      int result = getCliDriver().processLine(cleanupCommands);
+      if (cliDriver == null) {
+        cliDriver = new CliDriver();
+      }
+
+      int result = cliDriver.processLine(cleanupCommands);
       if (result != 0) {
         LOG.error("Failed during cleanup processLine with code={}. Ignoring", result);
         // TODO Convert this to an Assert.fail once HIVE-14682 is fixed
@@ -1133,7 +1137,12 @@ public class QTestUtil {
     if(!isSessionStateStarted) {
       startSessionState(canReuseSession);
     }
-    getCliDriver().processLine("set test.data.dir=" + testFiles + ";");
+    
+    if (cliDriver == null) {
+      cliDriver = new CliDriver();
+    }
+    
+    cliDriver.processLine("set test.data.dir=" + testFiles + ";");
 
     conf.setBoolean("hive.test.init.phase", true);
 
@@ -1152,7 +1161,7 @@ public class QTestUtil {
     String initCommands = readEntireFileIntoString(scriptFile);
     LOG.info("Initial setup (" + initScript + "):\n" + initCommands);
 
-    int result = getCliDriver().processLine(initCommands);
+    int result = cliDriver.processLine(initCommands);
     LOG.info("Result from cliDrriver.processLine in createSources=" + result);
     if (result != 0) {
       Assert.fail("Failed during createSources processLine with code=" + result);
@@ -1182,7 +1191,7 @@ public class QTestUtil {
       throw new RuntimeException(String.format("dataset file not found %s", tableFile), e);
     }
 
-    int result = getCliDriver().processLine(commands);
+    int result = cliDriver.processLine(commands);
     LOG.info("Result from cliDrriver.processLine in initFromDatasets=" + result);
     if (result != 0) {
       Assert.fail("Failed during initFromDatasets processLine with code=" + result);
@@ -1215,7 +1224,7 @@ public class QTestUtil {
   public void init(String fileName) throws Exception {
     cleanUp(fileName);
     createSources(fileName);
-    getCliDriver().processCmd("set hive.cli.print.header=true;");
+    cliDriver.processCmd("set hive.cli.print.header=true;");
   }
 
   public void cliInit(File file) throws Exception {
@@ -1287,10 +1296,12 @@ public class QTestUtil {
     }
     SessionState.start(ss);
 
+    cliDriver = new CliDriver();
+    
     if (fileName.equals("init_file.q")) {
       ss.initFiles.add(AbstractCliConfig.HIVE_ROOT + "/data/scripts/test_init_file.sql");
     }
-    getCliDriver().processInitFiles(ss);
+    cliDriver.processInitFiles(ss);
 
     return outf.getAbsolutePath();
   }
@@ -1346,7 +1357,7 @@ public class QTestUtil {
     String q1 = q.split(";")[0] + ";";
 
     LOG.debug("Executing " + q1);
-    return getCliDriver().processLine(q1);
+    return cliDriver.processLine(q1);
   }
 
   public int executeOne(String tname) {
@@ -1406,7 +1417,7 @@ public class QTestUtil {
       if (isCommandUsedForTesting(command)) {
         rc = executeTestCommand(command);
       } else {
-        rc = getCliDriver().processLine(command);
+        rc = cliDriver.processLine(command);
       }
 
       if (rc != 0 && !ignoreErrors()) {
@@ -2521,7 +2532,6 @@ public class QTestUtil {
         return  tblId.toString() + "@" + splits[1];
       });
 
-      Files.write(tmpFileLoc2, (Iterable<String>)replacedStream::iterator);
       Files.write(tmpFileLoc2, (Iterable<String>)colStats.entrySet().stream()
         .map(map->map.getKey()+"@COLUMN_STATS_ACCURATE@"+map.getValue())::iterator, StandardOpenOption.APPEND);
 

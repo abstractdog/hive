@@ -38,13 +38,21 @@ import java.util.Map;
  * configurations.
  */
 public abstract class AbstractMetaStoreService {
-  protected Configuration configuration;
+  private Configuration configuration;
   private Warehouse warehouse;
   private FileSystem warehouseRootFs;
   private Path trashDir;
 
   public AbstractMetaStoreService(Configuration configuration) {
     this.configuration = new Configuration(configuration);
+  }
+
+  /**
+   * Returns the actual configuration of the MetaStore.
+   * @return The actual configuration
+   */
+  protected Configuration getConfiguration() {
+    return configuration;
   }
 
   /**
@@ -148,8 +156,8 @@ public abstract class AbstractMetaStoreService {
    * @throws MetaException IO failure
    */
   public void cleanWarehouseDirs() throws MetaException {
-    warehouse.deleteDir(getWarehouseRoot(), true, true);
-    warehouse.deleteDir(trashDir, true, true);
+    warehouse.deleteDir(getWarehouseRoot(), true, true, false);
+    warehouse.deleteDir(trashDir, true, true, false);
   }
 
   /**

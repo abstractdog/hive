@@ -528,7 +528,12 @@ public class MetastoreConf {
             "The special string _HOST will be replaced automatically with the correct host name."),
     LIMIT_PARTITION_REQUEST("metastore.limit.partition.request",
         "hive.metastore.limit.partition.request", -1,
-        "This limits the number of partitions that can be requested from the metastore for a given table.\n" +
+        "This limits the number of partitions (whole partition objects) that can be requested " +
+        "from the metastore for a give table. MetaStore API methods using this are: \n" +
+                "get_partitions, \n" +
+                "get_partitions_with_auth, \n" +
+                "get_partitions_by_filter, \n" +
+                "get_partitions_by_expr.\n" +
             "The default value \"-1\" means no limit."),
     LOG4J_FILE("metastore.log4j.file", "hive.log4j.file", "",
         "Hive log4j configuration file.\n" +
@@ -718,6 +723,12 @@ public class MetastoreConf {
         "Number of retries upon failure of Thrift metastore calls"),
     THRIFT_URIS("metastore.thrift.uris", "hive.metastore.uris", "",
         "Thrift URI for the remote metastore. Used by metastore client to connect to remote metastore."),
+    THRIFT_URI_SELECTION("metastore.thrift.uri.selection", "hive.metastore.uri.selection", "RANDOM",
+        new Validator.StringSet("RANDOM", "SEQUENTIAL"),
+        "Determines the selection mechanism used by metastore client to connect to remote " +
+        "metastore.  SEQUENTIAL implies that the first valid metastore from the URIs specified " +
+        "as part of hive.metastore.uris will be picked.  RANDOM implies that the metastore " +
+        "will be picked randomly"),
     TIMEDOUT_TXN_REAPER_START("metastore.timedout.txn.reaper.start",
         "hive.timedout.txn.reaper.start", 100, TimeUnit.SECONDS,
         "Time delay of 1st reaper run after metastore start"),
@@ -766,6 +777,8 @@ public class MetastoreConf {
             "class is used to store and retrieve transactions and locks"),
     TXN_TIMEOUT("metastore.txn.timeout", "hive.txn.timeout", 300, TimeUnit.SECONDS,
         "time after which transactions are declared aborted if the client has not sent a heartbeat."),
+    URI_RESOLVER("metastore.uri.resolver", "hive.metastore.uri.resolver", "",
+            "If set, fully qualified class name of resolver for hive metastore uri's"),
     USERS_IN_ADMIN_ROLE("metastore.users.in.admin.role", "hive.users.in.admin.role", "", false,
         "Comma separated list of users who are in admin role for bootstrapping.\n" +
             "More users can be added in ADMIN role later."),

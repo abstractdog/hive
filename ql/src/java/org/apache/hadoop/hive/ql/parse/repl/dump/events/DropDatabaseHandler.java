@@ -15,26 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hive.ql.parse.repl.dump.events;
 
-package org.apache.hadoop.hive.ql;
+import org.apache.hadoop.hive.metastore.api.NotificationEvent;
+import org.apache.hadoop.hive.ql.parse.repl.DumpType;
+import org.apache.hadoop.hive.ql.parse.repl.load.DumpMetaData;
 
-public class CommandNeedRetryException extends Exception {
-
-  private static final long serialVersionUID = 1L;
-
-  public CommandNeedRetryException() {
-    super();
+class DropDatabaseHandler extends AbstractEventHandler {
+  DropDatabaseHandler(NotificationEvent event) {
+    super(event);
   }
 
-  public CommandNeedRetryException(String message) {
-    super(message);
+  @Override
+  public void handle(Context withinContext) throws Exception {
+    LOG.info("Processing#{} DROP_DATABASE message : {}", fromEventId(), event.getMessage());
+    DumpMetaData dmd = withinContext.createDmd(this);
+    dmd.setPayload(event.getMessage());
+    dmd.write();
   }
 
-  public CommandNeedRetryException(Throwable cause) {
-    super(cause);
-  }
-
-  public CommandNeedRetryException(String message, Throwable cause) {
-    super(message, cause);
+  @Override
+  public DumpType dumpType() {
+    return DumpType.EVENT_DROP_DATABASE;
   }
 }

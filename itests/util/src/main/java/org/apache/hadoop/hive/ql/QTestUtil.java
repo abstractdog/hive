@@ -92,15 +92,15 @@ import org.apache.hadoop.hive.common.io.SortAndDigestPrintStream;
 import org.apache.hadoop.hive.common.io.SortPrintStream;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+import org.apache.hive.druid.MiniDruidCluster;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.apache.hadoop.hive.llap.LlapItUtils;
 import org.apache.hadoop.hive.llap.daemon.MiniLlapCluster;
 import org.apache.hadoop.hive.llap.io.api.LlapProxy;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.Index;
-import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hadoop.hive.ql.dataset.Dataset;
-import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
-import org.apache.hadoop.hive.ql.dataset.DatasetParser;
+import org.apache.hadoop.hive.ql.cache.results.QueryResultsCache;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.Utilities;
@@ -963,6 +963,26 @@ public class QTestUtil {
     conf.set("hive.metastore.filter.hook",
         "org.apache.hadoop.hive.metastore.DefaultMetaStoreFilterHookImpl");
     db = Hive.get(conf);
+
+    // First delete any MVs to avoid race conditions
+    for (String dbName : db.getAllDatabases()) {
+      SessionState.get().setCurrentDatabase(dbName);
+      for (String tblName : db.getAllTables()) {
+        Table tblObj = null;
+        try {
+          tblObj = db.getTable(tblName);
+        } catch (InvalidTableException e) {
+          LOG.warn("Trying to drop table " + e.getTableName() + ". But it does not exist.");
+          continue;
+        }
+        // only remove MVs first
+        if (!tblObj.isMaterializedView()) {
+          continue;
+        }
+        db.dropTable(dbName, tblName, true, true, fsType == FsType.encrypted_hdfs);
+      }
+    }
+
     // Delete any tables other than the source tables
     // and any databases other than the default database.
     for (String dbName : db.getAllDatabases()) {
@@ -1029,6 +1049,9 @@ public class QTestUtil {
     if (System.getenv(QTEST_LEAVE_FILES) != null) {
       return;
     }
+
+    // Remove any cached results from the previous test.
+    QueryResultsCache.cleanupInstance();
 
     // allocate and initialize a new conf since a test can
     // modify conf by using 'set' commands
@@ -1137,11 +1160,11 @@ public class QTestUtil {
     if(!isSessionStateStarted) {
       startSessionState(canReuseSession);
     }
-    
+
     if (cliDriver == null) {
       cliDriver = new CliDriver();
     }
-    
+
     cliDriver.processLine("set test.data.dir=" + testFiles + ";");
 
     conf.setBoolean("hive.test.init.phase", true);
@@ -1297,7 +1320,7 @@ public class QTestUtil {
     SessionState.start(ss);
 
     cliDriver = new CliDriver();
-    
+
     if (fileName.equals("init_file.q")) {
       ss.initFiles.add(AbstractCliConfig.HIVE_ROOT + "/data/scripts/test_init_file.sql");
     }
@@ -1376,13 +1399,7 @@ public class QTestUtil {
   }
 
   public int execute(String tname) {
-    try {
-      return drv.run(qMap.get(tname)).getResponseCode();
-    } catch (CommandNeedRetryException e) {
-      LOG.error("driver failed to run the command: " + tname + " due to the exception: ", e);
-      e.printStackTrace();
-      return -1;
-    }
+    return drv.run(qMap.get(tname)).getResponseCode();
   }
 
   public int executeClient(String tname1, String tname2) {
@@ -2258,17 +2275,6 @@ public class QTestUtil {
         "./ql/target/surefire-reports or ./itests/qtest/target/surefire-reports/ for specific " +
         "test cases logs.");
     System.err.flush();
-  }
-
-  public static String ensurePathEndsInSlash(String path) {
-    if(path == null) {
-      throw new NullPointerException("Path cannot be null");
-    }
-    if(path.endsWith(File.separator)) {
-      return path;
-    } else {
-      return path + File.separator;
-    }
   }
 
   private static String[] cachedQvFileList = null;

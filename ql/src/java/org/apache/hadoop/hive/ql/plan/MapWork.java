@@ -73,6 +73,25 @@ import com.google.common.collect.Interner;
 @SuppressWarnings({"serial"})
 public class MapWork extends BaseWork {
 
+  public enum LlapIODescriptor {
+    DISABLED(null, false),
+    NO_INPUTS("no inputs", false),
+    UNKNOWN("unknown", false),
+    SOME_INPUTS("some inputs", false),
+    ACID("may be used (ACID table)", true),
+    ALL_INPUTS("all inputs", true),
+    CACHE_ONLY("all inputs (cache only)", true);
+
+    final String desc;
+    final boolean cached;
+
+    LlapIODescriptor(String desc, boolean cached) {
+      this.desc = desc;
+      this.cached = cached;
+    }
+
+  }
+
   // use LinkedHashMap to make sure the iteration order is
   // deterministic, to ease testing
   private LinkedHashMap<Path, ArrayList<String>> pathToAliases = new LinkedHashMap<>();
@@ -98,8 +117,6 @@ public class MapWork extends BaseWork {
   private Path tmpPathForPartitionPruning;
 
   private String inputformat;
-
-  private String indexIntermediateFile;
 
   private Integer numMapTasks;
   private Long maxSplitSize;
@@ -153,7 +170,7 @@ public class MapWork extends BaseWork {
   private byte[] includedBuckets;
 
   /** Whether LLAP IO will be used for inputs. */
-  private String llapIoDesc;
+  private LlapIODescriptor llapIoDesc;
 
   private boolean isMergeFromResolver;
 
@@ -295,32 +312,32 @@ public class MapWork extends BaseWork {
         isLlapOn, canWrapAny, hasPathToPartInfo, hasLlap, hasNonLlap, hasAcid, hasCacheOnly);
   }
 
-  private static String deriveLlapIoDescString(boolean isLlapOn, boolean canWrapAny,
+  private static LlapIODescriptor deriveLlapIoDescString(boolean isLlapOn, boolean canWrapAny,
       boolean hasPathToPartInfo, boolean hasLlap, boolean hasNonLlap, boolean hasAcid,
       boolean hasCacheOnly) {
     if (!isLlapOn) {
-      return null; // LLAP IO is off, don't output.
+      return LlapIODescriptor.DISABLED; // LLAP IO is off, don't output.
     }
     if (!canWrapAny && !hasCacheOnly) {
-      return "no inputs"; // Cannot use with input formats.
+      return LlapIODescriptor.NO_INPUTS; //"no inputs"; // Cannot use with input formats.
     }
     if (!hasPathToPartInfo) {
-      return "unknown"; // No information to judge.
+      return LlapIODescriptor.UNKNOWN; //"unknown"; // No information to judge.
     }
     int varieties = (hasAcid ? 1 : 0) + (hasLlap ? 1 : 0) + (hasCacheOnly ? 1 : 0) + (hasNonLlap ? 1 : 0);
     if (varieties > 1) {
-      return "some inputs"; // Will probably never actually happen.
+      return LlapIODescriptor.SOME_INPUTS; //"some inputs"; // Will probably never actually happen.
     }
     if (hasAcid) {
-      return "may be used (ACID table)";
+      return LlapIODescriptor.ACID; //"may be used (ACID table)";
     }
     if (hasLlap) {
-      return "all inputs";
+      return LlapIODescriptor.ALL_INPUTS;
     }
     if (hasCacheOnly) {
-      return "all inputs (cache only)";
+      return LlapIODescriptor.CACHE_ONLY;
     }
-    return "no inputs";
+    return LlapIODescriptor.NO_INPUTS;
   }
 
   public void internTable(Interner<TableDesc> interner) {
@@ -370,11 +387,15 @@ public class MapWork extends BaseWork {
   }
 
   @Explain(displayName = "LLAP IO", vectorization = Vectorization.SUMMARY_PATH)
-  public String getLlapIoDesc() {
-    return llapIoDesc;
+  public String getLlapIoDescString() {
+    return llapIoDesc.desc;
   }
 
-  public void setNameToSplitSample(HashMap<String, SplitSample> nameToSplitSample) {
+  public boolean getCacheAffinity() {
+    return llapIoDesc.cached;
+  }
+
+ public void setNameToSplitSample(HashMap<String, SplitSample> nameToSplitSample) {
     this.nameToSplitSample = nameToSplitSample;
   }
 
@@ -564,10 +585,6 @@ public class MapWork extends BaseWork {
     return this.mapperCannotSpanPartns;
   }
 
-  public String getIndexIntermediateFile() {
-    return indexIntermediateFile;
-  }
-
   public ArrayList<String> getAliases() {
     return new ArrayList<String>(aliasToWork.keySet());
   }
@@ -616,14 +633,6 @@ public class MapWork extends BaseWork {
   @Explain(displayName = "Path -> Sorted Columns", explainLevels = { Level.EXTENDED })
   public Map<String, List<SortCol>> getSortedColsByDirectory() {
     return sortedColsByDirectory;
-  }
-
-  public void addIndexIntermediateFile(String fileName) {
-    if (this.indexIntermediateFile == null) {
-      this.indexIntermediateFile = fileName;
-    } else {
-      this.indexIntermediateFile += "," + fileName;
-    }
   }
 
   public int getSamplingType() {

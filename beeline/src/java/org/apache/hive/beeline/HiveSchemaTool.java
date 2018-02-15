@@ -157,7 +157,8 @@ public class HiveSchemaTool {
   }
 
   private NestedScriptParser getDbCommandParser(String dbType, String metaDbType) {
-    return HiveSchemaHelper.getDbCommandParser(dbType, dbOpts, userName, passWord, hiveConf, metaDbType);
+    return HiveSchemaHelper.getDbCommandParser(dbType, dbOpts, userName, passWord, hiveConf,
+        metaDbType, false);
   }
 
   /***
@@ -797,7 +798,7 @@ public class HiveSchemaTool {
 
   private List<String> findCreateTable(String path, List<String> tableList)
       throws Exception {
-    NestedScriptParser sp           = HiveSchemaHelper.getDbCommandParser(dbType);
+    NestedScriptParser sp           = HiveSchemaHelper.getDbCommandParser(dbType, false);
     Matcher matcher                 = null;
     Pattern regexp                  = null;
     List<String> subs               = new ArrayList<String>();

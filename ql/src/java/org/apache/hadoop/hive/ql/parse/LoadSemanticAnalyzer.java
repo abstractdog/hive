@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,6 +159,48 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
         if (oneSrc.isDir()) {
           throw new SemanticException(ErrorMsg.INVALID_PATH.getMsg(ast,
               "source contains directory: " + oneSrc.getPath().toString()));
+        }
+      }
+      // Do another loop if table is bucketed
+      List<String> bucketCols = table.getBucketCols();
+      if (bucketCols != null && !bucketCols.isEmpty()) {
+        // Hive assumes that user names the files as per the corresponding
+        // bucket. For e.g, file names should follow the format 000000_0, 000000_1 etc.
+        // Here the 1st file will belong to bucket 0 and 2nd to bucket 1 and so on.
+        boolean[] bucketArray = new boolean[table.getNumBuckets()];
+        // initialize the array
+        Arrays.fill(bucketArray, false);
+        int numBuckets = table.getNumBuckets();
+
+        for (FileStatus oneSrc : srcs) {
+          String bucketName = oneSrc.getPath().getName();
+
+          //get the bucket id
+          String bucketIdStr =
+                  Utilities.getBucketFileNameFromPathSubString(bucketName);
+          int bucketId = Utilities.getBucketIdFromFile(bucketIdStr);
+          LOG.debug("bucket ID for file " + oneSrc.getPath() + " = " + bucketId
+          + " for table " + table.getFullyQualifiedName());
+          if (bucketId == -1) {
+            throw new SemanticException(ErrorMsg.INVALID_PATH.getMsg(
+                    "The file name is invalid : "
+                            + oneSrc.getPath().toString() + " for table "
+            + table.getFullyQualifiedName()));
+          }
+          if (bucketId >= numBuckets) {
+            throw new SemanticException(ErrorMsg.INVALID_PATH.getMsg(
+                    "The file name corresponds to invalid bucketId : "
+                            + oneSrc.getPath().toString())
+                    + ". Maximum number of buckets can be " + numBuckets
+            + " for table " + table.getFullyQualifiedName());
+          }
+          if (bucketArray[bucketId]) {
+            throw new SemanticException(ErrorMsg.INVALID_PATH.getMsg(
+                    "Multiple files for same bucket : " + bucketId
+                            + ". Only 1 file per bucket allowed in single load command. To load multiple files for same bucket, use multiple statements for table "
+            + table.getFullyQualifiedName()));
+          }
+          bucketArray[bucketId] = true;
         }
       }
     } catch (IOException e) {
@@ -317,25 +360,7 @@ public class LoadSemanticAnalyzer extends BaseSemanticAnalyzer {
       statTask = TaskFactory.get(columnStatsWork, conf);
     }
 
-    // HIVE-3334 has been filed for load file with index auto update
-    if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVEINDEXAUTOUPDATE)) {
-      IndexUpdater indexUpdater = new IndexUpdater(loadTableWork, getInputs(), conf);
-      try {
-        List<Task<? extends Serializable>> indexUpdateTasks = indexUpdater.generateUpdateTasks();
-
-        for (Task<? extends Serializable> updateTask : indexUpdateTasks) {
-          //LOAD DATA will either have a copy & move or just a move,
-          // we always want the update to be dependent on the move
-          childTask.addDependentTask(updateTask);
-          if (statTask != null) {
-            updateTask.addDependentTask(statTask);
-          }
-        }
-      } catch (HiveException e) {
-        console.printInfo("WARNING: could not auto-update stale indexes, indexes are not out of sync");
-      }
-    }
-    else if (statTask != null) {
+    if (statTask != null) {
       childTask.addDependentTask(statTask);
     }
   }

@@ -53,7 +53,7 @@ public class EnforceReadOnlyTables implements ExecuteWithHookContext {
       return;
     }
     List<String> readOnlyTables = Arrays.asList(System.getProperty("test.src.tables").split(","));
-    
+
     for (WriteEntity w: outputs) {
       if ((w.getTyp() == WriteEntity.Type.TABLE) ||
           (w.getTyp() == WriteEntity.Type.PARTITION)) {

@@ -122,10 +122,12 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorFactory;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.processors.HiveCommand;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
+import org.apache.hadoop.hive.ql.dataset.DatasetParser;
+import org.apache.hadoop.hive.ql.dataset.Dataset;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hive.common.util.StreamPrinter;
-import org.apache.hive.druid.MiniDruidCluster;
 import org.apache.logging.log4j.util.Strings;
 import org.apache.tools.ant.BuildException;
 import org.apache.zookeeper.WatchedEvent;
@@ -1147,11 +1149,7 @@ public class QTestUtil {
       startSessionState(canReuseSession);
     }
 
-    if (cliDriver == null) {
-      cliDriver = new CliDriver();
-    }
-
-    cliDriver.processLine("set test.data.dir=" + testFiles + ";");
+    getCliDriver().processLine("set test.data.dir=" + testFiles + ";");
 
     conf.setBoolean("hive.test.init.phase", true);
 

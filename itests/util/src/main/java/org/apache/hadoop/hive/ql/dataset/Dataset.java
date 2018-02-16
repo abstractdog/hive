@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,19 +17,16 @@
  */
 package org.apache.hadoop.hive.ql.dataset;
 
-/**
- * Dataset: simple class representation of a dataset
- */
 public class Dataset {
   public static final String INIT_FILE_NAME = "load.hive.sql";
   public static final String CLEANUP_FILE_NAME = "cleanup.hive.sql";
 
   private String table;
-
+  
   public Dataset(String table) {
     this.table = table;
   }
-
+  
   public String getTable(){
     return table;
   }

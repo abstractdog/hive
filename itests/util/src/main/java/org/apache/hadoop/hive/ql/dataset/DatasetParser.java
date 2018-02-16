@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,37 +25,32 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
- * DatasetParser: a parser which could parse dataset "hooks" from q files, --!qt:dataset:mydataset
+ * DatasetParser: a parser which could parse dataset "hooks" from q files,
+ * --!qt:dataset:mydataset
  */
 public class DatasetParser {
 
   private DatasetCollection datasets = new DatasetCollection();
-  private static final Logger LOG = LoggerFactory.getLogger("DatasetParser");
-
   public static final String DATASET_PREFIX = "--! qt:dataset:";
 
-  public void parse(File file) {
-    try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+  public void parse(File file)  {
+    try (BufferedReader br = new BufferedReader(new FileReader(file))){
       for (String line = br.readLine(); line != null; line = br.readLine()) {
-        if (line.trim().startsWith(DATASET_PREFIX)) {
-          Set<String> strDatasets = parseDatasetsFromLine(line);
+         if(line.trim().startsWith(DATASET_PREFIX)){
+           Set<String> strDatasets = parseDatasetsFromLine(line);
 
-          for (String strDataset : strDatasets) {
-            datasets.add(strDataset);
-          }
-        }
+           for (String strDataset : strDatasets){
+             datasets.add(strDataset);
+           }
+         }
       }
-    } catch (IOException e) {
-      LOG.debug(
-          String.format("io exception while searching for datasets in qfile: %s", e.getMessage()));
+    }catch(IOException e){
+      throw new RuntimeException("cannot find qfile while parsing for datasets", e);
     }
   }
 
-  public DatasetCollection getDatasets() {
+  public DatasetCollection getDatasets(){
     return datasets;
   }
 
@@ -63,7 +58,7 @@ public class DatasetParser {
     Set<String> datasets = new HashSet<String>();
 
     input = input.substring(DATASET_PREFIX.length());
-    if (!input.trim().isEmpty()) {
+    if (!input.trim().isEmpty()){
       datasets.addAll(Arrays.asList(input.split(",")));
     }
 

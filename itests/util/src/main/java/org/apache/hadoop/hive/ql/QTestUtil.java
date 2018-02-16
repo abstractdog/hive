@@ -122,9 +122,6 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorFactory;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.processors.HiveCommand;
 import org.apache.hadoop.hive.ql.session.SessionState;
-import org.apache.hadoop.hive.ql.dataset.Dataset;
-import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
-import org.apache.hadoop.hive.ql.dataset.DatasetParser;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hive.common.util.StreamPrinter;
@@ -259,6 +256,14 @@ public class QTestUtil {
       throw new RuntimeException("Source tables cannot be empty");
     }
   }
+
+  private CliDriver getCliDriver() {
+    if(cliDriver == null){
+      cliDriver = new CliDriver();
+    }
+    return cliDriver;
+  }
+
 
   /**
    * Returns the default UDF names which should not be removed when resetting the test database
@@ -1380,7 +1385,7 @@ public class QTestUtil {
     qMap.put(tname, qrest);
 
     System.out.println("Executing " + q1);
-    return cliDriver.processLine(q1);
+    return getCliDriver().processLine(q1);
   }
 
   public int execute(String tname) {

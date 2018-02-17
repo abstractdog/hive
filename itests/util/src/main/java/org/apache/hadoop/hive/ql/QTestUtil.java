@@ -319,7 +319,7 @@ public class QTestUtil {
         Path local_path = new Path(dest, name);
 
         // If this is a source table we do not copy it out
-        if (srcTables.contains(name)) {
+        if (getSrcTables().contains(name)) {
           continue;
         }
 
@@ -1016,7 +1016,7 @@ public class QTestUtil {
       FileSystem fileSystem = p.getFileSystem(conf);
       if (fileSystem.exists(p)) {
         for (FileStatus status : fileSystem.listStatus(p)) {
-          if (status.isDirectory() && !srcTables.contains(status.getPath().getName())) {
+          if (status.isDirectory() && !getSrcTables().contains(status.getPath().getName())) {
             fileSystem.delete(status.getPath(), true);
           }
         }
@@ -1168,7 +1168,7 @@ public class QTestUtil {
     String initCommands = readEntireFileIntoString(scriptFile);
     LOG.info("Initial setup (" + initScript + "):\n" + initCommands);
 
-    int result = getCliDriver().processLine(initCommands);
+    int result = cliDriver.processLine(initCommands);
     LOG.info("Result from cliDrriver.processLine in createSources=" + result);
     if (result != 0) {
       Assert.fail("Failed during createSources processLine with code=" + result);
@@ -1231,7 +1231,7 @@ public class QTestUtil {
   public void init(String fileName) throws Exception {
     cleanUp(fileName);
     createSources(fileName);
-    getCliDriver().processCmd("set hive.cli.print.header=true;");
+    cliDriver.processCmd("set hive.cli.print.header=true;");
   }
 
   public void cliInit(File file) throws Exception {
@@ -1308,7 +1308,7 @@ public class QTestUtil {
     if (fileName.equals("init_file.q")) {
       ss.initFiles.add(AbstractCliConfig.HIVE_ROOT + "/data/scripts/test_init_file.sql");
     }
-    getCliDriver().processInitFiles(ss);
+    cliDriver.processInitFiles(ss);
 
     return outf.getAbsolutePath();
   }
@@ -1364,7 +1364,7 @@ public class QTestUtil {
     String q1 = q.split(";")[0] + ";";
 
     LOG.debug("Executing " + q1);
-    return getCliDriver().processLine(q1);
+    return cliDriver.processLine(q1);
   }
 
   public int executeOne(String tname) {
@@ -1379,7 +1379,7 @@ public class QTestUtil {
     qMap.put(tname, qrest);
 
     System.out.println("Executing " + q1);
-    return getCliDriver().processLine(q1);
+    return cliDriver.processLine(q1);
   }
 
   public int execute(String tname) {
@@ -1418,7 +1418,7 @@ public class QTestUtil {
       if (isCommandUsedForTesting(command)) {
         rc = executeTestCommand(command);
       } else {
-        rc = getCliDriver().processLine(command);
+        rc = cliDriver.processLine(command);
       }
 
       if (rc != 0 && !ignoreErrors()) {

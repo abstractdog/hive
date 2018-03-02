@@ -818,6 +818,18 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     if (!sameColumns || !samePartitions) {
       throw new SemanticException(ErrorMsg.TABLES_INCOMPATIBLE_SCHEMAS.getMsg());
     }
+
+    // Exchange partition is not allowed with transactional tables.
+    // If only source is transactional table, then target will see deleted rows too as no snapshot
+    // isolation applicable for non-acid tables.
+    // If only target is transactional table, then data would be visible to all ongoing transactions
+    // affecting the snapshot isolation.
+    // If both source and targets are transactional tables, then target partition may have delta/base
+    // files with write IDs may not be valid. It may affect snapshot isolation for on-going txns as well.
+    if (AcidUtils.isTransactionalTable(sourceTable) || AcidUtils.isTransactionalTable(destTable)) {
+      throw new SemanticException(ErrorMsg.EXCHANGE_PARTITION_NOT_ALLOWED_WITH_TRANSACTIONAL_TABLES.getMsg());
+    }
+
     // check if source partition exists
     getPartitions(sourceTable, partSpecs, true);
 
@@ -1135,8 +1147,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   private void analyzeCreatePool(ASTNode ast) throws SemanticException {
     // TODO: allow defaults for e.g. scheduling policy.
-    if (ast.getChildCount() != 5) {
-      throw new SemanticException("Invalid syntax for create pool.");
+    if (ast.getChildCount() < 3) {
+      throw new SemanticException("Expected more arguments: " + ast.toStringTree());
     }
     String rpName = unescapeIdentifier(ast.getChild(0).getText());
     String poolPath = poolPath(ast.getChild(1));
@@ -1167,6 +1179,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
     if (!pool.isSetAllocFraction()) {
       throw new SemanticException("alloc_fraction should be specified for a pool");
+    }
+    if (!pool.isSetQueryParallelism()) {
+      throw new SemanticException("query_parallelism should be specified for a pool");
     }
     CreateOrAlterWMPoolDesc desc = new CreateOrAlterWMPoolDesc(pool, poolPath, false);
     addServiceOutput();
@@ -1560,7 +1575,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         Path queryTmpdir = ctx.getExternalTmpPath(newTblPartLoc);
         truncateTblDesc.setOutputDir(queryTmpdir);
         LoadTableDesc ltd = new LoadTableDesc(queryTmpdir, tblDesc,
-            partSpec == null ? new HashMap<>() : partSpec, null);
+            partSpec == null ? new HashMap<>() : partSpec);
         ltd.setLbCtx(lbCtx);
         @SuppressWarnings("unchecked")
         Task<MoveWork> moveTsk =
@@ -2014,7 +2029,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       mergeDesc.setOutputDir(queryTmpdir);
       // No need to handle MM tables - unsupported path.
       LoadTableDesc ltd = new LoadTableDesc(queryTmpdir, tblDesc,
-          partSpec == null ? new HashMap<>() : partSpec, null);
+          partSpec == null ? new HashMap<>() : partSpec);
       ltd.setLbCtx(lbCtx);
       Task<MoveWork> moveTsk =
           TaskFactory.get(new MoveWork(null, null, ltd, null, false), conf);

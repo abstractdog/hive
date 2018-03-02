@@ -490,8 +490,7 @@ public class QTestUtil {
   private enum CoreClusterType {
     MR,
     TEZ,
-    SPARK,
-    DRUID
+    SPARK
   }
 
   public enum FsType {
@@ -510,7 +509,7 @@ public class QTestUtil {
     llap(CoreClusterType.TEZ, FsType.hdfs),
     llap_local(CoreClusterType.TEZ, FsType.local),
     none(CoreClusterType.MR, FsType.local),
-    druid(CoreClusterType.DRUID, FsType.hdfs);
+    druid(CoreClusterType.TEZ, FsType.hdfs);
 
 
     private final CoreClusterType coreClusterType;
@@ -686,6 +685,27 @@ public class QTestUtil {
 
     String uriString = fs.getUri().toString();
 
+    if (clusterType == MiniClusterType.druid) {
+      final String tempDir = System.getProperty("test.tmp.dir");
+      druidCluster = new MiniDruidCluster("mini-druid",
+          getLogDirectory(),
+          tempDir,
+          setup.zkPort,
+          Utilities.jarFinderGetJar(MiniDruidCluster.class)
+      );
+      final Path druidDeepStorage = fs.makeQualified(new Path(druidCluster.getDeepStorageDir()));
+      fs.mkdirs(druidDeepStorage);
+      conf.set("hive.druid.storage.storageDirectory", druidDeepStorage.toUri().getPath());
+      conf.set("hive.druid.metadata.db.type", "derby");
+      conf.set("hive.druid.metadata.uri", druidCluster.getMetadataURI());
+      final Path scratchDir = fs
+          .makeQualified(new Path(System.getProperty("test.tmp.dir"), "druidStagingDir"));
+      fs.mkdirs(scratchDir);
+      conf.set("hive.druid.working.directory", scratchDir.toUri().getPath());
+      druidCluster.init(conf);
+      druidCluster.start();
+    }
+
     if (clusterType.getCoreClusterType() == CoreClusterType.TEZ) {
       if (confDir != null && !confDir.isEmpty()) {
         conf.addResource(new URL("file://" + new File(confDir).toURI().getPath()
@@ -706,18 +726,6 @@ public class QTestUtil {
       mr = shims.getMiniSparkCluster(conf, 2, uriString, 1);
     } else if (clusterType == MiniClusterType.mr) {
       mr = shims.getMiniMrCluster(conf, 2, uriString, 1);
-    } else if (clusterType == MiniClusterType.druid) {
-      final String tempDir = System.getProperty("test.tmp.dir");
-      druidCluster = new MiniDruidCluster("mini-druid",
-              getLogDirectory(),
-              tempDir,
-              setup.zkPort,
-              Utilities.jarFinderGetJar(MiniDruidCluster.class)
-      );
-      druidCluster.init(conf);
-      final Path druidDeepStorage = fs.makeQualified(new Path(druidCluster.getDeepStorageDir()));
-      fs.mkdirs(druidDeepStorage);
-      druidCluster.start();
     }
   }
 
@@ -1216,15 +1224,17 @@ public class QTestUtil {
       createRemoteDirs();
     }
 
-    // Create views registry
-    HiveMaterializedViewsRegistry.get().init();
-
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
     String execEngine = conf.get("hive.execution.engine");
     conf.set("hive.execution.engine", "mr");
     SessionState.start(conf);
     conf.set("hive.execution.engine", execEngine);
     db = Hive.get(conf);
+    // Create views registry
+    String registryImpl = db.getConf().get("hive.server2.materializedviews.registry.impl");
+    db.getConf().set("hive.server2.materializedviews.registry.impl", "DUMMY");
+    HiveMaterializedViewsRegistry.get().init(db);
+    db.getConf().set("hive.server2.materializedviews.registry.impl", registryImpl);
     drv = DriverFactory.newDriver(conf);
     pd = new ParseDriver();
     sem = new SemanticAnalyzer(queryState);

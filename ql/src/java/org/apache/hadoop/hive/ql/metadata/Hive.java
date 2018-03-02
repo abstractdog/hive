@@ -44,6 +44,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -1293,7 +1294,9 @@ public class Hive {
    * @throws HiveException
    */
   public List<RelOptMaterialization> getValidMaterializedViews() throws HiveException {
-    final long diff = conf.getIntVar(HiveConf.ConfVars.HIVE_MATERIALIZED_VIEW_REWRITING_TIME_WINDOW) * 1000;
+    final long diff =
+        HiveConf.getTimeVar(conf, HiveConf.ConfVars.HIVE_MATERIALIZED_VIEW_REWRITING_TIME_WINDOW,
+            TimeUnit.MILLISECONDS);
     final long minTime = System.currentTimeMillis() - diff;
     try {
       // Final result
@@ -1494,17 +1497,19 @@ public class Hive {
    * @param isSrcLocal
    * @param isAcid
    * @param hasFollowingStatsTask
+   * @param writeId
+   * @param stmtId
    * @return
    * @throws HiveException
    */
   public void loadPartition(Path loadPath, String tableName,
       Map<String, String> partSpec, LoadFileType loadFileType, boolean inheritTableSpecs,
       boolean isSkewedStoreAsSubdir,  boolean isSrcLocal, boolean isAcid,
-      boolean hasFollowingStatsTask, Long txnId, int stmtId)
+      boolean hasFollowingStatsTask, Long writeId, int stmtId)
           throws HiveException {
     Table tbl = getTable(tableName);
     loadPartition(loadPath, tbl, partSpec, loadFileType, inheritTableSpecs,
-        isSkewedStoreAsSubdir, isSrcLocal, isAcid, hasFollowingStatsTask, txnId, stmtId);
+        isSkewedStoreAsSubdir, isSrcLocal, isAcid, hasFollowingStatsTask, writeId, stmtId);
   }
 
   /**
@@ -1530,11 +1535,13 @@ public class Hive {
    *          true if this is an ACID operation Insert/Update/Delete operation
    * @param hasFollowingStatsTask
    *          true if there is a following task which updates the stats, so, this method need not update.
+   * @param writeId write ID allocated for the current load operation
+   * @param stmtId statement ID of the current load statement
    * @return Partition object being loaded with data
    */
   public Partition loadPartition(Path loadPath, Table tbl, Map<String, String> partSpec,
       LoadFileType loadFileType, boolean inheritTableSpecs, boolean isSkewedStoreAsSubdir,
-      boolean isSrcLocal, boolean isAcidIUDoperation, boolean hasFollowingStatsTask, Long txnId, int stmtId)
+      boolean isSrcLocal, boolean isAcidIUDoperation, boolean hasFollowingStatsTask, Long writeId, int stmtId)
           throws HiveException {
     Path tblDataLocationPath =  tbl.getDataLocation();
     boolean isMmTableWrite = AcidUtils.isInsertOnlyTable(tbl.getParameters());
@@ -1593,7 +1600,7 @@ public class Hive {
         }
         assert !isAcidIUDoperation;
         if (areEventsForDmlNeeded(tbl, oldPart)) {
-          newFiles = listFilesCreatedByQuery(loadPath, txnId, stmtId);
+          newFiles = listFilesCreatedByQuery(loadPath, writeId, stmtId);
         }
         if (Utilities.FILE_OP_LOGGER.isTraceEnabled()) {
           Utilities.FILE_OP_LOGGER.trace("maybe deleting stuff from " + oldPartPath
@@ -1605,12 +1612,12 @@ public class Hive {
         Path destPath = newPartPath;
         if (isMmTableWrite) {
           // We will load into MM directory, and delete from the parent if needed.
-          destPath = new Path(destPath, AcidUtils.deltaSubdir(txnId, txnId, stmtId));
+          destPath = new Path(destPath, AcidUtils.deltaSubdir(writeId, writeId, stmtId));
           filter = (loadFileType == LoadFileType.REPLACE_ALL)
-            ? new JavaUtils.IdPathFilter(txnId, stmtId, false, true) : filter;
+            ? new JavaUtils.IdPathFilter(writeId, stmtId, false, true) : filter;
         }
         else if(!isAcidIUDoperation && isFullAcidTable) {
-          destPath = fixFullAcidPathForLoadData(loadFileType, destPath, txnId, stmtId, tbl);
+          destPath = fixFullAcidPathForLoadData(loadFileType, destPath, writeId, stmtId, tbl);
         }
         if (Utilities.FILE_OP_LOGGER.isTraceEnabled()) {
           Utilities.FILE_OP_LOGGER.trace("moving " + loadPath + " to " + destPath);
@@ -1720,7 +1727,7 @@ public class Hive {
    * delta_x_x directory - same as any other Acid write.  This method modifies the destPath to add
    * this path component.
    * @param txnId - id of current transaction (in which this operation is running)
-   * @param stmtId - see {@link DbTxnManager#getWriteIdAndIncrement()}
+   * @param stmtId - see {@link DbTxnManager#getStmtIdAndIncrement()}
    * @return appropriately modified path
    */
   private Path fixFullAcidPathForLoadData(LoadFileType loadFileType, Path destPath, long txnId, int stmtId, Table tbl) throws HiveException {
@@ -1984,13 +1991,13 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @param loadFileType
    * @param numDP number of dynamic partitions
    * @param isAcid true if this is an ACID operation
-   * @param txnId txnId, can be 0 unless isAcid == true
+   * @param writeId writeId, can be 0 unless isAcid == true
    * @return partition map details (PartitionSpec and Partition)
    * @throws HiveException
    */
   public Map<Map<String, String>, Partition> loadDynamicPartitions(final Path loadPath,
       final String tableName, final Map<String, String> partSpec, final LoadFileType loadFileType,
-      final int numDP, final int numLB, final boolean isAcid, final long txnId, final int stmtId,
+      final int numDP, final int numLB, final boolean isAcid, final long writeId, final int stmtId,
       final boolean hasFollowingStatsTask, final AcidUtils.Operation operation, boolean isInsertOverwrite)
       throws HiveException {
 
@@ -2006,7 +2013,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
 
     // Get all valid partition paths and existing partitions for them (if any)
     final Table tbl = getTable(tableName);
-    final Set<Path> validPartitions = getValidPartitionsInPath(numDP, numLB, loadPath, txnId, stmtId,
+    final Set<Path> validPartitions = getValidPartitionsInPath(numDP, numLB, loadPath, writeId, stmtId,
         AcidUtils.isInsertOnlyTable(tbl.getParameters()), isInsertOverwrite);
 
     final int partsToLoad = validPartitions.size();
@@ -2041,7 +2048,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
               // load the partition
               Partition newPartition = loadPartition(partPath, tbl, fullPartSpec,
                   loadFileType, true, numLB > 0,
-                  false, isAcid, hasFollowingStatsTask, txnId, stmtId);
+                  false, isAcid, hasFollowingStatsTask, writeId, stmtId);
               partitionsMap.put(fullPartSpec, newPartition);
 
               if (inPlaceEligible) {
@@ -2100,8 +2107,9 @@ private void constructOneLBLocationMap(FileStatus fSta,
         for (Partition p : partitionsMap.values()) {
           partNames.add(p.getName());
         }
-        getMSC().addDynamicPartitions(txnId, tbl.getDbName(), tbl.getTableName(),
-          partNames, AcidUtils.toDataOperationType(operation));
+        getMSC().addDynamicPartitions(parentSession.getTxnMgr().getCurrentTxnId(), writeId,
+                tbl.getDbName(), tbl.getTableName(), partNames,
+                AcidUtils.toDataOperationType(operation));
       }
       LOG.info("Loaded " + partitionsMap.size() + " partitions");
       return partitionsMap;
@@ -2131,10 +2139,12 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @param hasFollowingStatsTask
    *          if there is any following stats task
    * @param isAcidIUDoperation true if this is an ACID based Insert [overwrite]/update/delete
+   * @param writeId write ID allocated for the current load operation
+   * @param stmtId statement ID of the current load statement
    */
   public void loadTable(Path loadPath, String tableName, LoadFileType loadFileType, boolean isSrcLocal,
       boolean isSkewedStoreAsSubdir, boolean isAcidIUDoperation, boolean hasFollowingStatsTask,
-      Long txnId, int stmtId) throws HiveException {
+      Long writeId, int stmtId) throws HiveException {
     List<Path> newFiles = null;
     Table tbl = getTable(tableName);
     assert tbl.getPath() != null : "null==getPath() for " + tbl.getTableName();
@@ -2147,7 +2157,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     // Note: this assumes both paths are qualified; which they are, currently.
     if (isMmTable && loadPath.equals(tbl.getPath())) {
       Utilities.FILE_OP_LOGGER.debug("not moving " + loadPath + " to " + tbl.getPath());
-      newFiles = listFilesCreatedByQuery(loadPath, txnId, stmtId);
+      newFiles = listFilesCreatedByQuery(loadPath, writeId, stmtId);
     } else {
       // Either a non-MM query, or a load into MM table from an external source.
       Path tblPath = tbl.getPath();
@@ -2156,12 +2166,12 @@ private void constructOneLBLocationMap(FileStatus fSta,
       if (isMmTable) {
         assert !isAcidIUDoperation;
         // We will load into MM directory, and delete from the parent if needed.
-        destPath = new Path(destPath, AcidUtils.deltaSubdir(txnId, txnId, stmtId));
+        destPath = new Path(destPath, AcidUtils.deltaSubdir(writeId, writeId, stmtId));
         filter = loadFileType == LoadFileType.REPLACE_ALL
-            ? new JavaUtils.IdPathFilter(txnId, stmtId, false, true) : filter;
+            ? new JavaUtils.IdPathFilter(writeId, stmtId, false, true) : filter;
       }
       else if(!isAcidIUDoperation && isFullAcidTable) {
-        destPath = fixFullAcidPathForLoadData(loadFileType, destPath, txnId, stmtId, tbl);
+        destPath = fixFullAcidPathForLoadData(loadFileType, destPath, writeId, stmtId, tbl);
       }
       Utilities.FILE_OP_LOGGER.debug("moving " + loadPath + " to " + tblPath
           + " (replace = " + loadFileType + ")");
@@ -3638,13 +3648,13 @@ private void constructOneLBLocationMap(FileStatus fSta,
           └── -ext-10000
             ├── HIVE_UNION_SUBDIR_1
             │   └── 000000_0
-            │       ├── _orc_acid_version
             │       └── delta_0000019_0000019_0001
+            │           ├── _orc_acid_version
             │           └── bucket_00000
             ├── HIVE_UNION_SUBDIR_2
             │   └── 000000_0
-            │       ├── _orc_acid_version
             │       └── delta_0000019_0000019_0002
+            │           ├── _orc_acid_version
             │           └── bucket_00000
            The assumption is that we either have all data in subdirs or root of srcPath
            but not both.
@@ -3703,7 +3713,10 @@ private void constructOneLBLocationMap(FileStatus fSta,
       try {
         if (!createdDeltaDirs.contains(deltaDest)) {
           try {
-            fs.mkdirs(deltaDest);
+            if(fs.mkdirs(deltaDest)) {
+              fs.rename(AcidUtils.OrcAcidVersion.getVersionFilePath(deltaStat.getPath()),
+                  AcidUtils.OrcAcidVersion.getVersionFilePath(deltaDest));
+            }
             createdDeltaDirs.add(deltaDest);
           } catch (IOException swallowIt) {
             // Don't worry about this, as it likely just means it's already been created.

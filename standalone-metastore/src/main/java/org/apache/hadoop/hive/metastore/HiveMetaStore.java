@@ -6691,6 +6691,17 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     }
 
     @Override
+    public GetValidWriteIdsResponse get_valid_write_ids(GetValidWriteIdsRequest rqst) throws TException {
+      return getTxnHandler().getValidWriteIds(rqst);
+    }
+
+    @Override
+    public AllocateTableWriteIdsResponse allocate_table_write_ids(
+            AllocateTableWriteIdsRequest rqst) throws TException {
+      return getTxnHandler().allocateTableWriteIds(rqst);
+    }
+
+    @Override
     public LockResponse lock(LockRequest rqst) throws TException {
       return getTxnHandler().lock(rqst);
     }
@@ -7845,7 +7856,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       IHMSHandler handler = newRetryingHMSHandler(baseHandler, conf);
 
       // Initialize materializations invalidation cache
-      MaterializationsInvalidationCache.get().init(handler.getMS(), handler.getTxnHandler());
+      MaterializationsInvalidationCache.get().init(conf, handler);
 
       TServerSocket serverSocket;
 

@@ -1567,8 +1567,8 @@ POSTHOOK: Lineage: src_null.key SCRIPT []
 POSTHOOK: Lineage: src_null.value EXPRESSION []
 Warning: Map Join MAPJOIN[123][bigTable=?] in task 'Map 1' is a cross product
 Warning: Map Join MAPJOIN[124][bigTable=?] in task 'Map 1' is a cross product
-Warning: Map Join MAPJOIN[126][bigTable=?] in task 'Map 1' is a cross product
-Warning: Shuffle Join MERGEJOIN[125][tables = [$hdt$_1, $hdt$_2]] in Stage 'Reducer 3' is a cross product
+Warning: Map Join MAPJOIN[125][bigTable=?] in task 'Map 1' is a cross product
+Warning: Shuffle Join MERGEJOIN[126][tables = [$hdt$_1, $hdt$_2]] in Stage 'Reducer 3' is a cross product
 Warning: Shuffle Join MERGEJOIN[127][tables = [$hdt$_2, $hdt$_3]] in Stage 'Reducer 6' is a cross product
 PREHOOK: query: explain
 select key, value, count(*)
@@ -1846,7 +1846,7 @@ STAGE PLANS:
                         1 Reducer 8
                       Statistics: Num rows: 1 Data size: 668 Basic stats: COMPLETE Column stats: NONE
                       Filter Operator
-                        predicate: (not CASE WHEN ((_col4 = 0)) THEN (false) WHEN (_col4 is null) THEN (false) WHEN (_col8 is not null) THEN (true) WHEN (_col2 is null) THEN (null) WHEN ((_col5 < _col4)) THEN (true) ELSE (false) END) (type: boolean)
+                        predicate: (not CASE WHEN ((_col4 = 0L)) THEN (false) WHEN (_col4 is null) THEN (false) WHEN (_col8 is not null) THEN (true) WHEN (_col2 is null) THEN (null) WHEN ((_col5 < _col4)) THEN (true) ELSE (false) END) (type: boolean)
                         Statistics: Num rows: 1 Data size: 668 Basic stats: COMPLETE Column stats: NONE
                         Select Operator
                           expressions: _col0 (type: string), _col1 (type: string), _col2 (type: bigint)
@@ -2043,8 +2043,8 @@ STAGE PLANS:
 
 Warning: Map Join MAPJOIN[123][bigTable=?] in task 'Map 1' is a cross product
 Warning: Map Join MAPJOIN[124][bigTable=?] in task 'Map 1' is a cross product
-Warning: Map Join MAPJOIN[126][bigTable=?] in task 'Map 1' is a cross product
-Warning: Shuffle Join MERGEJOIN[125][tables = [$hdt$_1, $hdt$_2]] in Stage 'Reducer 3' is a cross product
+Warning: Map Join MAPJOIN[125][bigTable=?] in task 'Map 1' is a cross product
+Warning: Shuffle Join MERGEJOIN[126][tables = [$hdt$_1, $hdt$_2]] in Stage 'Reducer 3' is a cross product
 Warning: Shuffle Join MERGEJOIN[127][tables = [$hdt$_2, $hdt$_3]] in Stage 'Reducer 6' is a cross product
 PREHOOK: query: select key, value, count(*)
 from src_null b

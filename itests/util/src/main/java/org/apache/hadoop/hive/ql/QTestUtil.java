@@ -1176,6 +1176,8 @@ public class QTestUtil {
   }
 
   private void initDataSetForTest(File file){
+    getCliDriver().processLine("set test.data.dir=" + testFiles + ";");
+
     DatasetParser parser = new DatasetParser();
     parser.parse(file);
 

@@ -1252,12 +1252,13 @@ public class QTestUtil {
 
   public String cliInit(File file, boolean recreate) throws Exception {
     String fileName = file.getName();
-    initDataSetForTest(file);
 
     if (recreate) {
       cleanUp(fileName);
       createSources(fileName);
     }
+
+    initDataSetForTest(file);
 
     HiveConf.setVar(conf, HiveConf.ConfVars.HIVE_AUTHENTICATOR_MANAGER,
     "org.apache.hadoop.hive.ql.security.DummyAuthenticator");

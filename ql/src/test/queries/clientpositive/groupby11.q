@@ -1,3 +1,5 @@
+--! qt:dataset:dest2
+--! qt:dataset:dest1
 set hive.mapred.mode=nonstrict;
 set hive.map.aggr=false;
 set hive.groupby.skewindata=true;

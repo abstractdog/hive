@@ -1,3 +1,5 @@
+--! qt:dataset:dest2
+--! qt:dataset:dest1
 set hive.map.aggr=true;
 
 -- SORT_QUERY_RESULTS

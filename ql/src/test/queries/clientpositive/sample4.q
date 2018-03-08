@@ -1,3 +1,4 @@
+--! qt:dataset:dest1
 CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 -- bucket column is the same as table sample

@@ -1,3 +1,8 @@
+--! qt:dataset:srcbucket2
+--! qt:dataset:src_thrift
+--! qt:dataset:dest3
+--! qt:dataset:dest2
+--! qt:dataset:dest1
 -- SORT_QUERY_RESULTS
 
 DROP TABLE dest1;

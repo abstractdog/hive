@@ -1,3 +1,4 @@
+--! qt:dataset:dest1
 set hive.fetch.task.conversion=more;
 
 DESCRIBE FUNCTION concat_ws;

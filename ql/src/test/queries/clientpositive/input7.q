@@ -1,3 +1,4 @@
+--! qt:dataset:dest1
 CREATE TABLE dest1(c1 DOUBLE, c2 INT) STORED AS TEXTFILE;
 
 EXPLAIN

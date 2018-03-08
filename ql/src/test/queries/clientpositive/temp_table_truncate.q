@@ -1,3 +1,5 @@
+--! qt:dataset:srcpart
+--! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;
 CREATE TEMPORARY TABLE tmp_src AS SELECT * FROM src WHERE key % 2 = 0;

@@ -1,3 +1,4 @@
+--! qt:dataset:dest1
 CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 -- input pruning, no sample filter

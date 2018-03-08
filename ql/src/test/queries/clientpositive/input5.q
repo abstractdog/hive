@@ -1,3 +1,5 @@
+--! qt:dataset:src_thrift
+--! qt:dataset:dest1
 CREATE TABLE dest1(key STRING, value STRING) STORED AS TEXTFILE;
 
 EXPLAIN

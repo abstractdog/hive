@@ -1,3 +1,4 @@
+--! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- sampling with join and alias
 -- SORT_QUERY_RESULTS

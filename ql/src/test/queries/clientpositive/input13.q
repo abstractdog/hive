@@ -1,3 +1,6 @@
+--! qt:dataset:dest3
+--! qt:dataset:dest2
+--! qt:dataset:dest1
 set hive.mapred.mode=nonstrict;
 CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 CREATE TABLE dest2(key INT, value STRING) STORED AS TEXTFILE;

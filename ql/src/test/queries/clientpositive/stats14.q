@@ -1,3 +1,4 @@
+--! qt:dataset:src
 set datanucleus.cache.collections=false;
 
 create table stats_src like src;

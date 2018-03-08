@@ -35,7 +35,6 @@ import org.apache.hadoop.hive.common.classification.RetrySemantics;
 import org.apache.hadoop.hive.metastore.annotation.NoReconnect;
 import org.apache.hadoop.hive.metastore.api.AggrStats;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
-import org.apache.hadoop.hive.metastore.api.BasicTxnInfo;
 import org.apache.hadoop.hive.metastore.api.CmRecycleRequest;
 import org.apache.hadoop.hive.metastore.api.CmRecycleResponse;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hive.metastore.api.ConfigValSecurityException;
 import org.apache.hadoop.hive.metastore.api.CreationMetadata;
 import org.apache.hadoop.hive.metastore.api.CurrentNotificationEventId;
 import org.apache.hadoop.hive.metastore.api.DataOperationType;
+import org.apache.hadoop.hive.metastore.api.DefaultConstraintsRequest;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -62,7 +62,6 @@ import org.apache.hadoop.hive.metastore.api.GetRoleGrantsForPrincipalResponse;
 import org.apache.hadoop.hive.metastore.api.HeartbeatTxnRangeResponse;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
 import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -90,6 +89,7 @@ import org.apache.hadoop.hive.metastore.api.PrincipalPrivilegeSet;
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
 import org.apache.hadoop.hive.metastore.api.Role;
+import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
@@ -926,7 +926,7 @@ public interface IMetaStoreClient {
    *          table name of the old partition
    * @param newParts
    *          list of partitions
-   * @param environmentContext 
+   * @param environmentContext
    * @throws InvalidOperationException
    *           if the old partition does not exist
    * @throws MetaException
@@ -1019,77 +1019,6 @@ public interface IMetaStoreClient {
    */
   Map<String, String> partitionNameToSpec(String name)
       throws MetaException, TException;
-
-  /**
-   * create an index
-   * @param index the index object
-   * @throws InvalidObjectException
-   * @throws MetaException
-   * @throws NoSuchObjectException
-   * @throws TException
-   * @throws AlreadyExistsException
-   */
-  void createIndex(Index index, Table indexTable) throws InvalidObjectException,
-      MetaException, NoSuchObjectException, TException, AlreadyExistsException;
-
-  void alter_index(String dbName, String tblName, String indexName,
-      Index index) throws InvalidOperationException, MetaException, TException;
-
-  /**
-   *
-   * @param dbName
-   * @param tblName
-   * @param indexName
-   * @return the index
-   * @throws MetaException
-   * @throws UnknownTableException
-   * @throws NoSuchObjectException
-   * @throws TException
-   */
-  Index getIndex(String dbName, String tblName, String indexName)
-      throws MetaException, UnknownTableException, NoSuchObjectException,
-      TException;
-
-
-  /**
-   * list indexes of the give base table
-   * @param db_name
-   * @param tbl_name
-   * @param max
-   * @return the list of indexes
-   * @throws NoSuchObjectException
-   * @throws MetaException
-   * @throws TException
-   */
-  List<Index> listIndexes(String db_name, String tbl_name,
-      short max) throws NoSuchObjectException, MetaException, TException;
-
-  /**
-   * list all the index names of the give base table.
-   *
-   * @param db_name
-   * @param tbl_name
-   * @param max
-   * @return the list of names
-   * @throws MetaException
-   * @throws TException
-   */
-  List<String> listIndexNames(String db_name, String tbl_name,
-      short max) throws MetaException, TException;
-
-  /**
-   * @param db_name
-   * @param tbl_name
-   * @param name index name
-   * @param deleteData
-   * @return true on success
-   * @throws NoSuchObjectException
-   * @throws MetaException
-   * @throws TException
-   */
-  boolean dropIndex(String db_name, String tbl_name,
-      String name, boolean deleteData) throws NoSuchObjectException,
-      MetaException, TException;
 
   /**
    * Write table level column statistics to persistent store
@@ -1811,11 +1740,15 @@ public interface IMetaStoreClient {
   List<SQLNotNullConstraint> getNotNullConstraints(NotNullConstraintsRequest request) throws MetaException,
     NoSuchObjectException, TException;
 
+  List<SQLDefaultConstraint> getDefaultConstraints(DefaultConstraintsRequest request) throws MetaException,
+      NoSuchObjectException, TException;
+
   void createTableWithConstraints(
     org.apache.hadoop.hive.metastore.api.Table tTbl,
     List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys,
     List<SQLUniqueConstraint> uniqueConstraints,
-    List<SQLNotNullConstraint> notNullConstraints)
+    List<SQLNotNullConstraint> notNullConstraints,
+    List<SQLDefaultConstraint> defaultConstraints)
     throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException;
 
   void dropConstraint(String dbName, String tableName, String constraintName) throws
@@ -1832,6 +1765,9 @@ public interface IMetaStoreClient {
 
   void addNotNullConstraint(List<SQLNotNullConstraint> notNullConstraintCols) throws
   MetaException, NoSuchObjectException, TException;
+
+  void addDefaultConstraint(List<SQLDefaultConstraint> defaultConstraints) throws
+      MetaException, NoSuchObjectException, TException;
 
   /**
    * Gets the unique id of the backing database instance used for storing metadata

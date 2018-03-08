@@ -518,13 +518,13 @@ import org.slf4j.LoggerFactory;
           case 1: // TABLES_USED
             if (schemeField.type == org.apache.thrift.protocol.TType.SET) {
               {
-                org.apache.thrift.protocol.TSet _set786 = iprot.readSetBegin();
-                struct.tablesUsed = new HashSet<String>(2*_set786.size);
-                String _elem787;
-                for (int _i788 = 0; _i788 < _set786.size; ++_i788)
+                org.apache.thrift.protocol.TSet _set792 = iprot.readSetBegin();
+                struct.tablesUsed = new HashSet<String>(2*_set792.size);
+                String _elem793;
+                for (int _i794 = 0; _i794 < _set792.size; ++_i794)
                 {
-                  _elem787 = iprot.readString();
-                  struct.tablesUsed.add(_elem787);
+                  _elem793 = iprot.readString();
+                  struct.tablesUsed.add(_elem793);
                 }
                 iprot.readSetEnd();
               }
@@ -566,9 +566,9 @@ import org.slf4j.LoggerFactory;
         oprot.writeFieldBegin(TABLES_USED_FIELD_DESC);
         {
           oprot.writeSetBegin(new org.apache.thrift.protocol.TSet(org.apache.thrift.protocol.TType.STRING, struct.tablesUsed.size()));
-          for (String _iter789 : struct.tablesUsed)
+          for (String _iter795 : struct.tablesUsed)
           {
-            oprot.writeString(_iter789);
+            oprot.writeString(_iter795);
           }
           oprot.writeSetEnd();
         }
@@ -603,9 +603,9 @@ import org.slf4j.LoggerFactory;
       TTupleProtocol oprot = (TTupleProtocol) prot;
       {
         oprot.writeI32(struct.tablesUsed.size());
-        for (String _iter790 : struct.tablesUsed)
+        for (String _iter796 : struct.tablesUsed)
         {
-          oprot.writeString(_iter790);
+          oprot.writeString(_iter796);
         }
       }
       oprot.writeI64(struct.invalidationTime);
@@ -623,13 +623,13 @@ import org.slf4j.LoggerFactory;
     public void read(org.apache.thrift.protocol.TProtocol prot, Materialization struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       {
-        org.apache.thrift.protocol.TSet _set791 = new org.apache.thrift.protocol.TSet(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-        struct.tablesUsed = new HashSet<String>(2*_set791.size);
-        String _elem792;
-        for (int _i793 = 0; _i793 < _set791.size; ++_i793)
+        org.apache.thrift.protocol.TSet _set797 = new org.apache.thrift.protocol.TSet(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+        struct.tablesUsed = new HashSet<String>(2*_set797.size);
+        String _elem798;
+        for (int _i799 = 0; _i799 < _set797.size; ++_i799)
         {
-          _elem792 = iprot.readString();
-          struct.tablesUsed.add(_elem792);
+          _elem798 = iprot.readString();
+          struct.tablesUsed.add(_elem798);
         }
       }
       struct.setTablesUsedIsSet(true);

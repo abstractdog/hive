@@ -36,7 +36,6 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.FileMetadataExprType;
 import org.apache.hadoop.hive.metastore.api.Function;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -61,6 +60,7 @@ import org.apache.hadoop.hive.metastore.api.WMTrigger;
 import org.apache.hadoop.hive.metastore.api.WMValidateResourcePlanResponse;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.RolePrincipalGrant;
+import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
@@ -310,57 +310,11 @@ public class DummyRawStoreForJdoConnection implements RawStore {
   @Override
   public void alterPartition(String db_name, String tbl_name, List<String> part_vals,
       Partition new_part) throws InvalidObjectException, MetaException {
-
-
   }
 
   @Override
   public void alterPartitions(String db_name, String tbl_name, List<List<String>> part_vals_list,
       List<Partition> new_parts) throws InvalidObjectException, MetaException {
-
-
-  }
-
-
-  @Override
-  public boolean addIndex(Index index) throws InvalidObjectException, MetaException {
-
-    return false;
-  }
-
-  @Override
-  public Index getIndex(String dbName, String origTableName, String indexName)
-      throws MetaException {
-
-    return null;
-  }
-
-  @Override
-  public boolean dropIndex(String dbName, String origTableName, String indexName)
-      throws MetaException {
-
-    return false;
-  }
-
-  @Override
-  public List<Index> getIndexes(String dbName, String origTableName, int max)
-      throws MetaException {
-
-    return null;
-  }
-
-  @Override
-  public List<String> listIndexNames(String dbName, String origTableName, short max)
-      throws MetaException {
-
-    return Collections.emptyList();
-  }
-
-  @Override
-  public void alterIndex(String dbname, String baseTblName, String name, Index newIndex)
-      throws InvalidObjectException, MetaException {
-
-
   }
 
   @Override
@@ -841,6 +795,7 @@ public class DummyRawStoreForJdoConnection implements RawStore {
     return null;
   }
 
+  @Override
   public void flushCache() {
 
   }
@@ -915,10 +870,18 @@ public class DummyRawStoreForJdoConnection implements RawStore {
   }
 
   @Override
+  public List<SQLDefaultConstraint> getDefaultConstraints(String db_name, String tbl_name)
+      throws MetaException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
   public List<String> createTableWithConstraints(Table tbl,
     List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys,
     List<SQLUniqueConstraint> uniqueConstraints,
-    List<SQLNotNullConstraint> notNullConstraints)
+    List<SQLNotNullConstraint> notNullConstraints,
+    List<SQLDefaultConstraint> defaultConstraints)
     throws InvalidObjectException, MetaException {
     // TODO Auto-generated method stub
     return null;
@@ -944,6 +907,7 @@ public class DummyRawStoreForJdoConnection implements RawStore {
     return null;
   }
 
+  @Override
   public List<String> addUniqueConstraints(List<SQLUniqueConstraint> uks)
     throws InvalidObjectException, MetaException {
     // TODO Auto-generated method stub
@@ -953,6 +917,13 @@ public class DummyRawStoreForJdoConnection implements RawStore {
   @Override
   public List<String> addNotNullConstraints(List<SQLNotNullConstraint> nns)
     throws InvalidObjectException, MetaException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public List<String> addDefaultConstraints(List<SQLDefaultConstraint> nns)
+      throws InvalidObjectException, MetaException {
     // TODO Auto-generated method stub
     return null;
   }

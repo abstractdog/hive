@@ -157,54 +157,6 @@ FROM
   \"GLOBAL_PRIVS\""
 );
 
-CREATE TABLE IF NOT EXISTS `IDXS` (
-  `INDEX_ID` bigint,
-  `CREATE_TIME` int,
-  `DEFERRED_REBUILD` boolean,
-  `INDEX_HANDLER_CLASS` string,
-  `INDEX_NAME` string,
-  `INDEX_TBL_ID` bigint,
-  `LAST_ACCESS_TIME` int,
-  `ORIG_TBL_ID` bigint,
-  `SD_ID` bigint,
-  CONSTRAINT `SYS_PK_IDXS` PRIMARY KEY (`INDEX_ID`) DISABLE
-)
-STORED BY 'org.apache.hive.storage.jdbc.JdbcStorageHandler'
-TBLPROPERTIES (
-"hive.sql.database.type" = "METASTORE",
-"hive.sql.query" =
-"SELECT
-  \"INDEX_ID\",
-  \"CREATE_TIME\",
-  \"DEFERRED_REBUILD\",
-  \"INDEX_HANDLER_CLASS\",
-  \"INDEX_NAME\",
-  \"INDEX_TBL_ID\",
-  \"LAST_ACCESS_TIME\",
-  \"ORIG_TBL_ID\",
-  \"SD_ID\"
-FROM
-  \"IDXS\""
-);
-
-CREATE TABLE IF NOT EXISTS `INDEX_PARAMS` (
-  `INDEX_ID` bigint,
-  `PARAM_KEY` string,
-  `PARAM_VALUE` string,
-  CONSTRAINT `SYS_PK_INDEX_PARAMS` PRIMARY KEY (`INDEX_ID`,`PARAM_KEY`) DISABLE
-)
-STORED BY 'org.apache.hive.storage.jdbc.JdbcStorageHandler'
-TBLPROPERTIES (
-"hive.sql.database.type" = "METASTORE",
-"hive.sql.query" =
-"SELECT
-  \"INDEX_ID\",
-  \"PARAM_KEY\",
-  \"PARAM_VALUE\"
-FROM
-  \"INDEX_PARAMS\""
-);
-
 CREATE TABLE IF NOT EXISTS `PARTITIONS` (
   `PART_ID` bigint,
   `CREATE_TIME` int,
@@ -935,6 +887,7 @@ CREATE TABLE IF NOT EXISTS `KEY_CONSTRAINTS`
   `UPDATE_RULE` string,
   `DELETE_RULE` string,
   `ENABLE_VALIDATE_RELY` int,
+  `DEFAULT_VALUE` string,
   CONSTRAINT `SYS_PK_KEY_CONSTRAINTS` PRIMARY KEY (`CONSTRAINT_NAME`, `POSITION`) DISABLE
 )
 STORED BY 'org.apache.hive.storage.jdbc.JdbcStorageHandler'
@@ -953,7 +906,8 @@ TBLPROPERTIES (
   \"CONSTRAINT_TYPE\",
   \"UPDATE_RULE\",
   \"DELETE_RULE\",
-  \"ENABLE_VALIDATE_RELY\"
+  \"ENABLE_VALIDATE_RELY\",
+  \"DEFAULT_VALUE\"
 FROM
   \"KEY_CONSTRAINTS\""
 );

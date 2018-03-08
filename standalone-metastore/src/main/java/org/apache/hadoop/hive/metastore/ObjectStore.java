@@ -92,7 +92,6 @@ import org.apache.hadoop.hive.metastore.api.FunctionType;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
 import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
 import org.apache.hadoop.hive.metastore.api.HiveObjectType;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -117,6 +116,7 @@ import org.apache.hadoop.hive.metastore.api.ResourceType;
 import org.apache.hadoop.hive.metastore.api.ResourceUri;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.RolePrincipalGrant;
+import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
@@ -155,7 +155,6 @@ import org.apache.hadoop.hive.metastore.model.MDelegationToken;
 import org.apache.hadoop.hive.metastore.model.MFieldSchema;
 import org.apache.hadoop.hive.metastore.model.MFunction;
 import org.apache.hadoop.hive.metastore.model.MGlobalPrivilege;
-import org.apache.hadoop.hive.metastore.model.MIndex;
 import org.apache.hadoop.hive.metastore.model.MMasterKey;
 import org.apache.hadoop.hive.metastore.model.MMetastoreDBProperties;
 import org.apache.hadoop.hive.metastore.model.MNotificationLog;
@@ -1092,8 +1091,8 @@ public class ObjectStore implements RawStore, Configurable {
   @Override
   public List<String> createTableWithConstraints(Table tbl,
     List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys,
-    List<SQLUniqueConstraint> uniqueConstraints,
-    List<SQLNotNullConstraint> notNullConstraints)
+    List<SQLUniqueConstraint> uniqueConstraints, List<SQLNotNullConstraint> notNullConstraints,
+    List<SQLDefaultConstraint> defaultConstraints)
     throws InvalidObjectException, MetaException {
     boolean success = false;
     try {
@@ -1106,6 +1105,7 @@ public class ObjectStore implements RawStore, Configurable {
       constraintNames.addAll(addPrimaryKeys(primaryKeys, false));
       constraintNames.addAll(addUniqueConstraints(uniqueConstraints, false));
       constraintNames.addAll(addNotNullConstraints(notNullConstraints, false));
+      constraintNames.addAll(addDefaultConstraints(defaultConstraints, false));
       success = commitTransaction();
       return constraintNames;
     } finally {
@@ -3775,37 +3775,6 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
-  @Override
-  public void alterIndex(String dbname, String baseTblName, String name, Index newIndex)
-      throws InvalidObjectException, MetaException {
-    boolean success = false;
-    try {
-      openTransaction();
-      name = normalizeIdentifier(name);
-      baseTblName = normalizeIdentifier(baseTblName);
-      dbname = normalizeIdentifier(dbname);
-      MIndex newi = convertToMIndex(newIndex);
-      if (newi == null) {
-        throw new InvalidObjectException("new index is invalid");
-      }
-
-      MIndex oldi = getMIndex(dbname, baseTblName, name);
-      if (oldi == null) {
-        throw new MetaException("index " + name + " doesn't exist");
-      }
-
-      // For now only alter parameters are allowed
-      oldi.setParameters(newi.getParameters());
-
-      // commit the changes
-      success = commitTransaction();
-    } finally {
-      if (!success) {
-        rollbackTransaction();
-      }
-    }
-  }
-
   /**
    * Alters an existing partition. Initiates copy of SD. Returns the old CD.
    * @param dbname
@@ -4245,6 +4214,9 @@ public class ObjectStore implements RawStore, Configurable {
             }
           } else {
             currentConstraintName = normalizeIdentifier(foreignKey.getFk_name());
+            if(constraintNameAlreadyExists(currentConstraintName)) {
+              throw new InvalidObjectException("Constraint name already exists: " + currentConstraintName);
+            }
           }
           fkNames.add(currentConstraintName);
           Integer updateRule = foreignKey.getUpdate_rule();
@@ -4396,6 +4368,9 @@ public class ObjectStore implements RawStore, Configurable {
         }
       } else {
         constraintName = normalizeIdentifier(pks.get(i).getPk_name());
+        if(constraintNameAlreadyExists(constraintName)) {
+          throw new InvalidObjectException("Constraint name already exists: " + constraintName);
+        }
       }
       pkNames.add(constraintName);
       int enableValidateRely = (pks.get(i).isEnable_cstr() ? 4 : 0) +
@@ -4461,6 +4436,9 @@ public class ObjectStore implements RawStore, Configurable {
         }
       } else {
         constraintName = normalizeIdentifier(uks.get(i).getUk_name());
+        if(constraintNameAlreadyExists(constraintName)) {
+          throw new InvalidObjectException("Constraint name already exists: " + constraintName);
+        }
       }
       ukNames.add(constraintName);
 
@@ -4489,6 +4467,75 @@ public class ObjectStore implements RawStore, Configurable {
   public List<String> addNotNullConstraints(List<SQLNotNullConstraint> nns)
           throws InvalidObjectException, MetaException {
     return addNotNullConstraints(nns, true);
+  }
+
+  @Override
+  public List<String> addDefaultConstraints(List<SQLDefaultConstraint> nns)
+      throws InvalidObjectException, MetaException {
+    return addDefaultConstraints(nns, true);
+  }
+
+  private List<String> addDefaultConstraints(List<SQLDefaultConstraint> nns, boolean retrieveCD)
+      throws InvalidObjectException, MetaException {
+    List<String> nnNames = new ArrayList<>();
+    List<MConstraint> cstrs = new ArrayList<>();
+    String constraintName = null;
+
+    for (int i = 0; i < nns.size(); i++) {
+      final String tableDB = normalizeIdentifier(nns.get(i).getTable_db());
+      final String tableName = normalizeIdentifier(nns.get(i).getTable_name());
+      final String columnName = normalizeIdentifier(nns.get(i).getColumn_name());
+
+      // If retrieveCD is false, we do not need to do a deep retrieval of the Table Column Descriptor.
+      // For instance, this is the case when we are creating the table.
+      AttachedMTableInfo nParentTable = getMTable(tableDB, tableName, retrieveCD);
+      MTable parentTable = nParentTable.mtbl;
+      if (parentTable == null) {
+        throw new InvalidObjectException("Parent table not found: " + tableName);
+      }
+
+      MColumnDescriptor parentCD = retrieveCD ? nParentTable.mcd : parentTable.getSd().getCD();
+      int parentIntegerIndex = getColumnIndexFromTableColumns(parentCD == null ? null : parentCD.getCols(), columnName);
+      if (parentIntegerIndex == -1) {
+        if (parentTable.getPartitionKeys() != null) {
+          parentCD = null;
+          parentIntegerIndex = getColumnIndexFromTableColumns(parentTable.getPartitionKeys(), columnName);
+        }
+        if (parentIntegerIndex == -1) {
+          throw new InvalidObjectException("Parent column not found: " + columnName);
+        }
+      }
+      if (nns.get(i).getDc_name() == null) {
+        constraintName = generateConstraintName(tableDB, tableName, columnName, "dc");
+      } else {
+        constraintName = normalizeIdentifier(nns.get(i).getDc_name());
+        if(constraintNameAlreadyExists(constraintName)) {
+          throw new InvalidObjectException("Constraint name already exists: " + constraintName);
+        }
+      }
+      nnNames.add(constraintName);
+
+      int enableValidateRely = (nns.get(i).isEnable_cstr() ? 4 : 0) +
+          (nns.get(i).isValidate_cstr() ? 2 : 0) + (nns.get(i).isRely_cstr() ? 1 : 0);
+      String defaultValue = nns.get(i).getDefault_value();
+      MConstraint muk = new MConstraint(
+          constraintName,
+          MConstraint.DEFAULT_CONSTRAINT,
+          1, // Not null constraint should reference a single column
+          null,
+          null,
+          enableValidateRely,
+          parentTable,
+          null,
+          parentCD,
+          null,
+          null,
+          parentIntegerIndex,
+          defaultValue);
+      cstrs.add(muk);
+    }
+    pm.makePersistentAll(cstrs);
+    return nnNames;
   }
 
   private List<String> addNotNullConstraints(List<SQLNotNullConstraint> nns, boolean retrieveCD)
@@ -4525,6 +4572,9 @@ public class ObjectStore implements RawStore, Configurable {
         constraintName = generateConstraintName(tableDB, tableName, columnName, "nn");
       } else {
         constraintName = normalizeIdentifier(nns.get(i).getNn_name());
+        if(constraintNameAlreadyExists(constraintName)) {
+          throw new InvalidObjectException("Constraint name already exists: " + constraintName);
+        }
       }
       nnNames.add(constraintName);
 
@@ -4547,190 +4597,6 @@ public class ObjectStore implements RawStore, Configurable {
     }
     pm.makePersistentAll(cstrs);
     return nnNames;
-  }
-
-  @Override
-  public boolean addIndex(Index index) throws InvalidObjectException,
-      MetaException {
-    boolean commited = false;
-    try {
-      openTransaction();
-      MIndex idx = convertToMIndex(index);
-      pm.makePersistent(idx);
-      commited = commitTransaction();
-      return true;
-    } finally {
-      if (!commited) {
-        rollbackTransaction();
-        return false;
-      }
-    }
-  }
-
-  private MIndex convertToMIndex(Index index) throws InvalidObjectException,
-      MetaException {
-
-    StorageDescriptor sd = index.getSd();
-    if (sd == null) {
-      throw new InvalidObjectException("Storage descriptor is not defined for index.");
-    }
-
-    MStorageDescriptor msd = this.convertToMStorageDescriptor(sd);
-    MTable origTable = getMTable(index.getDbName(), index.getOrigTableName());
-    if (origTable == null) {
-      throw new InvalidObjectException(
-          "Original table does not exist for the given index.");
-    }
-
-    String[] qualified = MetaStoreUtils.getQualifiedName(index.getDbName(), index.getIndexTableName());
-    MTable indexTable = getMTable(qualified[0], qualified[1]);
-    if (indexTable == null) {
-      throw new InvalidObjectException(
-          "Underlying index table does not exist for the given index.");
-    }
-
-    return new MIndex(normalizeIdentifier(index.getIndexName()), origTable, index.getCreateTime(),
-        index.getLastAccessTime(), index.getParameters(), indexTable, msd,
-        index.getIndexHandlerClass(), index.isDeferredRebuild());
-  }
-
-  @Override
-  public boolean dropIndex(String dbName, String origTableName, String indexName)
-      throws MetaException {
-    boolean success = false;
-    try {
-      openTransaction();
-      MIndex index = getMIndex(dbName, origTableName, indexName);
-      if (index != null) {
-        pm.deletePersistent(index);
-      }
-      success = commitTransaction();
-    } finally {
-      if (!success) {
-        rollbackTransaction();
-      }
-    }
-    return success;
-  }
-
-  private MIndex getMIndex(String dbName, String originalTblName, String indexName)
-      throws MetaException {
-    MIndex midx = null;
-    boolean commited = false;
-    Query query = null;
-    try {
-      openTransaction();
-      dbName = normalizeIdentifier(dbName);
-      originalTblName = normalizeIdentifier(originalTblName);
-      MTable mtbl = getMTable(dbName, originalTblName);
-      if (mtbl == null) {
-        commited = commitTransaction();
-        return null;
-      }
-      query =
-          pm.newQuery(MIndex.class,
-              "origTable.tableName == t1 && origTable.database.name == t2 && indexName == t3");
-      query.declareParameters("java.lang.String t1, java.lang.String t2, java.lang.String t3");
-      query.setUnique(true);
-      midx =
-          (MIndex) query.execute(originalTblName, dbName,
-              normalizeIdentifier(indexName));
-      pm.retrieve(midx);
-      commited = commitTransaction();
-    } finally {
-      rollbackAndCleanup(commited, query);
-    }
-    return midx;
-  }
-
-  @Override
-  public Index getIndex(String dbName, String origTableName, String indexName)
-      throws MetaException {
-    openTransaction();
-    MIndex mIndex = this.getMIndex(dbName, origTableName, indexName);
-    Index ret = convertToIndex(mIndex);
-    commitTransaction();
-    return ret;
-  }
-
-  private Index convertToIndex(MIndex mIndex) throws MetaException {
-    if (mIndex == null) {
-      return null;
-    }
-
-    MTable origTable = mIndex.getOrigTable();
-    MTable indexTable = mIndex.getIndexTable();
-
-    return new Index(
-    mIndex.getIndexName(),
-    mIndex.getIndexHandlerClass(),
-    origTable.getDatabase().getName(),
-    origTable.getTableName(),
-    mIndex.getCreateTime(),
-    mIndex.getLastAccessTime(),
-    indexTable.getTableName(),
-    convertToStorageDescriptor(mIndex.getSd()),
-    mIndex.getParameters(),
-    mIndex.getDeferredRebuild());
-
-  }
-
-  @Override
-  public List<Index> getIndexes(String dbName, String origTableName, int max)
-      throws MetaException {
-    boolean success = false;
-    Query query = null;
-    try {
-      LOG.debug("Executing getIndexes");
-      openTransaction();
-
-      dbName = normalizeIdentifier(dbName);
-      origTableName = normalizeIdentifier(origTableName);
-      query =
-          pm.newQuery(MIndex.class, "origTable.tableName == t1 && origTable.database.name == t2");
-      query.declareParameters("java.lang.String t1, java.lang.String t2");
-      List<MIndex> mIndexes = (List<MIndex>) query.execute(origTableName, dbName);
-      pm.retrieveAll(mIndexes);
-
-      List<Index> indexes = new ArrayList<>(mIndexes.size());
-      for (MIndex mIdx : mIndexes) {
-        indexes.add(this.convertToIndex(mIdx));
-      }
-      success = commitTransaction();
-      LOG.debug("Done retrieving all objects for getIndexes");
-
-      return indexes;
-    } finally {
-      rollbackAndCleanup(success, query);
-    }
-  }
-
-  @Override
-  public List<String> listIndexNames(String dbName, String origTableName, short max)
-      throws MetaException {
-    List<String> pns = new ArrayList<>();
-    boolean success = false;
-    Query query = null;
-    try {
-      openTransaction();
-      LOG.debug("Executing listIndexNames");
-      dbName = normalizeIdentifier(dbName);
-      origTableName = normalizeIdentifier(origTableName);
-      query =
-          pm.newQuery("select indexName from org.apache.hadoop.hive.metastore.model.MIndex "
-              + "where origTable.database.name == t1 && origTable.tableName == t2 "
-              + "order by indexName asc");
-      query.declareParameters("java.lang.String t1, java.lang.String t2");
-      query.setResult("indexName");
-      Collection names = (Collection) query.execute(dbName, origTableName);
-      for (Iterator i = names.iterator(); i.hasNext();) {
-        pns.add((String) i.next());
-      }
-      success = commitTransaction();
-    } finally {
-      rollbackAndCleanup(success, query);
-    }
-    return pns;
   }
 
   @Override
@@ -9555,37 +9421,107 @@ public class ObjectStore implements RawStore, Configurable {
     }
   }
 
-  protected List<SQLNotNullConstraint> getNotNullConstraintsInternal(final String db_name_input,
+  @Override
+  public List<SQLDefaultConstraint> getDefaultConstraints(String db_name, String tbl_name)
+      throws MetaException {
+    try {
+      return getDefaultConstraintsInternal(db_name, tbl_name, true, true);
+    } catch (NoSuchObjectException e) {
+      throw new MetaException(ExceptionUtils.getStackTrace(e));
+    }
+  }
+
+  protected List<SQLDefaultConstraint> getDefaultConstraintsInternal(final String db_name_input,
       final String tbl_name_input, boolean allowSql, boolean allowJdo)
           throws MetaException, NoSuchObjectException {
+    final String db_name = normalizeIdentifier(db_name_input);
+    final String tbl_name = normalizeIdentifier(tbl_name_input);
+    return new GetListHelper<SQLDefaultConstraint>(db_name, tbl_name, allowSql, allowJdo) {
+
+      @Override
+      protected List<SQLDefaultConstraint> getSqlResult(GetHelper<List<SQLDefaultConstraint>> ctx)
+              throws MetaException {
+        return directSql.getDefaultConstraints(db_name, tbl_name);
+      }
+
+      @Override
+      protected List<SQLDefaultConstraint> getJdoResult(GetHelper<List<SQLDefaultConstraint>> ctx)
+              throws MetaException, NoSuchObjectException {
+        return getDefaultConstraintsViaJdo(db_name, tbl_name);
+      }
+    }.run(false);
+  }
+
+  private List<SQLDefaultConstraint> getDefaultConstraintsViaJdo(String db_name, String tbl_name)
+          throws MetaException {
+    boolean commited = false;
+    List<SQLDefaultConstraint> defaultConstraints= null;
+    Query query = null;
+    try {
+      openTransaction();
+      query = pm.newQuery(MConstraint.class,
+        "parentTable.tableName == tbl_name && parentTable.database.name == db_name &&"
+        + " constraintType == MConstraint.DEFAULT_CONSTRAINT");
+      query.declareParameters("java.lang.String tbl_name, java.lang.String db_name");
+      Collection<?> constraints = (Collection<?>) query.execute(tbl_name, db_name);
+      pm.retrieveAll(constraints);
+      defaultConstraints = new ArrayList<>();
+      for (Iterator<?> i = constraints.iterator(); i.hasNext();) {
+        MConstraint currConstraint = (MConstraint) i.next();
+        List<MFieldSchema> cols = currConstraint.getParentColumn() != null ?
+            currConstraint.getParentColumn().getCols() : currConstraint.getParentTable().getPartitionKeys();
+        int enableValidateRely = currConstraint.getEnableValidateRely();
+        boolean enable = (enableValidateRely & 4) != 0;
+        boolean validate = (enableValidateRely & 2) != 0;
+        boolean rely = (enableValidateRely & 1) != 0;
+        defaultConstraints.add(new SQLDefaultConstraint(db_name,
+         tbl_name,
+         cols.get(currConstraint.getParentIntegerIndex()).getName(),
+         currConstraint.getDefaultValue(), currConstraint.getConstraintName(), enable, validate, rely));
+      }
+      commited = commitTransaction();
+    } finally {
+      if (!commited) {
+        rollbackTransaction();
+      }
+      if (query != null) {
+        query.closeAll();
+      }
+    }
+    return defaultConstraints;
+  }
+
+  protected List<SQLNotNullConstraint> getNotNullConstraintsInternal(final String db_name_input,
+                                                                     final String tbl_name_input, boolean allowSql, boolean allowJdo)
+      throws MetaException, NoSuchObjectException {
     final String db_name = normalizeIdentifier(db_name_input);
     final String tbl_name = normalizeIdentifier(tbl_name_input);
     return new GetListHelper<SQLNotNullConstraint>(db_name, tbl_name, allowSql, allowJdo) {
 
       @Override
       protected List<SQLNotNullConstraint> getSqlResult(GetHelper<List<SQLNotNullConstraint>> ctx)
-              throws MetaException {
+          throws MetaException {
         return directSql.getNotNullConstraints(db_name, tbl_name);
       }
 
       @Override
       protected List<SQLNotNullConstraint> getJdoResult(GetHelper<List<SQLNotNullConstraint>> ctx)
-              throws MetaException, NoSuchObjectException {
+          throws MetaException, NoSuchObjectException {
         return getNotNullConstraintsViaJdo(db_name, tbl_name);
       }
     }.run(false);
   }
 
   private List<SQLNotNullConstraint> getNotNullConstraintsViaJdo(String db_name, String tbl_name)
-          throws MetaException {
+      throws MetaException {
     boolean commited = false;
     List<SQLNotNullConstraint> notNullConstraints = null;
     Query query = null;
     try {
       openTransaction();
       query = pm.newQuery(MConstraint.class,
-        "parentTable.tableName == tbl_name && parentTable.database.name == db_name &&"
-        + " constraintType == MConstraint.NOT_NULL_CONSTRAINT");
+          "parentTable.tableName == tbl_name && parentTable.database.name == db_name &&"
+              + " constraintType == MConstraint.NOT_NULL_CONSTRAINT");
       query.declareParameters("java.lang.String tbl_name, java.lang.String db_name");
       Collection<?> constraints = (Collection<?>) query.execute(tbl_name, db_name);
       pm.retrieveAll(constraints);
@@ -9599,9 +9535,9 @@ public class ObjectStore implements RawStore, Configurable {
         boolean validate = (enableValidateRely & 2) != 0;
         boolean rely = (enableValidateRely & 1) != 0;
         notNullConstraints.add(new SQLNotNullConstraint(db_name,
-         tbl_name,
-         cols.get(currConstraint.getParentIntegerIndex()).getName(),
-         currConstraint.getConstraintName(), enable, validate, rely));
+            tbl_name,
+            cols.get(currConstraint.getParentIntegerIndex()).getName(),
+            currConstraint.getConstraintName(), enable, validate, rely));
       }
       commited = commitTransaction();
     } finally {
@@ -9964,7 +9900,7 @@ public class ObjectStore implements RawStore, Configurable {
       } else {
         result = handleSimpleAlter(name, changes, canActivateDisabled, canDeactivate);
       }
- 
+
       commited = commitTransaction();
       return result;
     } catch (Exception e) {
@@ -10057,7 +9993,9 @@ public class ObjectStore implements RawStore, Configurable {
     String copyName = generateOldPlanName(newName, i);
     while (true) {
       MWMResourcePlan dup = getMWMResourcePlan(copyName, false, false);
-      if (dup == null) break;
+      if (dup == null) {
+        break;
+      }
       // Note: this can still conflict with parallel transactions. We do not currently handle
       //       parallel changes from two admins (by design :().
       copyName = generateOldPlanName(newName, ++i);

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 
-import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -42,7 +41,9 @@ import org.xml.sax.InputSource;
  * of this class.
  */
 public class UDFXPathUtil {
-  static final boolean DISABLE_XINCLUDE = true;
+  public static final String SAX_FEATURE_PREFIX = "http://xml.org/sax/features/";
+  public static final String EXTERNAL_GENERAL_ENTITIES_FEATURE = "external-general-entities";
+  public static final String EXTERNAL_PARAMETER_ENTITIES_FEATURE = "external-parameter-entities";
   private DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
   private DocumentBuilder builder = null;
   private XPath xpath = XPathFactory.newInstance().newXPath();
@@ -75,8 +76,8 @@ public class UDFXPathUtil {
     }
 
     if (builder == null){
-      initializeDocumentBuilderFactory();
       try {
+        initializeDocumentBuilderFactory();
         builder = dbf.newDocumentBuilder();
       } catch (ParserConfigurationException e) {
         throw new RuntimeException("Error instantiating DocumentBuilder, cannot build xml parser", e);
@@ -94,14 +95,9 @@ public class UDFXPathUtil {
     }
   }
 
-  private void initializeDocumentBuilderFactory() {
-
-    dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-
-    if (DISABLE_XINCLUDE){
-      dbf.setXIncludeAware(false);
-    }
+  private void initializeDocumentBuilderFactory() throws ParserConfigurationException {
+    dbf.setFeature(SAX_FEATURE_PREFIX + EXTERNAL_GENERAL_ENTITIES_FEATURE, false);
+    dbf.setFeature(SAX_FEATURE_PREFIX + EXTERNAL_PARAMETER_ENTITIES_FEATURE, false);
   }
 
   public Boolean evalBoolean(String xml, String path) {

@@ -351,13 +351,13 @@ import org.slf4j.LoggerFactory;
           case 1: // FILE_IDS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list746 = iprot.readListBegin();
-                struct.fileIds = new ArrayList<Long>(_list746.size);
-                long _elem747;
-                for (int _i748 = 0; _i748 < _list746.size; ++_i748)
+                org.apache.thrift.protocol.TList _list752 = iprot.readListBegin();
+                struct.fileIds = new ArrayList<Long>(_list752.size);
+                long _elem753;
+                for (int _i754 = 0; _i754 < _list752.size; ++_i754)
                 {
-                  _elem747 = iprot.readI64();
-                  struct.fileIds.add(_elem747);
+                  _elem753 = iprot.readI64();
+                  struct.fileIds.add(_elem753);
                 }
                 iprot.readListEnd();
               }
@@ -383,9 +383,9 @@ import org.slf4j.LoggerFactory;
         oprot.writeFieldBegin(FILE_IDS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, struct.fileIds.size()));
-          for (long _iter749 : struct.fileIds)
+          for (long _iter755 : struct.fileIds)
           {
-            oprot.writeI64(_iter749);
+            oprot.writeI64(_iter755);
           }
           oprot.writeListEnd();
         }
@@ -410,9 +410,9 @@ import org.slf4j.LoggerFactory;
       TTupleProtocol oprot = (TTupleProtocol) prot;
       {
         oprot.writeI32(struct.fileIds.size());
-        for (long _iter750 : struct.fileIds)
+        for (long _iter756 : struct.fileIds)
         {
-          oprot.writeI64(_iter750);
+          oprot.writeI64(_iter756);
         }
       }
     }
@@ -421,13 +421,13 @@ import org.slf4j.LoggerFactory;
     public void read(org.apache.thrift.protocol.TProtocol prot, ClearFileMetadataRequest struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       {
-        org.apache.thrift.protocol.TList _list751 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
-        struct.fileIds = new ArrayList<Long>(_list751.size);
-        long _elem752;
-        for (int _i753 = 0; _i753 < _list751.size; ++_i753)
+        org.apache.thrift.protocol.TList _list757 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
+        struct.fileIds = new ArrayList<Long>(_list757.size);
+        long _elem758;
+        for (int _i759 = 0; _i759 < _list757.size; ++_i759)
         {
-          _elem752 = iprot.readI64();
-          struct.fileIds.add(_elem752);
+          _elem758 = iprot.readI64();
+          struct.fileIds.add(_elem758);
         }
       }
       struct.setFileIdsIsSet(true);

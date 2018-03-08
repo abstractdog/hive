@@ -40,7 +40,6 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.FileMetadataExprType;
 import org.apache.hadoop.hive.metastore.api.Function;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -65,6 +64,7 @@ import org.apache.hadoop.hive.metastore.api.WMTrigger;
 import org.apache.hadoop.hive.metastore.api.WMValidateResourcePlanResponse;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.RolePrincipalGrant;
+import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
@@ -233,22 +233,6 @@ public interface RawStore extends Configurable {
 
   void alterPartitions(String db_name, String tbl_name,
       List<List<String>> part_vals_list, List<Partition> new_parts)
-      throws InvalidObjectException, MetaException;
-
-  boolean addIndex(Index index)
-      throws InvalidObjectException, MetaException;
-
-  Index getIndex(String dbName, String origTableName, String indexName) throws MetaException;
-
-  boolean dropIndex(String dbName, String origTableName, String indexName) throws MetaException;
-
-  List<Index> getIndexes(String dbName,
-      String origTableName, int max) throws MetaException;
-
-  List<String> listIndexNames(String dbName,
-      String origTableName, short max) throws MetaException;
-
-  void alterIndex(String dbname, String baseTblName, String name, Index newIndex)
       throws InvalidObjectException, MetaException;
 
   List<Partition> getPartitionsByFilter(
@@ -740,9 +724,13 @@ public interface RawStore extends Configurable {
   List<SQLNotNullConstraint> getNotNullConstraints(String db_name,
     String tbl_name) throws MetaException;
 
+  List<SQLDefaultConstraint> getDefaultConstraints(String db_name,
+                                                   String tbl_name) throws MetaException;
+
   List<String> createTableWithConstraints(Table tbl, List<SQLPrimaryKey> primaryKeys,
     List<SQLForeignKey> foreignKeys, List<SQLUniqueConstraint> uniqueConstraints,
-    List<SQLNotNullConstraint> notNullConstraints) throws InvalidObjectException, MetaException;
+    List<SQLNotNullConstraint> notNullConstraints,
+    List<SQLDefaultConstraint> defaultConstraints) throws InvalidObjectException, MetaException;
 
   void dropConstraint(String dbName, String tableName, String constraintName) throws NoSuchObjectException;
 
@@ -753,6 +741,8 @@ public interface RawStore extends Configurable {
   List<String> addUniqueConstraints(List<SQLUniqueConstraint> uks) throws InvalidObjectException, MetaException;
 
   List<String> addNotNullConstraints(List<SQLNotNullConstraint> nns) throws InvalidObjectException, MetaException;
+
+  List<String> addDefaultConstraints(List<SQLDefaultConstraint> nns) throws InvalidObjectException, MetaException;
 
   /**
    * Gets the unique id of the backing datastore for the metadata

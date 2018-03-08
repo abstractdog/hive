@@ -90,6 +90,17 @@ struct SQLNotNullConstraint {
   7: bool rely_cstr      // Rely/No Rely
 }
 
+struct SQLDefaultConstraint {
+  1: string table_db,    // table schema
+  2: string table_name,  // table name
+  3: string column_name, // column name
+  4: string default_value,// default value
+  5: string dc_name,     // default name
+  6: bool enable_cstr,   // Enable/Disable
+  7: bool validate_cstr, // Validate/No validate
+  8: bool rely_cstr      // Rely/No Rely
+}
+
 struct Type {
   1: string          name,             // one of the types in PrimitiveTypes or CollectionTypes or User defined types
   2: optional string type1,            // object type if the name is 'list' (LIST_TYPE), key type if the name is 'map' (MAP_TYPE)
@@ -367,19 +378,6 @@ struct PartitionSpec {
   5: optional PartitionListComposingSpec partitionList
 }
 
-struct Index {
-  1: string       indexName, // unique with in the whole database namespace
-  2: string       indexHandlerClass, // reserved
-  3: string       dbName,
-  4: string       origTableName,
-  5: i32          createTime,
-  6: i32          lastAccessTime,
-  7: string       indexTableName,
-  8: StorageDescriptor   sd,
-  9: map<string, string> parameters,
-  10: bool         deferredRebuild
-}
-
 // column statistics
 struct BooleanColumnStatsData {
 1: required i64 numTrues,
@@ -537,6 +535,16 @@ struct NotNullConstraintsResponse {
   1: required list<SQLNotNullConstraint> notNullConstraints
 }
 
+struct DefaultConstraintsRequest {
+  1: required string db_name,
+  2: required string tbl_name
+}
+
+struct DefaultConstraintsResponse {
+  1: required list<SQLDefaultConstraint> defaultConstraints
+}
+
+
 struct DropConstraintRequest {
   1: required string dbname, 
   2: required string tablename,
@@ -557,6 +565,10 @@ struct AddUniqueConstraintRequest {
 
 struct AddNotNullConstraintRequest {
   1: required list<SQLNotNullConstraint> notNullConstraintCols
+}
+
+struct AddDefaultConstraintRequest {
+  1: required list<SQLDefaultConstraint> defaultConstraintCols
 }
 
 // Return type for get_partitions_by_expr
@@ -1340,10 +1352,6 @@ exception NoSuchObjectException {
   1: string message
 }
 
-exception IndexAlreadyExistsException {
-  1: string message
-}
-
 exception InvalidOperationException {
   1: string message
 }
@@ -1419,7 +1427,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
               2:InvalidObjectException o2, 3:MetaException o3,
               4:NoSuchObjectException o4)
   void create_table_with_constraints(1:Table tbl, 2: list<SQLPrimaryKey> primaryKeys, 3: list<SQLForeignKey> foreignKeys,
-  4: list<SQLUniqueConstraint> uniqueConstraints, 5: list<SQLNotNullConstraint> notNullConstraints)
+  4: list<SQLUniqueConstraint> uniqueConstraints, 5: list<SQLNotNullConstraint> notNullConstraints,
+  6: list<SQLDefaultConstraint> defaultConstraints)
       throws (1:AlreadyExistsException o1,
               2:InvalidObjectException o2, 3:MetaException o3,
               4:NoSuchObjectException o4)
@@ -1432,6 +1441,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
   void add_unique_constraint(1:AddUniqueConstraintRequest req)
       throws(1:NoSuchObjectException o1, 2:MetaException o2)
   void add_not_null_constraint(1:AddNotNullConstraintRequest req)
+      throws(1:NoSuchObjectException o1, 2:MetaException o2)
+  void add_default_constraint(1:AddDefaultConstraintRequest req)
       throws(1:NoSuchObjectException o1, 2:MetaException o2)
 
   // drops the table and all the partitions associated with it if the table has partitions
@@ -1671,21 +1682,6 @@ service ThriftHiveMetastore extends fb303.FacebookService
                   3: UnknownDBException o3, 4: UnknownTableException o4, 5: UnknownPartitionException o5,
                   6: InvalidPartitionException o6)
 
-  //index
-  Index add_index(1:Index new_index, 2: Table index_table)
-                       throws(1:InvalidObjectException o1, 2:AlreadyExistsException o2, 3:MetaException o3)
-  void alter_index(1:string dbname, 2:string base_tbl_name, 3:string idx_name, 4:Index new_idx)
-                       throws (1:InvalidOperationException o1, 2:MetaException o2)
-  bool drop_index_by_name(1:string db_name, 2:string tbl_name, 3:string index_name, 4:bool deleteData)
-                       throws(1:NoSuchObjectException o1, 2:MetaException o2)
-  Index get_index_by_name(1:string db_name 2:string tbl_name, 3:string index_name)
-                       throws(1:MetaException o1, 2:NoSuchObjectException o2)
-
-  list<Index> get_indexes(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
-                       throws(1:NoSuchObjectException o1, 2:MetaException o2)
-  list<string> get_index_names(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
-                       throws(1:MetaException o2)
-
   //primary keys and foreign keys
   PrimaryKeysResponse get_primary_keys(1:PrimaryKeysRequest request)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
@@ -1695,6 +1691,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
   UniqueConstraintsResponse get_unique_constraints(1:UniqueConstraintsRequest request)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
   NotNullConstraintsResponse get_not_null_constraints(1:NotNullConstraintsRequest request)
+                       throws(1:MetaException o1, 2:NoSuchObjectException o2)
+  DefaultConstraintsResponse get_default_constraints(1:DefaultConstraintsRequest request)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
 
   // column statistics interfaces

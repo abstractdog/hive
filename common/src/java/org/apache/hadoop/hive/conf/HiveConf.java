@@ -1879,7 +1879,6 @@ public class HiveConf extends Configuration {
         "in the number of rows filtered by a certain operator, which in turn might lead to overprovision or\n" +
         "underprovision of resources. This factor is applied to the cardinality estimation of IN clauses in\n" +
         "filter operators."),
-
     // Concurrency
     HIVE_SUPPORT_CONCURRENCY("hive.support.concurrency", false,
         "Whether Hive supports concurrency control or not. \n" +
@@ -3038,7 +3037,7 @@ public class HiveConf extends Configuration {
         "Enable (configurable) deprecated behaviors by setting desired level of backward compatibility.\n" +
         "Setting to 0.12:\n" +
         "  Maintains division behavior: int / int = double"),
-    HIVE_CONVERT_JOIN_BUCKET_MAPJOIN_TEZ("hive.convert.join.bucket.mapjoin.tez", false,
+    HIVE_CONVERT_JOIN_BUCKET_MAPJOIN_TEZ("hive.convert.join.bucket.mapjoin.tez", true,
         "Whether joins can be automatically converted to bucket map joins in hive \n" +
         "when tez is used as the execution engine."),
     HIVE_TEZ_BMJ_USE_SUBCACHE("hive.tez.bmj.use.subcache", true,
@@ -3236,6 +3235,8 @@ public class HiveConf extends Configuration {
     LLAP_IO_VRB_QUEUE_LIMIT_MIN("hive.llap.io.vrb.queue.limit.min", 10,
         "The minimum queue size for VRBs produced by a LLAP IO thread when the processing is\n" +
         "slower than the IO (used when determining the size from base size)."),
+    LLAP_IO_SHARE_OBJECT_POOLS("hive.llap.io.share.object.pools", false,
+        "Whether to used shared object pools in LLAP IO. A safety flag."),
     LLAP_AUTO_ALLOW_UBER("hive.llap.auto.allow.uber", false,
         "Whether or not to allow the planner to run vertices in the AM."),
     LLAP_AUTO_ENFORCE_TREE("hive.llap.auto.enforce.tree", true,
@@ -3689,21 +3690,28 @@ public class HiveConf extends Configuration {
     HIVE_CONF_INTERNAL_VARIABLE_LIST("hive.conf.internal.variable.list",
         "hive.added.files.path,hive.added.jars.path,hive.added.archives.path",
         "Comma separated list of variables which are used internally and should not be configurable."),
-
     HIVE_SPARK_RSC_CONF_LIST("hive.spark.rsc.conf.list",
         SPARK_OPTIMIZE_SHUFFLE_SERDE.varname + "," +
             SPARK_CLIENT_FUTURE_TIMEOUT.varname,
         "Comma separated list of variables which are related to remote spark context.\n" +
             "Changing these variables will result in re-creating the spark session."),
-
     HIVE_QUERY_TIMEOUT_SECONDS("hive.query.timeout.seconds", "0s",
         new TimeValidator(TimeUnit.SECONDS),
         "Timeout for Running Query in seconds. A nonpositive value means infinite. " +
         "If the query timeout is also set by thrift API call, the smaller one will be taken."),
-
-
     HIVE_EXEC_INPUT_LISTING_MAX_THREADS("hive.exec.input.listing.max.threads", 0, new  SizeValidator(0L, true, 1024L, true),
         "Maximum number of threads that Hive uses to list file information from file systems (recommended > 1 for blobstore)."),
+
+    HIVE_QUERY_REEXECUTION_ENABLED("hive.query.reexecution.enabled", true,
+        "Enable query reexecutions"),
+    HIVE_QUERY_REEXECUTION_STRATEGIES("hive.query.reexecution.strategies", "overlay,reoptimize",
+        "comma separated list of plugin can be used:\n"
+            + "  overlay: hiveconf subtree 'reexec.overlay' is used as an overlay in case of an execution errors out\n"
+            + "  reoptimize: collects operator statistics during execution and recompile the query after a failure"),
+    HIVE_QUERY_MAX_REEXECUTION_COUNT("hive.query.reexecution.max.count", 1,
+        "Maximum number of re-executions for a single query."),
+    HIVE_QUERY_REEXECUTION_ALWAYS_COLLECT_OPERATOR_STATS("hive.query.reexecution.always.collect.operator.stats", false,
+        "Used during testing"),
 
     HIVE_QUERY_RESULTS_CACHE_ENABLED("hive.query.results.cache.enabled", true,
         "If the query results cache is enabled. This will keep results of previously executed queries " +
@@ -5088,4 +5096,23 @@ public class HiveConf extends Configuration {
       return reverseMap;
     }
   }
+
+  public void verifyAndSetAll(Map<String, String> overlay) {
+    for (Entry<String, String> entry : overlay.entrySet()) {
+      verifyAndSet(entry.getKey(), entry.getValue());
+    }
+  }
+
+  public Map<String, String> subtree(String string) {
+    Map<String, String> ret = new HashMap<>();
+    for (Entry<Object, Object> entry : getProps().entrySet()) {
+      String key = (String) entry.getKey();
+      String value = (String) entry.getValue();
+      if (key.startsWith(string)) {
+        ret.put(key.substring(string.length() + 1), value);
+      }
+    }
+    return ret;
+  }
+
 }

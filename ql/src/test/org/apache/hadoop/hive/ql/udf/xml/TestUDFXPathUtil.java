@@ -97,15 +97,7 @@ public class TestUDFXPathUtil {
         "    <!ENTITY embed SYSTEM \"" + fname + "\"> \n" +
         "]>\n" +
         "<foo>&embed;</foo>";
-
-    String evaled = null;
-    Exception caught = null;
-    try {
-      evaled = new UDFXPathUtil().evalString(xml, "/foo");
-    } catch (Exception e){
-      caught = e;
-    }
-    assertTrue(caught.getCause().getMessage()
-      .contains("\'file\' access is not allowed due to restriction set by the accessExternalDTD property"));
+    String evaled = new UDFXPathUtil().evalString(xml, "/foo");
+    assertTrue(evaled.isEmpty());
   }
 }

@@ -109,6 +109,7 @@ TOK_NOT_NULL;
 TOK_UNIQUE;
 TOK_PRIMARY_KEY;
 TOK_FOREIGN_KEY;
+TOK_DEFAULT_VALUE;
 TOK_VALIDATE;
 TOK_NOVALIDATE;
 TOK_RELY;
@@ -773,14 +774,21 @@ explainStatement
 	: KW_EXPLAIN (
 	    explainOption* execStatement -> ^(TOK_EXPLAIN execStatement explainOption*)
         |
-        KW_REWRITE queryStatementExpression -> ^(TOK_EXPLAIN_SQ_REWRITE queryStatementExpression))
+        KW_REWRITE queryStatementExpression -> ^(TOK_EXPLAIN_SQ_REWRITE queryStatementExpression)
+      )
 	;
 
 explainOption
 @init { msgs.push("explain option"); }
 @after { msgs.pop(); }
-    : KW_EXTENDED|KW_FORMATTED|KW_DEPENDENCY|KW_LOGICAL|KW_AUTHORIZATION|KW_ANALYZE|
-      (KW_VECTORIZATION vectorizationOnly? vectorizatonDetail?)
+    : KW_EXTENDED
+    | KW_FORMATTED
+    | KW_DEPENDENCY
+    | KW_LOGICAL
+    | KW_AUTHORIZATION
+    | KW_ANALYZE
+    | KW_REOPTIMIZATION
+    | (KW_VECTORIZATION vectorizationOnly? vectorizatonDetail?)
     ;
 
 vectorizationOnly
@@ -2371,8 +2379,8 @@ colConstraint
 @after { popMsg(state); }
     : (KW_CONSTRAINT constraintName=identifier)? columnConstraintType constraintOptsCreate?
     -> {$constraintName.tree != null}?
-            ^(columnConstraintType ^(TOK_CONSTRAINT_NAME $constraintName) constraintOptsCreate?)
-    -> ^(columnConstraintType constraintOptsCreate?)
+            ^({$columnConstraintType.tree} ^(TOK_CONSTRAINT_NAME $constraintName) constraintOptsCreate?)
+    -> ^({$columnConstraintType.tree} constraintOptsCreate?)
     ;
 
 alterColumnConstraint[CommonTree fkColName]
@@ -2396,13 +2404,20 @@ alterColConstraint
 @after { popMsg(state); }
     : (KW_CONSTRAINT constraintName=identifier)? columnConstraintType constraintOptsAlter?
     -> {$constraintName.tree != null}?
-            ^(columnConstraintType ^(TOK_CONSTRAINT_NAME $constraintName) constraintOptsAlter?)
-    -> ^(columnConstraintType constraintOptsAlter?)
+            ^({$columnConstraintType.tree} ^(TOK_CONSTRAINT_NAME $constraintName) constraintOptsAlter?)
+    -> ^({$columnConstraintType.tree} constraintOptsAlter?)
     ;
 
 columnConstraintType
     : KW_NOT KW_NULL       ->    TOK_NOT_NULL
+    | KW_DEFAULT defaultVal->    ^(TOK_DEFAULT_VALUE defaultVal)
     | tableConstraintType
+    ;
+
+defaultVal
+    : constant
+    | function
+    | castExpression
     ;
 
 tableConstraintType

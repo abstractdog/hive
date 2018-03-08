@@ -198,6 +198,8 @@ class SQLUniqueConstraint;
 
 class SQLNotNullConstraint;
 
+class SQLDefaultConstraint;
+
 class Type;
 
 class HiveObjectRef;
@@ -252,8 +254,6 @@ class PartitionListComposingSpec;
 
 class PartitionSpec;
 
-class Index;
-
 class BooleanColumnStatsData;
 
 class DoubleColumnStatsData;
@@ -304,6 +304,10 @@ class NotNullConstraintsRequest;
 
 class NotNullConstraintsResponse;
 
+class DefaultConstraintsRequest;
+
+class DefaultConstraintsResponse;
+
 class DropConstraintRequest;
 
 class AddPrimaryKeyRequest;
@@ -313,6 +317,8 @@ class AddForeignKeyRequest;
 class AddUniqueConstraintRequest;
 
 class AddNotNullConstraintRequest;
+
+class AddDefaultConstraintRequest;
 
 class PartitionsByExprResult;
 
@@ -575,8 +581,6 @@ class UnknownPartitionException;
 class InvalidObjectException;
 
 class NoSuchObjectException;
-
-class IndexAlreadyExistsException;
 
 class InvalidOperationException;
 
@@ -1079,6 +1083,94 @@ class SQLNotNullConstraint {
 void swap(SQLNotNullConstraint &a, SQLNotNullConstraint &b);
 
 inline std::ostream& operator<<(std::ostream& out, const SQLNotNullConstraint& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _SQLDefaultConstraint__isset {
+  _SQLDefaultConstraint__isset() : table_db(false), table_name(false), column_name(false), default_value(false), dc_name(false), enable_cstr(false), validate_cstr(false), rely_cstr(false) {}
+  bool table_db :1;
+  bool table_name :1;
+  bool column_name :1;
+  bool default_value :1;
+  bool dc_name :1;
+  bool enable_cstr :1;
+  bool validate_cstr :1;
+  bool rely_cstr :1;
+} _SQLDefaultConstraint__isset;
+
+class SQLDefaultConstraint {
+ public:
+
+  SQLDefaultConstraint(const SQLDefaultConstraint&);
+  SQLDefaultConstraint& operator=(const SQLDefaultConstraint&);
+  SQLDefaultConstraint() : table_db(), table_name(), column_name(), default_value(), dc_name(), enable_cstr(0), validate_cstr(0), rely_cstr(0) {
+  }
+
+  virtual ~SQLDefaultConstraint() throw();
+  std::string table_db;
+  std::string table_name;
+  std::string column_name;
+  std::string default_value;
+  std::string dc_name;
+  bool enable_cstr;
+  bool validate_cstr;
+  bool rely_cstr;
+
+  _SQLDefaultConstraint__isset __isset;
+
+  void __set_table_db(const std::string& val);
+
+  void __set_table_name(const std::string& val);
+
+  void __set_column_name(const std::string& val);
+
+  void __set_default_value(const std::string& val);
+
+  void __set_dc_name(const std::string& val);
+
+  void __set_enable_cstr(const bool val);
+
+  void __set_validate_cstr(const bool val);
+
+  void __set_rely_cstr(const bool val);
+
+  bool operator == (const SQLDefaultConstraint & rhs) const
+  {
+    if (!(table_db == rhs.table_db))
+      return false;
+    if (!(table_name == rhs.table_name))
+      return false;
+    if (!(column_name == rhs.column_name))
+      return false;
+    if (!(default_value == rhs.default_value))
+      return false;
+    if (!(dc_name == rhs.dc_name))
+      return false;
+    if (!(enable_cstr == rhs.enable_cstr))
+      return false;
+    if (!(validate_cstr == rhs.validate_cstr))
+      return false;
+    if (!(rely_cstr == rhs.rely_cstr))
+      return false;
+    return true;
+  }
+  bool operator != (const SQLDefaultConstraint &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const SQLDefaultConstraint & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(SQLDefaultConstraint &a, SQLDefaultConstraint &b);
+
+inline std::ostream& operator<<(std::ostream& out, const SQLDefaultConstraint& obj)
 {
   obj.printTo(out);
   return out;
@@ -2867,106 +2959,6 @@ inline std::ostream& operator<<(std::ostream& out, const PartitionSpec& obj)
   return out;
 }
 
-typedef struct _Index__isset {
-  _Index__isset() : indexName(false), indexHandlerClass(false), dbName(false), origTableName(false), createTime(false), lastAccessTime(false), indexTableName(false), sd(false), parameters(false), deferredRebuild(false) {}
-  bool indexName :1;
-  bool indexHandlerClass :1;
-  bool dbName :1;
-  bool origTableName :1;
-  bool createTime :1;
-  bool lastAccessTime :1;
-  bool indexTableName :1;
-  bool sd :1;
-  bool parameters :1;
-  bool deferredRebuild :1;
-} _Index__isset;
-
-class Index {
- public:
-
-  Index(const Index&);
-  Index& operator=(const Index&);
-  Index() : indexName(), indexHandlerClass(), dbName(), origTableName(), createTime(0), lastAccessTime(0), indexTableName(), deferredRebuild(0) {
-  }
-
-  virtual ~Index() throw();
-  std::string indexName;
-  std::string indexHandlerClass;
-  std::string dbName;
-  std::string origTableName;
-  int32_t createTime;
-  int32_t lastAccessTime;
-  std::string indexTableName;
-  StorageDescriptor sd;
-  std::map<std::string, std::string>  parameters;
-  bool deferredRebuild;
-
-  _Index__isset __isset;
-
-  void __set_indexName(const std::string& val);
-
-  void __set_indexHandlerClass(const std::string& val);
-
-  void __set_dbName(const std::string& val);
-
-  void __set_origTableName(const std::string& val);
-
-  void __set_createTime(const int32_t val);
-
-  void __set_lastAccessTime(const int32_t val);
-
-  void __set_indexTableName(const std::string& val);
-
-  void __set_sd(const StorageDescriptor& val);
-
-  void __set_parameters(const std::map<std::string, std::string> & val);
-
-  void __set_deferredRebuild(const bool val);
-
-  bool operator == (const Index & rhs) const
-  {
-    if (!(indexName == rhs.indexName))
-      return false;
-    if (!(indexHandlerClass == rhs.indexHandlerClass))
-      return false;
-    if (!(dbName == rhs.dbName))
-      return false;
-    if (!(origTableName == rhs.origTableName))
-      return false;
-    if (!(createTime == rhs.createTime))
-      return false;
-    if (!(lastAccessTime == rhs.lastAccessTime))
-      return false;
-    if (!(indexTableName == rhs.indexTableName))
-      return false;
-    if (!(sd == rhs.sd))
-      return false;
-    if (!(parameters == rhs.parameters))
-      return false;
-    if (!(deferredRebuild == rhs.deferredRebuild))
-      return false;
-    return true;
-  }
-  bool operator != (const Index &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const Index & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(Index &a, Index &b);
-
-inline std::ostream& operator<<(std::ostream& out, const Index& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
 typedef struct _BooleanColumnStatsData__isset {
   _BooleanColumnStatsData__isset() : bitVectors(false) {}
   bool bitVectors :1;
@@ -4346,6 +4338,91 @@ inline std::ostream& operator<<(std::ostream& out, const NotNullConstraintsRespo
 }
 
 
+class DefaultConstraintsRequest {
+ public:
+
+  DefaultConstraintsRequest(const DefaultConstraintsRequest&);
+  DefaultConstraintsRequest& operator=(const DefaultConstraintsRequest&);
+  DefaultConstraintsRequest() : db_name(), tbl_name() {
+  }
+
+  virtual ~DefaultConstraintsRequest() throw();
+  std::string db_name;
+  std::string tbl_name;
+
+  void __set_db_name(const std::string& val);
+
+  void __set_tbl_name(const std::string& val);
+
+  bool operator == (const DefaultConstraintsRequest & rhs) const
+  {
+    if (!(db_name == rhs.db_name))
+      return false;
+    if (!(tbl_name == rhs.tbl_name))
+      return false;
+    return true;
+  }
+  bool operator != (const DefaultConstraintsRequest &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const DefaultConstraintsRequest & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(DefaultConstraintsRequest &a, DefaultConstraintsRequest &b);
+
+inline std::ostream& operator<<(std::ostream& out, const DefaultConstraintsRequest& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class DefaultConstraintsResponse {
+ public:
+
+  DefaultConstraintsResponse(const DefaultConstraintsResponse&);
+  DefaultConstraintsResponse& operator=(const DefaultConstraintsResponse&);
+  DefaultConstraintsResponse() {
+  }
+
+  virtual ~DefaultConstraintsResponse() throw();
+  std::vector<SQLDefaultConstraint>  defaultConstraints;
+
+  void __set_defaultConstraints(const std::vector<SQLDefaultConstraint> & val);
+
+  bool operator == (const DefaultConstraintsResponse & rhs) const
+  {
+    if (!(defaultConstraints == rhs.defaultConstraints))
+      return false;
+    return true;
+  }
+  bool operator != (const DefaultConstraintsResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const DefaultConstraintsResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(DefaultConstraintsResponse &a, DefaultConstraintsResponse &b);
+
+inline std::ostream& operator<<(std::ostream& out, const DefaultConstraintsResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
 class DropConstraintRequest {
  public:
 
@@ -4550,6 +4627,46 @@ class AddNotNullConstraintRequest {
 void swap(AddNotNullConstraintRequest &a, AddNotNullConstraintRequest &b);
 
 inline std::ostream& operator<<(std::ostream& out, const AddNotNullConstraintRequest& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class AddDefaultConstraintRequest {
+ public:
+
+  AddDefaultConstraintRequest(const AddDefaultConstraintRequest&);
+  AddDefaultConstraintRequest& operator=(const AddDefaultConstraintRequest&);
+  AddDefaultConstraintRequest() {
+  }
+
+  virtual ~AddDefaultConstraintRequest() throw();
+  std::vector<SQLDefaultConstraint>  defaultConstraintCols;
+
+  void __set_defaultConstraintCols(const std::vector<SQLDefaultConstraint> & val);
+
+  bool operator == (const AddDefaultConstraintRequest & rhs) const
+  {
+    if (!(defaultConstraintCols == rhs.defaultConstraintCols))
+      return false;
+    return true;
+  }
+  bool operator != (const AddDefaultConstraintRequest &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const AddDefaultConstraintRequest & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(AddDefaultConstraintRequest &a, AddDefaultConstraintRequest &b);
+
+inline std::ostream& operator<<(std::ostream& out, const AddDefaultConstraintRequest& obj)
 {
   obj.printTo(out);
   return out;
@@ -11590,54 +11707,6 @@ class NoSuchObjectException : public ::apache::thrift::TException {
 void swap(NoSuchObjectException &a, NoSuchObjectException &b);
 
 inline std::ostream& operator<<(std::ostream& out, const NoSuchObjectException& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _IndexAlreadyExistsException__isset {
-  _IndexAlreadyExistsException__isset() : message(false) {}
-  bool message :1;
-} _IndexAlreadyExistsException__isset;
-
-class IndexAlreadyExistsException : public ::apache::thrift::TException {
- public:
-
-  IndexAlreadyExistsException(const IndexAlreadyExistsException&);
-  IndexAlreadyExistsException& operator=(const IndexAlreadyExistsException&);
-  IndexAlreadyExistsException() : message() {
-  }
-
-  virtual ~IndexAlreadyExistsException() throw();
-  std::string message;
-
-  _IndexAlreadyExistsException__isset __isset;
-
-  void __set_message(const std::string& val);
-
-  bool operator == (const IndexAlreadyExistsException & rhs) const
-  {
-    if (!(message == rhs.message))
-      return false;
-    return true;
-  }
-  bool operator != (const IndexAlreadyExistsException &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const IndexAlreadyExistsException & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-  mutable std::string thriftTExceptionMessageHolder_;
-  const char* what() const throw();
-};
-
-void swap(IndexAlreadyExistsException &a, IndexAlreadyExistsException &b);
-
-inline std::ostream& operator<<(std::ostream& out, const IndexAlreadyExistsException& obj)
 {
   obj.printTo(out);
   return out;

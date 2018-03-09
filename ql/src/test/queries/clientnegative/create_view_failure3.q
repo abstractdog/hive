@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP VIEW xxx13;
 
 -- number of explicit view column defs must match underlying SELECT

@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP VIEW av;
 
 CREATE VIEW av AS SELECT * FROM src;

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 CREATE VIEW testViewPart PARTITIONED ON (value)
 AS
 SELECT key, value

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 DROP VIEW testView;
 
 -- Cannot ALTER VIEW AS SELECT if view currently does not exist

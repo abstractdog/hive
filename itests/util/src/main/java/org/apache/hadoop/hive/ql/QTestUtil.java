@@ -227,7 +227,7 @@ public class QTestUtil {
     getSrcTables().add(table);
     storeSrcTables();
   }
-
+  
   public static Set<String> initSrcTables() {
     if (srcTables == null){
       initSrcTablesFromSystemProperty();
@@ -245,17 +245,11 @@ public class QTestUtil {
     srcTables = new HashSet<String>();
     // FIXME: moved default value to here...for now
     // i think this features is never really used from the command line
-    String defaultTestSrcTables = "src,src1,srcbucket,srcbucket2,src_json,src_thrift," +
-        "src_sequencefile,srcpart,alltypesorc,src_hbase,cbo_t1,cbo_t2,cbo_t3,src_cbo,part," +
-        "lineitem,alltypesparquet";
-    for (String srcTable : System.getProperty(TEST_SRC_TABLES_PROPERTY, defaultTestSrcTables).trim().split(",")) {
+    for (String srcTable : System.getProperty(TEST_SRC_TABLES_PROPERTY, "").trim().split(",")) {
       srcTable = srcTable.trim();
       if (!srcTable.isEmpty()) {
         srcTables.add(srcTable);
       }
-    }
-    if (srcTables.isEmpty()) {
-      throw new RuntimeException("Source tables cannot be empty");
     }
   }
 

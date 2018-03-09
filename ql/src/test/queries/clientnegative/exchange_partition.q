@@ -1,3 +1,4 @@
+--! qt:dataset:src
 dfs ${system:test.dfs.mkdir} ${system:test.tmp.dir}/ex_table1;
 dfs ${system:test.dfs.mkdir} ${system:test.tmp.dir}/ex_table1/part=part1;
 CREATE EXTERNAL TABLE ex_table1 ( key INT, value STRING)

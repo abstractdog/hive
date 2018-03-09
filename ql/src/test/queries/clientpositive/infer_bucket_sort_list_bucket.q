@@ -1,3 +1,4 @@
+--! qt:dataset:src
 set hive.merge.mapfiles=false;
 set hive.merge.mapredfiles=false; 
 set mapred.input.dir.recursive=true;

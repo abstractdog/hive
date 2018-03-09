@@ -1,3 +1,5 @@
+--! qt:dataset:src
+--! qt:dataset:dest1
 EXPLAIN
 CREATE TABLE dest1(key INT, value STRING) STORED AS
   INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'

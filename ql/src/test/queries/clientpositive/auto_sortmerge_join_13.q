@@ -1,3 +1,6 @@
+--! qt:dataset:src
+--! qt:dataset:dest2
+--! qt:dataset:dest1
 set hive.explain.user=false;
 
 set hive.exec.reducers.max = 1;

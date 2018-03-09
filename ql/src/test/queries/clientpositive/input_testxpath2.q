@@ -1,3 +1,5 @@
+--! qt:dataset:src_thrift
+--! qt:dataset:dest1
 CREATE TABLE dest1(lint_size INT, lintstring_size INT, mstringstring_size INT) STORED AS TEXTFILE;
 
 EXPLAIN

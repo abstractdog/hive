@@ -1,3 +1,4 @@
+--! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set mapreduce.job.reduces=4;
 set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat;

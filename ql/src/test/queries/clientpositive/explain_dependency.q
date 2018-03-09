@@ -1,3 +1,5 @@
+--! qt:dataset:srcpart
+--! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- This test is used for testing EXPLAIN DEPENDENCY command
 

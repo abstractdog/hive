@@ -1,3 +1,5 @@
+--! qt:dataset:src
+--! qt:dataset:dest1
 set hive.mapred.mode=nonstrict;
 -- SORT_QUERY_RESULTS
 

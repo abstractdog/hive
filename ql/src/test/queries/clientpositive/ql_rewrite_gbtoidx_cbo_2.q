@@ -1,3 +1,4 @@
+--! qt:dataset:src
 set hive.stats.dbclass=fs;
 set hive.stats.autogather=true;
 set hive.cbo.enable=true;

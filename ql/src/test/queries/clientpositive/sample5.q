@@ -1,3 +1,5 @@
+--! qt:dataset:srcbucket
+--! qt:dataset:dest1
 CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 -- SORT_QUERY_RESULTS

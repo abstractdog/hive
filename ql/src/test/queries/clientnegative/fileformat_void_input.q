@@ -1,3 +1,5 @@
+--! qt:dataset:src
+--! qt:dataset:dest1
 CREATE TABLE dest1(key INT, value STRING) STORED AS
   INPUTFORMAT 'java.lang.Void'
   OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat';

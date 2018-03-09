@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP TABLE `insert`;
 
 CREATE TABLE `insert` (key INT, `as` STRING);

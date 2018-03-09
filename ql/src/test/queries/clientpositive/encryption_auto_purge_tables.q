@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- SORT_QUERY_RESULTS;
 
 -- we're setting this so that TestNegaiveCliDriver.vm doesn't stop processing after DROP TABLE fails;

@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.merge.mapfiles=true;
 set hive.merge.mapredfiles=true;

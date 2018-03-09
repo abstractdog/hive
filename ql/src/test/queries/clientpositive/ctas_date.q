@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table ctas_date_1;
 drop table ctas_date_2;
 drop view ctas_date_3;

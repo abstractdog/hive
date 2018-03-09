@@ -1,4 +1,3 @@
---! qt:dataset:dest1
 set hive.mapred.mode=nonstrict;
 CREATE TABLE dest1(c1 STRING, c2 INT, c3 DOUBLE) STORED AS TEXTFILE;
 

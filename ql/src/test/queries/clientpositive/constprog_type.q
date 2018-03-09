@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 set hive.optimize.constant.propagation=true;
 
 CREATE TABLE dest1(d date, t timestamp);

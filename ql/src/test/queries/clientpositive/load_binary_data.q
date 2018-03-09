@@ -1,4 +1,3 @@
---! qt:dataset:dest1
 CREATE TABLE mytable(key binary, value int)
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '9'

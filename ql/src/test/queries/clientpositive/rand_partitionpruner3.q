@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 set hive.mapred.mode=nonstrict;
 set hive.optimize.ppd=true;
 -- complex predicates in the where clause

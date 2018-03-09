@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 SET hive.exec.schema.evolution=false;
 set hive.fetch.task.conversion=more;
 set hive.mapred.mode=nonstrict;

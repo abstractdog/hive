@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Tests that selecting from a view and another view that selects from that same view
 
 CREATE VIEW test_view1 AS SELECT * FROM src;

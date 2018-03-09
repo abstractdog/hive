@@ -1,4 +1,3 @@
---! qt:dataset:src
 SET hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat;
 SET hive.optimize.ppd=true;
 SET mapred.min.split.size=1000;

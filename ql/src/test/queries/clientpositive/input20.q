@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;
 
 ADD FILE ../../data/scripts/input20_script.py;

@@ -1,4 +1,3 @@
---! qt:dataset:src
 explain
 SELECT value from (
   select explode(array(key, value)) as (value) from (

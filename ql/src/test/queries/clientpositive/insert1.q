@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.explain.user=false;
 
 -- SORT_QUERY_RESULTS

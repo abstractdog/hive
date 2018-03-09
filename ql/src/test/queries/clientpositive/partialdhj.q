@@ -1,4 +1,3 @@
---! qt:dataset:src1
 set hive.auto.convert.join=true;
 set hive.strict.checks.cartesian.product=false;
 set hive.merge.nway.joins=false;

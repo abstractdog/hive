@@ -1,4 +1,3 @@
---! qt:dataset:dest1
 EXPLAIN
 CREATE TEMPORARY FUNCTION test_translate AS 'org.apache.hadoop.hive.ql.udf.generic.GenericUDFTestTranslate';
 

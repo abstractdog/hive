@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 CREATE TABLE npe_test (key STRING, value STRING) PARTITIONED BY (ds STRING);
 

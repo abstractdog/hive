@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 CREATE DATABASE tv;
 CREATE VIEW tv.testView as SELECT * FROM srcpart;
 DESCRIBE FORMATTED tv.testView;

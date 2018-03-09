@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 set hive.mapred.mode=nonstrict;
 -- create testing table.
 create table part_boolexpr(key int, value string) partitioned by (dt int, ts string);

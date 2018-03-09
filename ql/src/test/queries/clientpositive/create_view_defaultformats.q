@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop view if exists sfsrc;
 drop view if exists rcsrc;
 set hive.default.fileformat=SequenceFile;

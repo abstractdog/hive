@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.exec.compress.output=true;
 
 drop table insert_compressed;

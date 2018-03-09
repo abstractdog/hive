@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.auto.convert.join=true;
 set hive.auto.convert.join.noconditionaltask.size=3000;
 set hive.strict.checks.cartesian.product=false;

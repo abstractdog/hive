@@ -1,4 +1,3 @@
---! qt:dataset:dest1
 -- SORT_QUERY_RESULTS
 
 USE default;

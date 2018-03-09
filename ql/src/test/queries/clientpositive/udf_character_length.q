@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:dest1
 SET hive.vectorized.execution.enabled=false;
 set hive.fetch.task.conversion=more;
 

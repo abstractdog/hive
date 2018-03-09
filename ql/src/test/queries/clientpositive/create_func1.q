@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 -- qtest_get_java_boolean should already be created during test initialization
 select qtest_get_java_boolean('true'), qtest_get_java_boolean('false') from src limit 1;

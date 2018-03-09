@@ -1,8 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src1
---! qt:dataset:src
---! qt:dataset:part
---! qt:dataset:lineitem
 set hive.strict.checks.bucketing=false;
 
 set hive.mapred.mode=nonstrict;

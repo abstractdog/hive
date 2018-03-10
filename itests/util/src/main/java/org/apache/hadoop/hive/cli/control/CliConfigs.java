@@ -60,7 +60,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive");
         setLogDir("itests/qtest/target/qfile-results/clientpositive");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("");
@@ -80,7 +80,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/compiler/errors");
         setLogDir("itests/qtest/target/qfile-results/negative");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/perf-reg/");
@@ -152,7 +152,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive/llap");
         setLogDir("itests/qtest/target/qfile-results/clientpositive");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/llap");
@@ -200,7 +200,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive/llap");
         setLogDir("itests/qtest/target/qfile-results/clientpositive");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/llap");
@@ -341,7 +341,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientnegative");
         setLogDir("itests/qtest/target/qfile-results/clientnegative");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("");
@@ -443,7 +443,7 @@ public class CliConfigs {
         setResultsDir("contrib/src/test/results/clientnegative");
         setLogDir("itests/qtest/target/qfile-results/contribclientnegative");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("");
@@ -508,7 +508,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive/spark");
         setLogDir("itests/qtest-spark/target/qfile-results/clientpositive/spark");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/spark/standalone");
@@ -530,7 +530,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive/spark");
         setLogDir("itests/qtest-spark/target/qfile-results/clientpositive/spark");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/spark/local");
@@ -553,7 +553,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientpositive/spark");
         setLogDir("itests/qtest-spark/target/qfile-results/clientpositive/spark");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/spark/yarn-client");
@@ -575,7 +575,7 @@ public class CliConfigs {
         setResultsDir("ql/src/test/results/clientnegative/spark");
         setLogDir("itests/qtest-spark/target/qfile-results/clientnegative/spark");
 
-        //setInitScript("q_test_init.sql");
+        setInitScript("q_test_init.sql");
         setCleanupScript("q_test_cleanup.sql");
 
         setHiveConfDir("data/conf/spark/standalone");

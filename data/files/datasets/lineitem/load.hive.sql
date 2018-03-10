@@ -18,3 +18,6 @@ ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '|';
 
 LOAD DATA LOCAL INPATH '${hiveconf:test.data.dir}/lineitem.txt' OVERWRITE INTO TABLE lineitem;
+
+analyze table lineitem compute statistics;
+analyze table lineitem compute statistics for columns;

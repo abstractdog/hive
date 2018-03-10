@@ -11,3 +11,6 @@ CREATE TABLE part(
 );
 
 LOAD DATA LOCAL INPATH '${hiveconf:test.data.dir}/part_tiny.txt' overwrite into table part;
+
+analyze table part compute statistics;
+analyze table part compute statistics for columns;

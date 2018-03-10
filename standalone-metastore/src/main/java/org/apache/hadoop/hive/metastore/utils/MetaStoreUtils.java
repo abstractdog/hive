@@ -305,14 +305,6 @@ public class MetaStoreUtils {
     return new BigDecimal(new BigInteger(decimal.getUnscaled()), decimal.getScale()).doubleValue();
   }
 
-  public static String[] getQualifiedName(String defaultDbName, String tableName) {
-    String[] names = tableName.split("\\.");
-    if (names.length == 1) {
-      return new String[] { defaultDbName, tableName};
-    }
-    return names;
-  }
-
   public static void validatePartitionNameCharacters(List<String> partVals,
                                                      Pattern partitionValidationPattern) throws MetaException {
 
@@ -355,7 +347,9 @@ public class MetaStoreUtils {
       for (FieldSchema fs : sd.getCols()) {
         md.update(fs.getName().getBytes(ENCODING));
         md.update(fs.getType().getBytes(ENCODING));
-        if (fs.getComment() != null) md.update(fs.getComment().getBytes(ENCODING));
+        if (fs.getComment() != null) {
+          md.update(fs.getComment().getBytes(ENCODING));
+        }
       }
     }
     if (sd.getInputFormat() != null) {
@@ -384,7 +378,9 @@ public class MetaStoreUtils {
     }
     if (sd.getBucketCols() != null) {
       List<String> bucketCols = new ArrayList<>(sd.getBucketCols());
-      for (String bucket : bucketCols) md.update(bucket.getBytes(ENCODING));
+      for (String bucket : bucketCols) {
+        md.update(bucket.getBytes(ENCODING));
+      }
     }
     if (sd.getSortCols() != null) {
       SortedSet<Order> orders = new TreeSet<>(sd.getSortCols());
@@ -397,7 +393,9 @@ public class MetaStoreUtils {
       SkewedInfo skewed = sd.getSkewedInfo();
       if (skewed.getSkewedColNames() != null) {
         SortedSet<String> colnames = new TreeSet<>(skewed.getSkewedColNames());
-        for (String colname : colnames) md.update(colname.getBytes(ENCODING));
+        for (String colname : colnames) {
+          md.update(colname.getBytes(ENCODING));
+        }
       }
       if (skewed.getSkewedColValues() != null) {
         SortedSet<String> sortedOuterList = new TreeSet<>();
@@ -405,7 +403,9 @@ public class MetaStoreUtils {
           SortedSet<String> sortedInnerList = new TreeSet<>(innerList);
           sortedOuterList.add(org.apache.commons.lang.StringUtils.join(sortedInnerList, "."));
         }
-        for (String colval : sortedOuterList) md.update(colval.getBytes(ENCODING));
+        for (String colval : sortedOuterList) {
+          md.update(colval.getBytes(ENCODING));
+        }
       }
       if (skewed.getSkewedColValueLocationMaps() != null) {
         SortedMap<String, String> sortedMap = new TreeMap<>();
@@ -485,7 +485,9 @@ public class MetaStoreUtils {
   }
 
   private static String validateColumnType(String type) {
-    if (type.equals(TYPE_FROM_DESERIALIZER)) return null;
+    if (type.equals(TYPE_FROM_DESERIALIZER)) {
+      return null;
+    }
     int last = 0;
     boolean lastAlphaDigit = isValidTypeChar(type.charAt(last));
     for (int i = 1; i <= type.length(); i++) {
@@ -604,20 +606,16 @@ public class MetaStoreUtils {
     return false;
   }
 
-  public static boolean updateTableStatsFast(Database db, Table tbl, Warehouse wh,
-                                             boolean madeDir, EnvironmentContext environmentContext) throws MetaException {
-    return updateTableStatsFast(db, tbl, wh, madeDir, false, environmentContext);
-  }
-
-  public static boolean updateTableStatsFast(Database db, Table tbl, Warehouse wh,
-                                             boolean madeDir, boolean forceRecompute, EnvironmentContext environmentContext) throws MetaException {
-    if (tbl.getPartitionKeysSize() == 0) {
-      // Update stats only when unpartitioned
-      FileStatus[] fileStatuses = wh.getFileStatusesForUnpartitionedTable(db, tbl);
-      return updateTableStatsFast(tbl, fileStatuses, madeDir, forceRecompute, environmentContext);
-    } else {
-      return false;
-    }
+  public static boolean updateTableStatsFast(Database db, Table tbl, Warehouse wh, boolean madeDir,
+      boolean forceRecompute, EnvironmentContext environmentContext, boolean isCreate) throws MetaException {
+    if (tbl.getPartitionKeysSize() != 0) return false;
+    // Update stats only when unpartitioned
+    // TODO: this is also invalid for ACID tables, except for the create case by coincidence;
+    //       because the methods in metastore get all the files in the table directory without
+    //       regard for ACID state.
+    List<FileStatus> fileStatuses = wh.getFileStatusesForUnpartitionedTable(db, tbl);
+    return updateTableStatsFast(
+        tbl, fileStatuses, madeDir, forceRecompute, environmentContext, isCreate);
   }
 
   /**
@@ -630,8 +628,9 @@ public class MetaStoreUtils {
    * these parameters set
    * @return true if the stats were updated, false otherwise
    */
-  public static boolean updateTableStatsFast(Table tbl, FileStatus[] fileStatus, boolean newDir,
-                                             boolean forceRecompute, EnvironmentContext environmentContext) throws MetaException {
+  private static boolean updateTableStatsFast(Table tbl, List<FileStatus> fileStatus,
+      boolean newDir, boolean forceRecompute, EnvironmentContext environmentContext,
+      boolean isCreate) throws MetaException {
 
     Map<String,String> params = tbl.getParameters();
 
@@ -644,39 +643,43 @@ public class MetaStoreUtils {
       }
     }
 
-    boolean updated = false;
-    if (forceRecompute ||
-        params == null ||
-        !containsAllFastStats(params)) {
-      if (params == null) {
-        params = new HashMap<>();
-      }
-      if (!newDir) {
-        // The table location already exists and may contain data.
-        // Let's try to populate those stats that don't require full scan.
-        LOG.info("Updating table stats fast for " + tbl.getTableName());
-        populateQuickStats(fileStatus, params);
-        LOG.info("Updated size of table " + tbl.getTableName() +" to "+ params.get(StatsSetupConst.TOTAL_SIZE));
-        if (environmentContext != null
-            && environmentContext.isSetProperties()
-            && StatsSetupConst.TASK.equals(environmentContext.getProperties().get(
-            StatsSetupConst.STATS_GENERATED))) {
-          StatsSetupConst.setBasicStatsState(params, StatsSetupConst.TRUE);
-        } else {
-          StatsSetupConst.setBasicStatsState(params, StatsSetupConst.FALSE);
-        }
-      }
-      tbl.setParameters(params);
-      updated = true;
+    if (!forceRecompute && params != null && containsAllFastStats(params)) return false;
+    if (params == null) {
+      params = new HashMap<>();
     }
-    return updated;
+    if (!isCreate && MetaStoreUtils.isTransactionalTable(tbl.getParameters())) {
+      // TODO: we should use AcidUtils.getAcidFilesForStats, but cannot access it from metastore.
+      LOG.warn("Not updating fast stats for a transactional table " + tbl.getTableName());
+      tbl.setParameters(params);
+      return true;
+    }
+    if (!newDir) {
+      // The table location already exists and may contain data.
+      // Let's try to populate those stats that don't require full scan.
+      LOG.info("Updating table stats fast for " + tbl.getTableName());
+      populateQuickStats(fileStatus, params);
+      LOG.info("Updated size of table " + tbl.getTableName() +" to "+ params.get(StatsSetupConst.TOTAL_SIZE));
+      if (environmentContext != null
+          && environmentContext.isSetProperties()
+          && StatsSetupConst.TASK.equals(environmentContext.getProperties().get(
+          StatsSetupConst.STATS_GENERATED))) {
+        StatsSetupConst.setBasicStatsState(params, StatsSetupConst.TRUE);
+      } else {
+        StatsSetupConst.setBasicStatsState(params, StatsSetupConst.FALSE);
+      }
+    }
+    tbl.setParameters(params);
+    return true;
   }
 
-  public static void populateQuickStats(FileStatus[] fileStatus, Map<String, String> params) {
+  /** This method is invalid for MM and ACID tables unless fileStatus comes from AcidUtils. */
+  public static void populateQuickStats(List<FileStatus> fileStatus, Map<String, String> params) {
+    // Why is this even in metastore?
+    LOG.trace("Populating quick stats based on {} files", fileStatus.size());
     int numFiles = 0;
     long tableSize = 0L;
     for (FileStatus status : fileStatus) {
-      // don't take directories into account for quick stats
+      // don't take directories into account for quick stats TODO: wtf?
       if (!status.isDir()) {
         tableSize += status.getLen();
         numFiles += 1;
@@ -685,6 +688,12 @@ public class MetaStoreUtils {
     params.put(StatsSetupConst.NUM_FILES, Integer.toString(numFiles));
     params.put(StatsSetupConst.TOTAL_SIZE, Long.toString(tableSize));
   }
+ 
+  public static void clearQuickStats(Map<String, String> params) {
+    params.remove(StatsSetupConst.NUM_FILES);
+    params.remove(StatsSetupConst.TOTAL_SIZE);
+  }
+ 
 
   public static boolean areSameColumns(List<FieldSchema> oldCols, List<FieldSchema> newCols) {
     return ListUtils.isEqualList(oldCols, newCols);
@@ -705,16 +714,6 @@ public class MetaStoreUtils {
     }
   }
 
-  public static boolean updatePartitionStatsFast(Partition part, Warehouse wh, EnvironmentContext environmentContext)
-      throws MetaException {
-    return updatePartitionStatsFast(part, wh, false, false, environmentContext);
-  }
-
-  public static boolean updatePartitionStatsFast(Partition part, Warehouse wh, boolean madeDir, EnvironmentContext environmentContext)
-      throws MetaException {
-    return updatePartitionStatsFast(part, wh, madeDir, false, environmentContext);
-  }
-
   /**
    * Updates the numFiles and totalSize parameters for the passed Partition by querying
    *  the warehouse if the passed Partition does not already have values for these parameters.
@@ -725,10 +724,11 @@ public class MetaStoreUtils {
    * these parameters set
    * @return true if the stats were updated, false otherwise
    */
-  public static boolean updatePartitionStatsFast(Partition part, Warehouse wh,
-                                                 boolean madeDir, boolean forceRecompute, EnvironmentContext environmentContext) throws MetaException {
+  public static boolean updatePartitionStatsFast(Partition part, Table tbl, Warehouse wh,
+      boolean madeDir, boolean forceRecompute, EnvironmentContext environmentContext,
+      boolean isCreate) throws MetaException {
     return updatePartitionStatsFast(new PartitionSpecProxy.SimplePartitionWrapperIterator(part),
-        wh, madeDir, forceRecompute, environmentContext);
+        tbl, wh, madeDir, forceRecompute, environmentContext, isCreate);
   }
   /**
    * Updates the numFiles and totalSize parameters for the passed Partition by querying
@@ -740,29 +740,32 @@ public class MetaStoreUtils {
    * these parameters set
    * @return true if the stats were updated, false otherwise
    */
-  public static boolean updatePartitionStatsFast(PartitionSpecProxy.PartitionIterator part, Warehouse wh,
-                                                 boolean madeDir, boolean forceRecompute, EnvironmentContext environmentContext) throws MetaException {
+  public static boolean updatePartitionStatsFast(PartitionSpecProxy.PartitionIterator part,
+      Table table, Warehouse wh, boolean madeDir, boolean forceRecompute,
+      EnvironmentContext environmentContext, boolean isCreate) throws MetaException {
     Map<String,String> params = part.getParameters();
-    boolean updated = false;
-    if (forceRecompute ||
-        params == null ||
-        !containsAllFastStats(params)) {
-      if (params == null) {
-        params = new HashMap<>();
-      }
-      if (!madeDir) {
-        // The partition location already existed and may contain data. Lets try to
-        // populate those statistics that don't require a full scan of the data.
-        LOG.warn("Updating partition stats fast for: " + part.getTableName());
-        FileStatus[] fileStatus = wh.getFileStatusesForLocation(part.getLocation());
-        populateQuickStats(fileStatus, params);
-        LOG.warn("Updated size to " + params.get(StatsSetupConst.TOTAL_SIZE));
-        updateBasicState(environmentContext, params);
-      }
-      part.setParameters(params);
-      updated = true;
+    if (!forceRecompute && params != null && containsAllFastStats(params)) return false;
+    if (params == null) {
+      params = new HashMap<>();
     }
-    return updated;
+    if (!isCreate && MetaStoreUtils.isTransactionalTable(table.getParameters())) {
+      // TODO: implement?
+      LOG.warn("Not updating fast stats for a transactional table " + table.getTableName());
+      part.setParameters(params);
+      return true;
+    }
+    if (!madeDir) {
+      // The partition location already existed and may contain data. Lets try to
+      // populate those statistics that don't require a full scan of the data.
+      LOG.warn("Updating partition stats fast for: " + part.getTableName());
+      List<FileStatus> fileStatus = wh.getFileStatusesForLocation(part.getLocation());
+      // TODO: this is invalid for ACID tables, and we cannot access AcidUtils here.
+      populateQuickStats(fileStatus, params);
+      LOG.warn("Updated size to " + params.get(StatsSetupConst.TOTAL_SIZE));
+      updateBasicState(environmentContext, params);
+    }
+    part.setParameters(params);
+    return true;
   }
 
   /*
@@ -787,6 +790,12 @@ public class MetaStoreUtils {
     }
 
     return true;
+  }
+
+  /** Duplicates AcidUtils; used in a couple places in metastore. */
+  public static boolean isTransactionalTable(Map<String, String> params) {
+    String transactionalProp = params.get(hive_metastoreConstants.TABLE_IS_TRANSACTIONAL);
+    return (transactionalProp != null && "true".equalsIgnoreCase(transactionalProp));
   }
 
   /** Duplicates AcidUtils; used in a couple places in metastore. */
@@ -869,13 +878,6 @@ public class MetaStoreUtils {
       return false;
     }
     return (table.getParameters().get(hive_metastoreConstants.META_TABLE_STORAGE) != null);
-  }
-
-  public static boolean isIndexTable(Table table) {
-    if (table == null) {
-      return false;
-    }
-    return TableType.INDEX_TABLE.toString().equals(table.getTableType());
   }
 
   /**
@@ -1593,9 +1595,13 @@ public class MetaStoreUtils {
   }
 
   public static WMPoolSchedulingPolicy parseSchedulingPolicy(String schedulingPolicy) {
-    if (schedulingPolicy == null) return WMPoolSchedulingPolicy.FAIR;
+    if (schedulingPolicy == null) {
+      return WMPoolSchedulingPolicy.FAIR;
+    }
     schedulingPolicy = schedulingPolicy.trim().toUpperCase();
-    if ("DEFAULT".equals(schedulingPolicy)) return WMPoolSchedulingPolicy.FAIR;
+    if ("DEFAULT".equals(schedulingPolicy)) {
+      return WMPoolSchedulingPolicy.FAIR;
+    }
     return Enum.valueOf(WMPoolSchedulingPolicy.class, schedulingPolicy);
   }
 

@@ -20,9 +20,8 @@ package org.apache.hadoop.hive.metastore.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.metastore.DefaultPartitionExpressionProxy;
+import org.apache.hadoop.hive.metastore.MetaStoreTestUtils;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hadoop.hive.metastore.events.EventCleanerTask;
 import org.apache.hadoop.hive.metastore.minihms.AbstractMetaStoreService;
 import org.apache.hadoop.hive.metastore.minihms.MiniHMS;
 
@@ -34,8 +33,10 @@ import java.util.List;
  * {@link org.apache.hadoop.hive.metastore.minihms.AbstractMetaStoreService} implementations for
  * tests.
  */
-public class MetaStoreFactoryForTests {
+public final class MetaStoreFactoryForTests {
   private static final int DEFAULT_LIMIT_PARTITION_REQUEST = 100;
+
+  private MetaStoreFactoryForTests() {}
 
   /**
    * We would like to run the tests with 2 MetaStore configurations
@@ -58,10 +59,7 @@ public class MetaStoreFactoryForTests {
     MetastoreConf.setLongVar(conf, MetastoreConf.ConfVars.BATCH_RETRIEVE_MAX, 2);
     MetastoreConf.setLongVar(conf, MetastoreConf.ConfVars.LIMIT_PARTITION_REQUEST,
         DEFAULT_LIMIT_PARTITION_REQUEST);
-    MetastoreConf.setVar(conf, MetastoreConf.ConfVars.EXPRESSION_PROXY_CLASS,
-        DefaultPartitionExpressionProxy.class.getName());
-    MetastoreConf.setVar(conf, MetastoreConf.ConfVars.TASK_THREADS_ALWAYS,
-        EventCleanerTask.class.getName());
+    MetaStoreTestUtils.setConfForStandloneMode(conf);
 
     // Do this only on your own peril, and never in the production code
     conf.set("datanucleus.autoCreateTables", "false");
@@ -94,7 +92,7 @@ public class MetaStoreFactoryForTests {
             .setConf(conf)
             .setType(MiniHMS.MiniHMSType.EMBEDDED)
             .build();
-    metaStores.add(new Object[] { "Embedded", embedded});
+    metaStores.add(new Object[] {"Embedded", embedded});
 
     // Create Remote MetaStore
     conf.set("javax.jdo.option.ConnectionURL",
@@ -104,7 +102,7 @@ public class MetaStoreFactoryForTests {
             .setConf(conf)
             .setType(MiniHMS.MiniHMSType.REMOTE)
             .build();
-    metaStores.add(new Object[] { "Remote", remote});
+    metaStores.add(new Object[] {"Remote", remote});
 
     return metaStores;
   }

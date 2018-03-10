@@ -90,6 +90,17 @@ struct SQLNotNullConstraint {
   7: bool rely_cstr      // Rely/No Rely
 }
 
+struct SQLDefaultConstraint {
+  1: string table_db,    // table schema
+  2: string table_name,  // table name
+  3: string column_name, // column name
+  4: string default_value,// default value
+  5: string dc_name,     // default name
+  6: bool enable_cstr,   // Enable/Disable
+  7: bool validate_cstr, // Validate/No validate
+  8: bool rely_cstr      // Rely/No Rely
+}
+
 struct Type {
   1: string          name,             // one of the types in PrimitiveTypes or CollectionTypes or User defined types
   2: optional string type1,            // object type if the name is 'list' (LIST_TYPE), key type if the name is 'map' (MAP_TYPE)
@@ -327,7 +338,7 @@ struct Table {
   13: optional PrincipalPrivilegeSet privileges,
   14: optional bool temporary=false,
   15: optional bool rewriteEnabled,     // rewrite enabled or not
-  16: optional map<string, BasicTxnInfo> creationMetadata   // only for MVs, it stores table name used -> last modification before MV creation
+  16: optional CreationMetadata creationMetadata   // only for MVs, it stores table names used and txn list at MV creation
 }
 
 struct Partition {
@@ -365,19 +376,6 @@ struct PartitionSpec {
   3: string rootPath,
   4: optional PartitionSpecWithSharedSD sharedSDPartitionSpec,
   5: optional PartitionListComposingSpec partitionList
-}
-
-struct Index {
-  1: string       indexName, // unique with in the whole database namespace
-  2: string       indexHandlerClass, // reserved
-  3: string       dbName,
-  4: string       origTableName,
-  5: i32          createTime,
-  6: i32          lastAccessTime,
-  7: string       indexTableName,
-  8: StorageDescriptor   sd,
-  9: map<string, string> parameters,
-  10: bool         deferredRebuild
 }
 
 // column statistics
@@ -537,6 +535,16 @@ struct NotNullConstraintsResponse {
   1: required list<SQLNotNullConstraint> notNullConstraints
 }
 
+struct DefaultConstraintsRequest {
+  1: required string db_name,
+  2: required string tbl_name
+}
+
+struct DefaultConstraintsResponse {
+  1: required list<SQLDefaultConstraint> defaultConstraints
+}
+
+
 struct DropConstraintRequest {
   1: required string dbname, 
   2: required string tablename,
@@ -557,6 +565,10 @@ struct AddUniqueConstraintRequest {
 
 struct AddNotNullConstraintRequest {
   1: required list<SQLNotNullConstraint> notNullConstraintCols
+}
+
+struct AddDefaultConstraintRequest {
+  1: required list<SQLDefaultConstraint> defaultConstraintCols
 }
 
 // Return type for get_partitions_by_expr
@@ -731,6 +743,43 @@ struct CommitTxnRequest {
     1: required i64 txnid,
 }
 
+// Request msg to get the valid write ids list for the given list of tables wrt to input validTxnList
+struct GetValidWriteIdsRequest {
+    1: required list<string> fullTableNames, // Full table names of format <db_name>.<table_name>
+    2: required string validTxnList, // Valid txn list string wrt the current txn of the caller
+}
+
+// Valid Write ID list of one table wrt to current txn
+struct TableValidWriteIds {
+    1: required string fullTableName,  // Full table name of format <db_name>.<table_name>
+    2: required i64 writeIdHighWaterMark, // The highest write id valid for this table wrt given txn
+    3: required list<i64> invalidWriteIds, // List of open and aborted writes ids in the table
+    4: optional i64 minOpenWriteId, // Minimum write id which maps to a opened txn
+    5: required binary abortedBits, // Bit array to identify the aborted write ids in invalidWriteIds list
+}
+
+// Valid Write ID list for all the input tables wrt to current txn
+struct GetValidWriteIdsResponse {
+    1: required list<TableValidWriteIds> tblValidWriteIds,
+}
+
+// Request msg to allocate table write ids for the given list of txns
+struct AllocateTableWriteIdsRequest {
+    1: required list<i64> txnIds,
+    2: required string dbName,
+    3: required string tableName,
+}
+
+// Map for allocated write id against the txn for which it is allocated
+struct TxnToWriteId {
+    1: required i64 txnId,
+    2: required i64 writeId,
+}
+
+struct AllocateTableWriteIdsResponse {
+    1: required list<TxnToWriteId> txnToWriteIds,
+}
+
 struct LockComponent {
     1: required LockType type,
     2: required LockLevel level,
@@ -850,25 +899,27 @@ struct ShowCompactResponse {
 
 struct AddDynamicPartitions {
     1: required i64 txnid,
-    2: required string dbname,
-    3: required string tablename,
-    4: required list<string> partitionnames,
-    5: optional DataOperationType operationType = DataOperationType.UNSET
+    2: required i64 writeid,
+    3: required string dbname,
+    4: required string tablename,
+    5: required list<string> partitionnames,
+    6: optional DataOperationType operationType = DataOperationType.UNSET
 }
 
 struct BasicTxnInfo {
     1: required bool isnull,
-    2: optional i64 id,
-    3: optional i64 time,
-    4: optional i64 txnid,
-    5: optional string dbname,
-    6: optional string tablename,
-    7: optional string partitionname
+    2: optional i64 time,
+    3: optional i64 txnid,
+    4: optional string dbname,
+    5: optional string tablename,
+    6: optional string partitionname
 }
 
-struct TxnsSnapshot {
-    1: required i64 txn_high_water_mark,
-    2: required list<i64> open_txns
+struct CreationMetadata {
+    1: required string dbName,
+    2: required string tblName,
+    3: required set<string> tablesUsed,
+    4: optional string validTxnList
 }
 
 struct NotificationEventRequest {
@@ -1048,8 +1099,8 @@ struct TableMeta {
 }
 
 struct Materialization {
-  1: required Table materializationTable;
-  2: required set<string> tablesUsed;
+  1: required set<string> tablesUsed;
+  2: optional string validTxnList
   3: required i64 invalidationTime;
 }
 
@@ -1301,10 +1352,6 @@ exception NoSuchObjectException {
   1: string message
 }
 
-exception IndexAlreadyExistsException {
-  1: string message
-}
-
 exception InvalidOperationException {
   1: string message
 }
@@ -1380,7 +1427,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
               2:InvalidObjectException o2, 3:MetaException o3,
               4:NoSuchObjectException o4)
   void create_table_with_constraints(1:Table tbl, 2: list<SQLPrimaryKey> primaryKeys, 3: list<SQLForeignKey> foreignKeys,
-  4: list<SQLUniqueConstraint> uniqueConstraints, 5: list<SQLNotNullConstraint> notNullConstraints)
+  4: list<SQLUniqueConstraint> uniqueConstraints, 5: list<SQLNotNullConstraint> notNullConstraints,
+  6: list<SQLDefaultConstraint> defaultConstraints)
       throws (1:AlreadyExistsException o1,
               2:InvalidObjectException o2, 3:MetaException o3,
               4:NoSuchObjectException o4)
@@ -1393,6 +1441,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
   void add_unique_constraint(1:AddUniqueConstraintRequest req)
       throws(1:NoSuchObjectException o1, 2:MetaException o2)
   void add_not_null_constraint(1:AddNotNullConstraintRequest req)
+      throws(1:NoSuchObjectException o1, 2:MetaException o2)
+  void add_default_constraint(1:AddDefaultConstraintRequest req)
       throws(1:NoSuchObjectException o1, 2:MetaException o2)
 
   // drops the table and all the partitions associated with it if the table has partitions
@@ -1419,6 +1469,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
 				   throws (1:MetaException o1, 2:InvalidOperationException o2, 3:UnknownDBException o3)
   map<string, Materialization> get_materialization_invalidation_info(1:string dbname, 2:list<string> tbl_names)
 				   throws (1:MetaException o1, 2:InvalidOperationException o2, 3:UnknownDBException o3)
+  void update_creation_metadata(1:string dbname, 2:string tbl_name, 3:CreationMetadata creation_metadata)
+                   throws (1:MetaException o1, 2:InvalidOperationException o2, 3:UnknownDBException o3)
 
   // Get a list of table names that match a filter.
   // The filter operators are LIKE, <, <=, >, >=, =, <>
@@ -1630,21 +1682,6 @@ service ThriftHiveMetastore extends fb303.FacebookService
                   3: UnknownDBException o3, 4: UnknownTableException o4, 5: UnknownPartitionException o5,
                   6: InvalidPartitionException o6)
 
-  //index
-  Index add_index(1:Index new_index, 2: Table index_table)
-                       throws(1:InvalidObjectException o1, 2:AlreadyExistsException o2, 3:MetaException o3)
-  void alter_index(1:string dbname, 2:string base_tbl_name, 3:string idx_name, 4:Index new_idx)
-                       throws (1:InvalidOperationException o1, 2:MetaException o2)
-  bool drop_index_by_name(1:string db_name, 2:string tbl_name, 3:string index_name, 4:bool deleteData)
-                       throws(1:NoSuchObjectException o1, 2:MetaException o2)
-  Index get_index_by_name(1:string db_name 2:string tbl_name, 3:string index_name)
-                       throws(1:MetaException o1, 2:NoSuchObjectException o2)
-
-  list<Index> get_indexes(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
-                       throws(1:NoSuchObjectException o1, 2:MetaException o2)
-  list<string> get_index_names(1:string db_name, 2:string tbl_name, 3:i16 max_indexes=-1)
-                       throws(1:MetaException o2)
-
   //primary keys and foreign keys
   PrimaryKeysResponse get_primary_keys(1:PrimaryKeysRequest request)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
@@ -1654,6 +1691,8 @@ service ThriftHiveMetastore extends fb303.FacebookService
   UniqueConstraintsResponse get_unique_constraints(1:UniqueConstraintsRequest request)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
   NotNullConstraintsResponse get_not_null_constraints(1:NotNullConstraintsRequest request)
+                       throws(1:MetaException o1, 2:NoSuchObjectException o2)
+  DefaultConstraintsResponse get_default_constraints(1:DefaultConstraintsRequest request)
                        throws(1:MetaException o1, 2:NoSuchObjectException o2)
 
   // column statistics interfaces
@@ -1804,6 +1843,10 @@ service ThriftHiveMetastore extends fb303.FacebookService
   void abort_txn(1:AbortTxnRequest rqst) throws (1:NoSuchTxnException o1)
   void abort_txns(1:AbortTxnsRequest rqst) throws (1:NoSuchTxnException o1)
   void commit_txn(1:CommitTxnRequest rqst) throws (1:NoSuchTxnException o1, 2:TxnAbortedException o2)
+  GetValidWriteIdsResponse get_valid_write_ids(1:GetValidWriteIdsRequest rqst)
+      throws (1:NoSuchTxnException o1, 2:MetaException o2)
+  AllocateTableWriteIdsResponse allocate_table_write_ids(1:AllocateTableWriteIdsRequest rqst)
+    throws (1:NoSuchTxnException o1, 2:TxnAbortedException o2, 3:MetaException o3)
   LockResponse lock(1:LockRequest rqst) throws (1:NoSuchTxnException o1, 2:TxnAbortedException o2)
   LockResponse check_lock(1:CheckLockRequest rqst)
     throws (1:NoSuchTxnException o1, 2:TxnAbortedException o2, 3:NoSuchLockException o3)
@@ -1815,8 +1858,6 @@ service ThriftHiveMetastore extends fb303.FacebookService
   CompactionResponse compact2(1:CompactionRequest rqst) 
   ShowCompactResponse show_compact(1:ShowCompactRequest rqst)
   void add_dynamic_partitions(1:AddDynamicPartitions rqst) throws (1:NoSuchTxnException o1, 2:TxnAbortedException o2)
-  list<BasicTxnInfo> get_last_completed_transaction_for_tables(1:list<string> db_names, 2:list<string> table_names, 3:TxnsSnapshot txns_snapshot)
-  BasicTxnInfo get_last_completed_transaction_for_table(1:string db_name, 2:string table_name, 3:TxnsSnapshot txns_snapshot)
 
   // Notification logging calls
   NotificationEventResponse get_next_notification(1:NotificationEventRequest rqst) 

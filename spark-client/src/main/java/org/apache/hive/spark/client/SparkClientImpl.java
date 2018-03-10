@@ -38,6 +38,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.io.Writer;
 import java.net.URI;
@@ -91,7 +92,7 @@ class SparkClientImpl implements SparkClient {
   private volatile boolean isAlive;
 
   SparkClientImpl(RpcServer rpcServer, Map<String, String> conf, HiveConf hiveConf,
-                  String sessionid) throws IOException, SparkException {
+                  String sessionid) throws IOException {
     this.conf = conf;
     this.hiveConf = hiveConf;
     this.jobs = Maps.newConcurrentMap();
@@ -574,7 +575,7 @@ class SparkClientImpl implements SparkClient {
     }
 
     private void handle(ChannelHandlerContext ctx, Error msg) {
-      LOG.warn("Error reported from remote driver.", msg.cause);
+      LOG.warn("Error reported from remote driver: {}", msg.cause);
     }
 
     private void handle(ChannelHandlerContext ctx, JobMetrics msg) {
@@ -620,7 +621,6 @@ class SparkClientImpl implements SparkClient {
         LOG.warn("Received spark job ID: {} for unknown job {}", msg.sparkJobId, msg.clientJobId);
       }
     }
-
   }
 
   private static class AddJarJob implements Job<Serializable> {

@@ -198,6 +198,8 @@ class SQLUniqueConstraint;
 
 class SQLNotNullConstraint;
 
+class SQLDefaultConstraint;
+
 class Type;
 
 class HiveObjectRef;
@@ -252,8 +254,6 @@ class PartitionListComposingSpec;
 
 class PartitionSpec;
 
-class Index;
-
 class BooleanColumnStatsData;
 
 class DoubleColumnStatsData;
@@ -304,6 +304,10 @@ class NotNullConstraintsRequest;
 
 class NotNullConstraintsResponse;
 
+class DefaultConstraintsRequest;
+
+class DefaultConstraintsResponse;
+
 class DropConstraintRequest;
 
 class AddPrimaryKeyRequest;
@@ -313,6 +317,8 @@ class AddForeignKeyRequest;
 class AddUniqueConstraintRequest;
 
 class AddNotNullConstraintRequest;
+
+class AddDefaultConstraintRequest;
 
 class PartitionsByExprResult;
 
@@ -364,6 +370,18 @@ class AbortTxnsRequest;
 
 class CommitTxnRequest;
 
+class GetValidWriteIdsRequest;
+
+class TableValidWriteIds;
+
+class GetValidWriteIdsResponse;
+
+class AllocateTableWriteIdsRequest;
+
+class TxnToWriteId;
+
+class AllocateTableWriteIdsResponse;
+
 class LockComponent;
 
 class LockRequest;
@@ -400,7 +418,7 @@ class AddDynamicPartitions;
 
 class BasicTxnInfo;
 
-class TxnsSnapshot;
+class CreationMetadata;
 
 class NotificationEventRequest;
 
@@ -563,8 +581,6 @@ class UnknownPartitionException;
 class InvalidObjectException;
 
 class NoSuchObjectException;
-
-class IndexAlreadyExistsException;
 
 class InvalidOperationException;
 
@@ -1067,6 +1083,94 @@ class SQLNotNullConstraint {
 void swap(SQLNotNullConstraint &a, SQLNotNullConstraint &b);
 
 inline std::ostream& operator<<(std::ostream& out, const SQLNotNullConstraint& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _SQLDefaultConstraint__isset {
+  _SQLDefaultConstraint__isset() : table_db(false), table_name(false), column_name(false), default_value(false), dc_name(false), enable_cstr(false), validate_cstr(false), rely_cstr(false) {}
+  bool table_db :1;
+  bool table_name :1;
+  bool column_name :1;
+  bool default_value :1;
+  bool dc_name :1;
+  bool enable_cstr :1;
+  bool validate_cstr :1;
+  bool rely_cstr :1;
+} _SQLDefaultConstraint__isset;
+
+class SQLDefaultConstraint {
+ public:
+
+  SQLDefaultConstraint(const SQLDefaultConstraint&);
+  SQLDefaultConstraint& operator=(const SQLDefaultConstraint&);
+  SQLDefaultConstraint() : table_db(), table_name(), column_name(), default_value(), dc_name(), enable_cstr(0), validate_cstr(0), rely_cstr(0) {
+  }
+
+  virtual ~SQLDefaultConstraint() throw();
+  std::string table_db;
+  std::string table_name;
+  std::string column_name;
+  std::string default_value;
+  std::string dc_name;
+  bool enable_cstr;
+  bool validate_cstr;
+  bool rely_cstr;
+
+  _SQLDefaultConstraint__isset __isset;
+
+  void __set_table_db(const std::string& val);
+
+  void __set_table_name(const std::string& val);
+
+  void __set_column_name(const std::string& val);
+
+  void __set_default_value(const std::string& val);
+
+  void __set_dc_name(const std::string& val);
+
+  void __set_enable_cstr(const bool val);
+
+  void __set_validate_cstr(const bool val);
+
+  void __set_rely_cstr(const bool val);
+
+  bool operator == (const SQLDefaultConstraint & rhs) const
+  {
+    if (!(table_db == rhs.table_db))
+      return false;
+    if (!(table_name == rhs.table_name))
+      return false;
+    if (!(column_name == rhs.column_name))
+      return false;
+    if (!(default_value == rhs.default_value))
+      return false;
+    if (!(dc_name == rhs.dc_name))
+      return false;
+    if (!(enable_cstr == rhs.enable_cstr))
+      return false;
+    if (!(validate_cstr == rhs.validate_cstr))
+      return false;
+    if (!(rely_cstr == rhs.rely_cstr))
+      return false;
+    return true;
+  }
+  bool operator != (const SQLDefaultConstraint &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const SQLDefaultConstraint & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(SQLDefaultConstraint &a, SQLDefaultConstraint &b);
+
+inline std::ostream& operator<<(std::ostream& out, const SQLDefaultConstraint& obj)
 {
   obj.printTo(out);
   return out;
@@ -2415,7 +2519,7 @@ class Table {
   PrincipalPrivilegeSet privileges;
   bool temporary;
   bool rewriteEnabled;
-  std::map<std::string, BasicTxnInfo>  creationMetadata;
+  CreationMetadata creationMetadata;
 
   _Table__isset __isset;
 
@@ -2449,7 +2553,7 @@ class Table {
 
   void __set_rewriteEnabled(const bool val);
 
-  void __set_creationMetadata(const std::map<std::string, BasicTxnInfo> & val);
+  void __set_creationMetadata(const CreationMetadata& val);
 
   bool operator == (const Table & rhs) const
   {
@@ -2850,106 +2954,6 @@ class PartitionSpec {
 void swap(PartitionSpec &a, PartitionSpec &b);
 
 inline std::ostream& operator<<(std::ostream& out, const PartitionSpec& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _Index__isset {
-  _Index__isset() : indexName(false), indexHandlerClass(false), dbName(false), origTableName(false), createTime(false), lastAccessTime(false), indexTableName(false), sd(false), parameters(false), deferredRebuild(false) {}
-  bool indexName :1;
-  bool indexHandlerClass :1;
-  bool dbName :1;
-  bool origTableName :1;
-  bool createTime :1;
-  bool lastAccessTime :1;
-  bool indexTableName :1;
-  bool sd :1;
-  bool parameters :1;
-  bool deferredRebuild :1;
-} _Index__isset;
-
-class Index {
- public:
-
-  Index(const Index&);
-  Index& operator=(const Index&);
-  Index() : indexName(), indexHandlerClass(), dbName(), origTableName(), createTime(0), lastAccessTime(0), indexTableName(), deferredRebuild(0) {
-  }
-
-  virtual ~Index() throw();
-  std::string indexName;
-  std::string indexHandlerClass;
-  std::string dbName;
-  std::string origTableName;
-  int32_t createTime;
-  int32_t lastAccessTime;
-  std::string indexTableName;
-  StorageDescriptor sd;
-  std::map<std::string, std::string>  parameters;
-  bool deferredRebuild;
-
-  _Index__isset __isset;
-
-  void __set_indexName(const std::string& val);
-
-  void __set_indexHandlerClass(const std::string& val);
-
-  void __set_dbName(const std::string& val);
-
-  void __set_origTableName(const std::string& val);
-
-  void __set_createTime(const int32_t val);
-
-  void __set_lastAccessTime(const int32_t val);
-
-  void __set_indexTableName(const std::string& val);
-
-  void __set_sd(const StorageDescriptor& val);
-
-  void __set_parameters(const std::map<std::string, std::string> & val);
-
-  void __set_deferredRebuild(const bool val);
-
-  bool operator == (const Index & rhs) const
-  {
-    if (!(indexName == rhs.indexName))
-      return false;
-    if (!(indexHandlerClass == rhs.indexHandlerClass))
-      return false;
-    if (!(dbName == rhs.dbName))
-      return false;
-    if (!(origTableName == rhs.origTableName))
-      return false;
-    if (!(createTime == rhs.createTime))
-      return false;
-    if (!(lastAccessTime == rhs.lastAccessTime))
-      return false;
-    if (!(indexTableName == rhs.indexTableName))
-      return false;
-    if (!(sd == rhs.sd))
-      return false;
-    if (!(parameters == rhs.parameters))
-      return false;
-    if (!(deferredRebuild == rhs.deferredRebuild))
-      return false;
-    return true;
-  }
-  bool operator != (const Index &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const Index & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-};
-
-void swap(Index &a, Index &b);
-
-inline std::ostream& operator<<(std::ostream& out, const Index& obj)
 {
   obj.printTo(out);
   return out;
@@ -4334,6 +4338,91 @@ inline std::ostream& operator<<(std::ostream& out, const NotNullConstraintsRespo
 }
 
 
+class DefaultConstraintsRequest {
+ public:
+
+  DefaultConstraintsRequest(const DefaultConstraintsRequest&);
+  DefaultConstraintsRequest& operator=(const DefaultConstraintsRequest&);
+  DefaultConstraintsRequest() : db_name(), tbl_name() {
+  }
+
+  virtual ~DefaultConstraintsRequest() throw();
+  std::string db_name;
+  std::string tbl_name;
+
+  void __set_db_name(const std::string& val);
+
+  void __set_tbl_name(const std::string& val);
+
+  bool operator == (const DefaultConstraintsRequest & rhs) const
+  {
+    if (!(db_name == rhs.db_name))
+      return false;
+    if (!(tbl_name == rhs.tbl_name))
+      return false;
+    return true;
+  }
+  bool operator != (const DefaultConstraintsRequest &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const DefaultConstraintsRequest & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(DefaultConstraintsRequest &a, DefaultConstraintsRequest &b);
+
+inline std::ostream& operator<<(std::ostream& out, const DefaultConstraintsRequest& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class DefaultConstraintsResponse {
+ public:
+
+  DefaultConstraintsResponse(const DefaultConstraintsResponse&);
+  DefaultConstraintsResponse& operator=(const DefaultConstraintsResponse&);
+  DefaultConstraintsResponse() {
+  }
+
+  virtual ~DefaultConstraintsResponse() throw();
+  std::vector<SQLDefaultConstraint>  defaultConstraints;
+
+  void __set_defaultConstraints(const std::vector<SQLDefaultConstraint> & val);
+
+  bool operator == (const DefaultConstraintsResponse & rhs) const
+  {
+    if (!(defaultConstraints == rhs.defaultConstraints))
+      return false;
+    return true;
+  }
+  bool operator != (const DefaultConstraintsResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const DefaultConstraintsResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(DefaultConstraintsResponse &a, DefaultConstraintsResponse &b);
+
+inline std::ostream& operator<<(std::ostream& out, const DefaultConstraintsResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
 class DropConstraintRequest {
  public:
 
@@ -4538,6 +4627,46 @@ class AddNotNullConstraintRequest {
 void swap(AddNotNullConstraintRequest &a, AddNotNullConstraintRequest &b);
 
 inline std::ostream& operator<<(std::ostream& out, const AddNotNullConstraintRequest& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class AddDefaultConstraintRequest {
+ public:
+
+  AddDefaultConstraintRequest(const AddDefaultConstraintRequest&);
+  AddDefaultConstraintRequest& operator=(const AddDefaultConstraintRequest&);
+  AddDefaultConstraintRequest() {
+  }
+
+  virtual ~AddDefaultConstraintRequest() throw();
+  std::vector<SQLDefaultConstraint>  defaultConstraintCols;
+
+  void __set_defaultConstraintCols(const std::vector<SQLDefaultConstraint> & val);
+
+  bool operator == (const AddDefaultConstraintRequest & rhs) const
+  {
+    if (!(defaultConstraintCols == rhs.defaultConstraintCols))
+      return false;
+    return true;
+  }
+  bool operator != (const AddDefaultConstraintRequest &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const AddDefaultConstraintRequest & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(AddDefaultConstraintRequest &a, AddDefaultConstraintRequest &b);
+
+inline std::ostream& operator<<(std::ostream& out, const AddDefaultConstraintRequest& obj)
 {
   obj.printTo(out);
   return out;
@@ -5954,6 +6083,294 @@ inline std::ostream& operator<<(std::ostream& out, const CommitTxnRequest& obj)
   return out;
 }
 
+
+class GetValidWriteIdsRequest {
+ public:
+
+  GetValidWriteIdsRequest(const GetValidWriteIdsRequest&);
+  GetValidWriteIdsRequest& operator=(const GetValidWriteIdsRequest&);
+  GetValidWriteIdsRequest() : validTxnList() {
+  }
+
+  virtual ~GetValidWriteIdsRequest() throw();
+  std::vector<std::string>  fullTableNames;
+  std::string validTxnList;
+
+  void __set_fullTableNames(const std::vector<std::string> & val);
+
+  void __set_validTxnList(const std::string& val);
+
+  bool operator == (const GetValidWriteIdsRequest & rhs) const
+  {
+    if (!(fullTableNames == rhs.fullTableNames))
+      return false;
+    if (!(validTxnList == rhs.validTxnList))
+      return false;
+    return true;
+  }
+  bool operator != (const GetValidWriteIdsRequest &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const GetValidWriteIdsRequest & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(GetValidWriteIdsRequest &a, GetValidWriteIdsRequest &b);
+
+inline std::ostream& operator<<(std::ostream& out, const GetValidWriteIdsRequest& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+typedef struct _TableValidWriteIds__isset {
+  _TableValidWriteIds__isset() : minOpenWriteId(false) {}
+  bool minOpenWriteId :1;
+} _TableValidWriteIds__isset;
+
+class TableValidWriteIds {
+ public:
+
+  TableValidWriteIds(const TableValidWriteIds&);
+  TableValidWriteIds& operator=(const TableValidWriteIds&);
+  TableValidWriteIds() : fullTableName(), writeIdHighWaterMark(0), minOpenWriteId(0), abortedBits() {
+  }
+
+  virtual ~TableValidWriteIds() throw();
+  std::string fullTableName;
+  int64_t writeIdHighWaterMark;
+  std::vector<int64_t>  invalidWriteIds;
+  int64_t minOpenWriteId;
+  std::string abortedBits;
+
+  _TableValidWriteIds__isset __isset;
+
+  void __set_fullTableName(const std::string& val);
+
+  void __set_writeIdHighWaterMark(const int64_t val);
+
+  void __set_invalidWriteIds(const std::vector<int64_t> & val);
+
+  void __set_minOpenWriteId(const int64_t val);
+
+  void __set_abortedBits(const std::string& val);
+
+  bool operator == (const TableValidWriteIds & rhs) const
+  {
+    if (!(fullTableName == rhs.fullTableName))
+      return false;
+    if (!(writeIdHighWaterMark == rhs.writeIdHighWaterMark))
+      return false;
+    if (!(invalidWriteIds == rhs.invalidWriteIds))
+      return false;
+    if (__isset.minOpenWriteId != rhs.__isset.minOpenWriteId)
+      return false;
+    else if (__isset.minOpenWriteId && !(minOpenWriteId == rhs.minOpenWriteId))
+      return false;
+    if (!(abortedBits == rhs.abortedBits))
+      return false;
+    return true;
+  }
+  bool operator != (const TableValidWriteIds &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const TableValidWriteIds & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(TableValidWriteIds &a, TableValidWriteIds &b);
+
+inline std::ostream& operator<<(std::ostream& out, const TableValidWriteIds& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class GetValidWriteIdsResponse {
+ public:
+
+  GetValidWriteIdsResponse(const GetValidWriteIdsResponse&);
+  GetValidWriteIdsResponse& operator=(const GetValidWriteIdsResponse&);
+  GetValidWriteIdsResponse() {
+  }
+
+  virtual ~GetValidWriteIdsResponse() throw();
+  std::vector<TableValidWriteIds>  tblValidWriteIds;
+
+  void __set_tblValidWriteIds(const std::vector<TableValidWriteIds> & val);
+
+  bool operator == (const GetValidWriteIdsResponse & rhs) const
+  {
+    if (!(tblValidWriteIds == rhs.tblValidWriteIds))
+      return false;
+    return true;
+  }
+  bool operator != (const GetValidWriteIdsResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const GetValidWriteIdsResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(GetValidWriteIdsResponse &a, GetValidWriteIdsResponse &b);
+
+inline std::ostream& operator<<(std::ostream& out, const GetValidWriteIdsResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class AllocateTableWriteIdsRequest {
+ public:
+
+  AllocateTableWriteIdsRequest(const AllocateTableWriteIdsRequest&);
+  AllocateTableWriteIdsRequest& operator=(const AllocateTableWriteIdsRequest&);
+  AllocateTableWriteIdsRequest() : dbName(), tableName() {
+  }
+
+  virtual ~AllocateTableWriteIdsRequest() throw();
+  std::vector<int64_t>  txnIds;
+  std::string dbName;
+  std::string tableName;
+
+  void __set_txnIds(const std::vector<int64_t> & val);
+
+  void __set_dbName(const std::string& val);
+
+  void __set_tableName(const std::string& val);
+
+  bool operator == (const AllocateTableWriteIdsRequest & rhs) const
+  {
+    if (!(txnIds == rhs.txnIds))
+      return false;
+    if (!(dbName == rhs.dbName))
+      return false;
+    if (!(tableName == rhs.tableName))
+      return false;
+    return true;
+  }
+  bool operator != (const AllocateTableWriteIdsRequest &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const AllocateTableWriteIdsRequest & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(AllocateTableWriteIdsRequest &a, AllocateTableWriteIdsRequest &b);
+
+inline std::ostream& operator<<(std::ostream& out, const AllocateTableWriteIdsRequest& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class TxnToWriteId {
+ public:
+
+  TxnToWriteId(const TxnToWriteId&);
+  TxnToWriteId& operator=(const TxnToWriteId&);
+  TxnToWriteId() : txnId(0), writeId(0) {
+  }
+
+  virtual ~TxnToWriteId() throw();
+  int64_t txnId;
+  int64_t writeId;
+
+  void __set_txnId(const int64_t val);
+
+  void __set_writeId(const int64_t val);
+
+  bool operator == (const TxnToWriteId & rhs) const
+  {
+    if (!(txnId == rhs.txnId))
+      return false;
+    if (!(writeId == rhs.writeId))
+      return false;
+    return true;
+  }
+  bool operator != (const TxnToWriteId &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const TxnToWriteId & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(TxnToWriteId &a, TxnToWriteId &b);
+
+inline std::ostream& operator<<(std::ostream& out, const TxnToWriteId& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+class AllocateTableWriteIdsResponse {
+ public:
+
+  AllocateTableWriteIdsResponse(const AllocateTableWriteIdsResponse&);
+  AllocateTableWriteIdsResponse& operator=(const AllocateTableWriteIdsResponse&);
+  AllocateTableWriteIdsResponse() {
+  }
+
+  virtual ~AllocateTableWriteIdsResponse() throw();
+  std::vector<TxnToWriteId>  txnToWriteIds;
+
+  void __set_txnToWriteIds(const std::vector<TxnToWriteId> & val);
+
+  bool operator == (const AllocateTableWriteIdsResponse & rhs) const
+  {
+    if (!(txnToWriteIds == rhs.txnToWriteIds))
+      return false;
+    return true;
+  }
+  bool operator != (const AllocateTableWriteIdsResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const AllocateTableWriteIdsResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(AllocateTableWriteIdsResponse &a, AllocateTableWriteIdsResponse &b);
+
+inline std::ostream& operator<<(std::ostream& out, const AllocateTableWriteIdsResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
 typedef struct _LockComponent__isset {
   _LockComponent__isset() : tablename(false), partitionname(false), operationType(true), isAcid(true), isDynamicPartitionWrite(true) {}
   bool tablename :1;
@@ -7025,13 +7442,14 @@ class AddDynamicPartitions {
 
   AddDynamicPartitions(const AddDynamicPartitions&);
   AddDynamicPartitions& operator=(const AddDynamicPartitions&);
-  AddDynamicPartitions() : txnid(0), dbname(), tablename(), operationType((DataOperationType::type)5) {
+  AddDynamicPartitions() : txnid(0), writeid(0), dbname(), tablename(), operationType((DataOperationType::type)5) {
     operationType = (DataOperationType::type)5;
 
   }
 
   virtual ~AddDynamicPartitions() throw();
   int64_t txnid;
+  int64_t writeid;
   std::string dbname;
   std::string tablename;
   std::vector<std::string>  partitionnames;
@@ -7040,6 +7458,8 @@ class AddDynamicPartitions {
   _AddDynamicPartitions__isset __isset;
 
   void __set_txnid(const int64_t val);
+
+  void __set_writeid(const int64_t val);
 
   void __set_dbname(const std::string& val);
 
@@ -7052,6 +7472,8 @@ class AddDynamicPartitions {
   bool operator == (const AddDynamicPartitions & rhs) const
   {
     if (!(txnid == rhs.txnid))
+      return false;
+    if (!(writeid == rhs.writeid))
       return false;
     if (!(dbname == rhs.dbname))
       return false;
@@ -7086,8 +7508,7 @@ inline std::ostream& operator<<(std::ostream& out, const AddDynamicPartitions& o
 }
 
 typedef struct _BasicTxnInfo__isset {
-  _BasicTxnInfo__isset() : id(false), time(false), txnid(false), dbname(false), tablename(false), partitionname(false) {}
-  bool id :1;
+  _BasicTxnInfo__isset() : time(false), txnid(false), dbname(false), tablename(false), partitionname(false) {}
   bool time :1;
   bool txnid :1;
   bool dbname :1;
@@ -7100,12 +7521,11 @@ class BasicTxnInfo {
 
   BasicTxnInfo(const BasicTxnInfo&);
   BasicTxnInfo& operator=(const BasicTxnInfo&);
-  BasicTxnInfo() : isnull(0), id(0), time(0), txnid(0), dbname(), tablename(), partitionname() {
+  BasicTxnInfo() : isnull(0), time(0), txnid(0), dbname(), tablename(), partitionname() {
   }
 
   virtual ~BasicTxnInfo() throw();
   bool isnull;
-  int64_t id;
   int64_t time;
   int64_t txnid;
   std::string dbname;
@@ -7115,8 +7535,6 @@ class BasicTxnInfo {
   _BasicTxnInfo__isset __isset;
 
   void __set_isnull(const bool val);
-
-  void __set_id(const int64_t val);
 
   void __set_time(const int64_t val);
 
@@ -7131,10 +7549,6 @@ class BasicTxnInfo {
   bool operator == (const BasicTxnInfo & rhs) const
   {
     if (!(isnull == rhs.isnull))
-      return false;
-    if (__isset.id != rhs.__isset.id)
-      return false;
-    else if (__isset.id && !(id == rhs.id))
       return false;
     if (__isset.time != rhs.__isset.time)
       return false;
@@ -7178,36 +7592,54 @@ inline std::ostream& operator<<(std::ostream& out, const BasicTxnInfo& obj)
   return out;
 }
 
+typedef struct _CreationMetadata__isset {
+  _CreationMetadata__isset() : validTxnList(false) {}
+  bool validTxnList :1;
+} _CreationMetadata__isset;
 
-class TxnsSnapshot {
+class CreationMetadata {
  public:
 
-  TxnsSnapshot(const TxnsSnapshot&);
-  TxnsSnapshot& operator=(const TxnsSnapshot&);
-  TxnsSnapshot() : txn_high_water_mark(0) {
+  CreationMetadata(const CreationMetadata&);
+  CreationMetadata& operator=(const CreationMetadata&);
+  CreationMetadata() : dbName(), tblName(), validTxnList() {
   }
 
-  virtual ~TxnsSnapshot() throw();
-  int64_t txn_high_water_mark;
-  std::vector<int64_t>  open_txns;
+  virtual ~CreationMetadata() throw();
+  std::string dbName;
+  std::string tblName;
+  std::set<std::string>  tablesUsed;
+  std::string validTxnList;
 
-  void __set_txn_high_water_mark(const int64_t val);
+  _CreationMetadata__isset __isset;
 
-  void __set_open_txns(const std::vector<int64_t> & val);
+  void __set_dbName(const std::string& val);
 
-  bool operator == (const TxnsSnapshot & rhs) const
+  void __set_tblName(const std::string& val);
+
+  void __set_tablesUsed(const std::set<std::string> & val);
+
+  void __set_validTxnList(const std::string& val);
+
+  bool operator == (const CreationMetadata & rhs) const
   {
-    if (!(txn_high_water_mark == rhs.txn_high_water_mark))
+    if (!(dbName == rhs.dbName))
       return false;
-    if (!(open_txns == rhs.open_txns))
+    if (!(tblName == rhs.tblName))
+      return false;
+    if (!(tablesUsed == rhs.tablesUsed))
+      return false;
+    if (__isset.validTxnList != rhs.__isset.validTxnList)
+      return false;
+    else if (__isset.validTxnList && !(validTxnList == rhs.validTxnList))
       return false;
     return true;
   }
-  bool operator != (const TxnsSnapshot &rhs) const {
+  bool operator != (const CreationMetadata &rhs) const {
     return !(*this == rhs);
   }
 
-  bool operator < (const TxnsSnapshot & ) const;
+  bool operator < (const CreationMetadata & ) const;
 
   uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
   uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
@@ -7215,9 +7647,9 @@ class TxnsSnapshot {
   virtual void printTo(std::ostream& out) const;
 };
 
-void swap(TxnsSnapshot &a, TxnsSnapshot &b);
+void swap(CreationMetadata &a, CreationMetadata &b);
 
-inline std::ostream& operator<<(std::ostream& out, const TxnsSnapshot& obj)
+inline std::ostream& operator<<(std::ostream& out, const CreationMetadata& obj)
 {
   obj.printTo(out);
   return out;
@@ -8697,31 +9129,39 @@ inline std::ostream& operator<<(std::ostream& out, const TableMeta& obj)
   return out;
 }
 
+typedef struct _Materialization__isset {
+  _Materialization__isset() : validTxnList(false) {}
+  bool validTxnList :1;
+} _Materialization__isset;
 
 class Materialization {
  public:
 
   Materialization(const Materialization&);
   Materialization& operator=(const Materialization&);
-  Materialization() : invalidationTime(0) {
+  Materialization() : validTxnList(), invalidationTime(0) {
   }
 
   virtual ~Materialization() throw();
-  Table materializationTable;
   std::set<std::string>  tablesUsed;
+  std::string validTxnList;
   int64_t invalidationTime;
 
-  void __set_materializationTable(const Table& val);
+  _Materialization__isset __isset;
 
   void __set_tablesUsed(const std::set<std::string> & val);
+
+  void __set_validTxnList(const std::string& val);
 
   void __set_invalidationTime(const int64_t val);
 
   bool operator == (const Materialization & rhs) const
   {
-    if (!(materializationTable == rhs.materializationTable))
-      return false;
     if (!(tablesUsed == rhs.tablesUsed))
+      return false;
+    if (__isset.validTxnList != rhs.__isset.validTxnList)
+      return false;
+    else if (__isset.validTxnList && !(validTxnList == rhs.validTxnList))
       return false;
     if (!(invalidationTime == rhs.invalidationTime))
       return false;
@@ -11267,54 +11707,6 @@ class NoSuchObjectException : public ::apache::thrift::TException {
 void swap(NoSuchObjectException &a, NoSuchObjectException &b);
 
 inline std::ostream& operator<<(std::ostream& out, const NoSuchObjectException& obj)
-{
-  obj.printTo(out);
-  return out;
-}
-
-typedef struct _IndexAlreadyExistsException__isset {
-  _IndexAlreadyExistsException__isset() : message(false) {}
-  bool message :1;
-} _IndexAlreadyExistsException__isset;
-
-class IndexAlreadyExistsException : public ::apache::thrift::TException {
- public:
-
-  IndexAlreadyExistsException(const IndexAlreadyExistsException&);
-  IndexAlreadyExistsException& operator=(const IndexAlreadyExistsException&);
-  IndexAlreadyExistsException() : message() {
-  }
-
-  virtual ~IndexAlreadyExistsException() throw();
-  std::string message;
-
-  _IndexAlreadyExistsException__isset __isset;
-
-  void __set_message(const std::string& val);
-
-  bool operator == (const IndexAlreadyExistsException & rhs) const
-  {
-    if (!(message == rhs.message))
-      return false;
-    return true;
-  }
-  bool operator != (const IndexAlreadyExistsException &rhs) const {
-    return !(*this == rhs);
-  }
-
-  bool operator < (const IndexAlreadyExistsException & ) const;
-
-  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
-  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
-
-  virtual void printTo(std::ostream& out) const;
-  mutable std::string thriftTExceptionMessageHolder_;
-  const char* what() const throw();
-};
-
-void swap(IndexAlreadyExistsException &a, IndexAlreadyExistsException &b);
-
-inline std::ostream& operator<<(std::ostream& out, const IndexAlreadyExistsException& obj)
 {
   obj.printTo(out);
   return out;

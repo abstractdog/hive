@@ -354,14 +354,14 @@ import org.slf4j.LoggerFactory;
           case 1: // FOREIGN_KEY_COLS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list372 = iprot.readListBegin();
-                struct.foreignKeyCols = new ArrayList<SQLForeignKey>(_list372.size);
-                SQLForeignKey _elem373;
-                for (int _i374 = 0; _i374 < _list372.size; ++_i374)
+                org.apache.thrift.protocol.TList _list360 = iprot.readListBegin();
+                struct.foreignKeyCols = new ArrayList<SQLForeignKey>(_list360.size);
+                SQLForeignKey _elem361;
+                for (int _i362 = 0; _i362 < _list360.size; ++_i362)
                 {
-                  _elem373 = new SQLForeignKey();
-                  _elem373.read(iprot);
-                  struct.foreignKeyCols.add(_elem373);
+                  _elem361 = new SQLForeignKey();
+                  _elem361.read(iprot);
+                  struct.foreignKeyCols.add(_elem361);
                 }
                 iprot.readListEnd();
               }
@@ -387,9 +387,9 @@ import org.slf4j.LoggerFactory;
         oprot.writeFieldBegin(FOREIGN_KEY_COLS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.foreignKeyCols.size()));
-          for (SQLForeignKey _iter375 : struct.foreignKeyCols)
+          for (SQLForeignKey _iter363 : struct.foreignKeyCols)
           {
-            _iter375.write(oprot);
+            _iter363.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -414,9 +414,9 @@ import org.slf4j.LoggerFactory;
       TTupleProtocol oprot = (TTupleProtocol) prot;
       {
         oprot.writeI32(struct.foreignKeyCols.size());
-        for (SQLForeignKey _iter376 : struct.foreignKeyCols)
+        for (SQLForeignKey _iter364 : struct.foreignKeyCols)
         {
-          _iter376.write(oprot);
+          _iter364.write(oprot);
         }
       }
     }
@@ -425,14 +425,14 @@ import org.slf4j.LoggerFactory;
     public void read(org.apache.thrift.protocol.TProtocol prot, AddForeignKeyRequest struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       {
-        org.apache.thrift.protocol.TList _list377 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-        struct.foreignKeyCols = new ArrayList<SQLForeignKey>(_list377.size);
-        SQLForeignKey _elem378;
-        for (int _i379 = 0; _i379 < _list377.size; ++_i379)
+        org.apache.thrift.protocol.TList _list365 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+        struct.foreignKeyCols = new ArrayList<SQLForeignKey>(_list365.size);
+        SQLForeignKey _elem366;
+        for (int _i367 = 0; _i367 < _list365.size; ++_i367)
         {
-          _elem378 = new SQLForeignKey();
-          _elem378.read(iprot);
-          struct.foreignKeyCols.add(_elem378);
+          _elem366 = new SQLForeignKey();
+          _elem366.read(iprot);
+          struct.foreignKeyCols.add(_elem366);
         }
       }
       struct.setForeignKeyColsIsSet(true);

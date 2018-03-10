@@ -346,14 +346,14 @@ import org.slf4j.LoggerFactory;
           case 1: // FUNCTIONS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list724 = iprot.readListBegin();
-                struct.functions = new ArrayList<Function>(_list724.size);
-                Function _elem725;
-                for (int _i726 = 0; _i726 < _list724.size; ++_i726)
+                org.apache.thrift.protocol.TList _list760 = iprot.readListBegin();
+                struct.functions = new ArrayList<Function>(_list760.size);
+                Function _elem761;
+                for (int _i762 = 0; _i762 < _list760.size; ++_i762)
                 {
-                  _elem725 = new Function();
-                  _elem725.read(iprot);
-                  struct.functions.add(_elem725);
+                  _elem761 = new Function();
+                  _elem761.read(iprot);
+                  struct.functions.add(_elem761);
                 }
                 iprot.readListEnd();
               }
@@ -380,9 +380,9 @@ import org.slf4j.LoggerFactory;
           oprot.writeFieldBegin(FUNCTIONS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.functions.size()));
-            for (Function _iter727 : struct.functions)
+            for (Function _iter763 : struct.functions)
             {
-              _iter727.write(oprot);
+              _iter763.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -414,9 +414,9 @@ import org.slf4j.LoggerFactory;
       if (struct.isSetFunctions()) {
         {
           oprot.writeI32(struct.functions.size());
-          for (Function _iter728 : struct.functions)
+          for (Function _iter764 : struct.functions)
           {
-            _iter728.write(oprot);
+            _iter764.write(oprot);
           }
         }
       }
@@ -428,14 +428,14 @@ import org.slf4j.LoggerFactory;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list729 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.functions = new ArrayList<Function>(_list729.size);
-          Function _elem730;
-          for (int _i731 = 0; _i731 < _list729.size; ++_i731)
+          org.apache.thrift.protocol.TList _list765 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.functions = new ArrayList<Function>(_list765.size);
+          Function _elem766;
+          for (int _i767 = 0; _i767 < _list765.size; ++_i767)
           {
-            _elem730 = new Function();
-            _elem730.read(iprot);
-            struct.functions.add(_elem730);
+            _elem766 = new Function();
+            _elem766.read(iprot);
+            struct.functions.add(_elem766);
           }
         }
         struct.setFunctionsIsSet(true);

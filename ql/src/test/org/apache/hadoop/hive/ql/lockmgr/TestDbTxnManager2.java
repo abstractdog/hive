@@ -21,7 +21,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hive.common.JavaUtils;
 import org.apache.hadoop.hive.metastore.MetastoreTaskThread;
 import org.apache.hadoop.hive.metastore.api.AddDynamicPartitions;
+import org.apache.hadoop.hive.metastore.api.AllocateTableWriteIdsRequest;
+import org.apache.hadoop.hive.metastore.api.AllocateTableWriteIdsResponse;
 import org.apache.hadoop.hive.metastore.api.DataOperationType;
+import org.apache.hadoop.hive.metastore.api.LockState;
+import org.apache.hadoop.hive.metastore.api.LockType;
+import org.apache.hadoop.hive.metastore.api.ShowLocksRequest;
+import org.apache.hadoop.hive.metastore.api.ShowLocksResponse;
+import org.apache.hadoop.hive.metastore.api.ShowLocksResponseElement;
 import org.apache.hadoop.hive.metastore.txn.AcidWriteSetService;
 import org.apache.hadoop.hive.metastore.txn.TxnStore;
 import org.apache.hadoop.hive.metastore.txn.TxnUtils;
@@ -29,15 +36,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.apache.hadoop.hive.common.FileUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.api.LockState;
-import org.apache.hadoop.hive.metastore.api.LockType;
-import org.apache.hadoop.hive.metastore.api.ShowLocksRequest;
-import org.apache.hadoop.hive.metastore.api.ShowLocksResponse;
-import org.apache.hadoop.hive.metastore.api.ShowLocksResponseElement;
 import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
 import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.ErrorMsg;
+import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.junit.Before;
@@ -63,17 +66,17 @@ import java.util.Map;
  * code path that CLI would but with the advantage that you can create a 2nd HiveTxnManager and then
  * simulate interleaved transactional/locking operations but all from within a single thread.
  * The later not only controls concurrency precisely but is the only way to run in UT env with DerbyDB.
- * 
+ *
  * A slightly different (and simpler) approach is to use "start transaction/(commit/rollback)"
  * command with the Driver.run().  This allows you to "see" the state of the Lock Manager after
  * each statement and can also simulate concurrent (but very controlled) work but w/o forking any
  * threads.  The limitation here is that not all statements are allowed in an explicit transaction.
  * For example, "drop table foo".  This approach will also cause the query to execute which will
- * make tests slower but will exericise the code path that is much closer to the actual user calls.
- * 
+ * make tests slower but will exercise the code path that is much closer to the actual user calls.
+ *
  * In either approach, each logical "session" should use it's own Transaction Manager.  This requires
  * using {@link #swapTxnManager(HiveTxnManager)} since in the SessionState the TM is associated with
- * each thread.  
+ * each thread.
  */
 public class TestDbTxnManager2 {
   private static final Logger LOG = LoggerFactory.getLogger(TestDbTxnManager2.class);
@@ -94,7 +97,7 @@ public class TestDbTxnManager2 {
   public void setUp() throws Exception {
     SessionState.start(conf);
     ctx = new Context(conf);
-    driver = new Driver(conf);
+    driver = new Driver(new QueryState.Builder().withHiveConf(conf).nonIsolated().build(), null);
     TxnDbUtil.cleanDb(conf);
     TxnDbUtil.prepDb(conf);
     SessionState ss = SessionState.get();
@@ -663,7 +666,7 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "acidPart", "p=1", locks);
     checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "_dummy_database", "_dummy_table", null, locks);
     txnMgr.rollbackTxn();
-    
+
     cpr = driver.compileAndRespond("update acidPart set b = 17 where a = 1");
     checkCmdOnDriver(cpr);
     lockState = ((DbTxnManager) txnMgr).acquireLocks(driver.getPlan(), ctx, "Practical", false);
@@ -964,13 +967,16 @@ public class TestDbTxnManager2 {
     Assert.assertEquals("Unexpected lock count", 2, locks.size());
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB_PART", "p=blah", locks);
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB_PART", "p=blah", locks);
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnId, "default", "TAB_PART",
+    long writeId = txnMgr.getTableWriteId("default", "TAB_PART");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnId, writeId, "default", "TAB_PART",
       Collections.singletonList("p=blah"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
     txnMgr.commitTxn();
 
     adp.setTxnid(txnId2);
+    writeId = txnMgr2.getTableWriteId("default", "TAB_PART");
+    adp.setWriteid(writeId);
     txnHandler.addDynamicPartitions(adp);
     LockException expectedException = null;
     try {
@@ -1021,7 +1027,13 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB2", null, locks);
     //update stmt has p=blah, thus nothing is actually update and we generate empty dyn part list
     Assert.assertEquals(0, TxnDbUtil.countQueryAgent(conf, "select count(*) from WRITE_SET"));
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(),
+
+    AllocateTableWriteIdsResponse writeIds
+            = txnHandler.allocateTableWriteIds(new AllocateTableWriteIdsRequest(Collections.singletonList(txnMgr2.getCurrentTxnId()),
+            "default", "tab2"));
+    Assert.assertEquals(txnMgr2.getCurrentTxnId(), writeIds.getTxnToWriteIds().get(0).getTxnId());
+
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeIds.getTxnToWriteIds().get(0).getWriteId(),
       "default", "tab2", Collections.EMPTY_LIST);
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1038,7 +1050,12 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB2", null, locks);//since TAB2 is empty
     //update stmt has p=blah, thus nothing is actually update and we generate empty dyn part list
     Assert.assertEquals(0, TxnDbUtil.countQueryAgent(conf, "select count(*) from WRITE_SET"));
-    adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(),
+
+    writeIds = txnHandler.allocateTableWriteIds(new AllocateTableWriteIdsRequest(Collections.singletonList(txnMgr2.getCurrentTxnId()),
+            "default", "tab2"));
+    Assert.assertEquals(txnMgr2.getCurrentTxnId(), writeIds.getTxnToWriteIds().get(0).getTxnId());
+
+    adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeIds.getTxnToWriteIds().get(0).getWriteId(),
       "default", "tab2", Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);//simulate partition update
@@ -1053,8 +1070,13 @@ public class TestDbTxnManager2 {
     Assert.assertEquals(1, TxnDbUtil.countQueryAgent(conf, "select count(*) from WRITE_SET"));
     checkCmdOnDriver(driver.compileAndRespond("update TAB2 set b = 17 where a = 1"));//no rows match
     txnMgr.acquireLocks(driver.getPlan(), ctx, "Long Running");
+
+    writeIds = txnHandler.allocateTableWriteIds(new AllocateTableWriteIdsRequest(Collections.singletonList(txnMgr.getCurrentTxnId()),
+            "default", "tab2"));
+    Assert.assertEquals(txnMgr.getCurrentTxnId(), writeIds.getTxnToWriteIds().get(0).getTxnId());
+
     //so generate empty Dyn Part call
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(),
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeIds.getTxnToWriteIds().get(0).getWriteId(),
       "default", "tab2", Collections.EMPTY_LIST);
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1094,7 +1116,12 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB_PART", "p=blah", locks);
     txnMgr.rollbackTxn();
 
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnId, "default", "TAB_PART",
+    AllocateTableWriteIdsResponse writeIds
+            = txnHandler.allocateTableWriteIds(new AllocateTableWriteIdsRequest(Collections.singletonList(txnId), "default", "TAB_PART"));
+    Assert.assertEquals(txnId, writeIds.getTxnToWriteIds().get(0).getTxnId());
+
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnId, writeIds.getTxnToWriteIds().get(0).getWriteId(),
+            "default", "TAB_PART",
       Arrays.asList("p=blah"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1171,8 +1198,9 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB2", "p=one", locks);
     //this simulates the completion of txnid:2
     //this simulates the completion of txnid:idTxnUpdate1
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), "default", "tab2",
-      Collections.singletonList("p=two"));
+    long writeId = txnMgr2.getTableWriteId("default", "tab2");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeId, "default", "tab2",
+            Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
     txnMgr2.commitTxn();//txnid:idTxnUpdate1
@@ -1180,7 +1208,8 @@ public class TestDbTxnManager2 {
     Assert.assertEquals("Unexpected lock count", 1, locks.size());
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB2", "p=one", locks);
     //completion of txnid:idTxnUpdate2
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), "default", "tab2",
+    writeId = txnMgr.getTableWriteId("default", "tab2");
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeId, "default", "tab2",
       Collections.singletonList("p=one"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1223,7 +1252,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB1", "p=one", locks);
 
     //this simulates the completion of txnid:idTxnUpdate3
-    adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), "default", "tab1",
+    writeId = txnMgr2.getTableWriteId("default", "tab1");
+    adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=one"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1235,7 +1265,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB1", "p=two", locks);
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB1", "p=one", locks);
     //completion of txnid:idTxnUpdate4
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), "default", "tab1",
+    writeId = txnMgr.getTableWriteId("default", "tab1");
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1281,7 +1312,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB1", "p=two", locks);
 
     //this simulates the completion of txnid:idTxnUpdate1
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), "default", "tab1",
+    long writeId = txnMgr2.getTableWriteId("default", "tab1");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=one"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1292,7 +1324,8 @@ public class TestDbTxnManager2 {
     Assert.assertEquals("Unexpected lock count", 1, locks.size());
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB1", "p=two", locks);
     //completion of txnid:idTxnUpdate2
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), "default", "tab1",
+    writeId = txnMgr.getTableWriteId("default", "tab1");
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1337,7 +1370,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB1", "p=two", locks);
 
     //this simulates the completion of txnid:idTxnUpdate1
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), "default", "tab1",
+    long writeId = txnMgr2.getTableWriteId("default", "tab1");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=one"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1348,7 +1382,8 @@ public class TestDbTxnManager2 {
     Assert.assertEquals("Unexpected lock count", 1, locks.size());
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB1", "p=two", locks);
     //completion of txnid:idTxnUpdate2
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), "default", "tab1",
+    writeId = txnMgr.getTableWriteId("default", "tab1");
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.DELETE);
     txnHandler.addDynamicPartitions(adp);
@@ -1397,7 +1432,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB1", "p=two", locks);
 
     //this simulates the completion of "Update tab2" txn
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), "default", "tab1",
+    long writeId = txnMgr2.getTableWriteId("default", "tab1");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -1408,7 +1444,8 @@ public class TestDbTxnManager2 {
     Assert.assertEquals("Unexpected lock count", 1, locks.size());
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB1", "p=two", locks);
     //completion of "delete from tab1" txn
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), "default", "tab1",
+    writeId = txnMgr.getTableWriteId("default", "tab1");
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.DELETE);
     txnHandler.addDynamicPartitions(adp);
@@ -1430,7 +1467,7 @@ public class TestDbTxnManager2 {
       3, TxnDbUtil.countQueryAgent(conf, "select count(*) from COMPLETED_TXN_COMPONENTS where ctc_table='tab1' and ctc_partition is not null"));
   }
   /**
-   * Concurrent delte/detele of same partition - should pass
+   * Concurrent delete/detele of same partition - should pass
    */
   @Test
   public void testWriteSetTracking11() throws Exception {
@@ -1466,7 +1503,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_WRITE, LockState.WAITING, "default", "TAB1", "p=two", locks);
 
     //this simulates the completion of "delete from tab1" txn
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), "default", "tab1",
+    long writeId = txnMgr2.getTableWriteId("default", "tab1");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnMgr2.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.DELETE);
     txnHandler.addDynamicPartitions(adp);
@@ -1479,7 +1517,8 @@ public class TestDbTxnManager2 {
     checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "TAB1", "p=one", locks);
     checkLock(LockType.SHARED_WRITE, LockState.ACQUIRED, "default", "TAB1", "p=two", locks);
     //completion of txnid:txnIdSelect
-    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), "default", "tab1",
+    writeId = txnMgr.getTableWriteId("default", "tab1");
+    adp = new AddDynamicPartitions(txnMgr.getCurrentTxnId(), writeId, "default", "tab1",
       Collections.singletonList("p=two"));
     adp.setOperationType(DataOperationType.DELETE);
     txnHandler.addDynamicPartitions(adp);
@@ -1652,15 +1691,16 @@ public class TestDbTxnManager2 {
       0,
       TxnDbUtil.countQueryAgent(conf, "select count(*) from TXN_COMPONENTS where tc_txnid=" + txnId1));
     //complete 1st txn
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnId1, "default", "target",
+    long writeId = txnMgr.getTableWriteId("default", "target");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnId1, writeId, "default", "target",
       Collections.singletonList("p=1/q=3"));//update clause
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
-    adp = new AddDynamicPartitions(txnId1, "default", "target",
+    adp = new AddDynamicPartitions(txnId1, writeId, "default", "target",
       Arrays.asList("p=1/q=2","p=2/q=2"));//delete clause
     adp.setOperationType(DataOperationType.DELETE);
     txnHandler.addDynamicPartitions(adp);
-    adp = new AddDynamicPartitions(txnId1, "default", "target",
+    adp = new AddDynamicPartitions(txnId1, writeId, "default", "target",
       Arrays.asList("p=1/q=2","p=1/q=3","p=1/q=1"));//insert clause
     adp.setOperationType(DataOperationType.INSERT);
     txnHandler.addDynamicPartitions(adp);
@@ -1717,15 +1757,16 @@ public class TestDbTxnManager2 {
       0,
       TxnDbUtil.countQueryAgent(conf, "select count(*) from TXN_COMPONENTS where tc_txnid=" + txnId2));
     //complete 2nd txn
-    adp = new AddDynamicPartitions(txnId2, "default", "target",
+    writeId = txnMgr2.getTableWriteId("default", "target");
+    adp = new AddDynamicPartitions(txnId2, writeId, "default", "target",
       Collections.singletonList(cc ? "p=1/q=3" : "p=1/p=2"));//update clause
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
-    adp = new AddDynamicPartitions(txnId2, "default", "target",
+    adp = new AddDynamicPartitions(txnId2, writeId, "default", "target",
       Arrays.asList("p=1/q=2","p=2/q=2"));//delete clause
     adp.setOperationType(DataOperationType.DELETE);
     txnHandler.addDynamicPartitions(adp);
-    adp = new AddDynamicPartitions(txnId2, "default", "target",
+    adp = new AddDynamicPartitions(txnId2, writeId, "default", "target",
       Arrays.asList("p=1/q=2","p=1/q=3","p=1/q=1"));//insert clause
     adp.setOperationType(DataOperationType.INSERT);
     txnHandler.addDynamicPartitions(adp);
@@ -1964,7 +2005,8 @@ public class TestDbTxnManager2 {
     //Plan is using DummyPartition, so can only lock the table... unfortunately
     checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "target", null, locks);
     checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "_dummy_database", "_dummy_table", null, locks);
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnid2, "default", "target", Arrays.asList("p=1/q=2","p=1/q=2"));
+    long writeId = txnMgr.getTableWriteId("default", "target");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnid2, writeId, "default", "target", Arrays.asList("p=1/q=2","p=1/q=2"));
     adp.setOperationType(DataOperationType.INSERT);
     txnHandler.addDynamicPartitions(adp);
     Assert.assertEquals(
@@ -2037,7 +2079,8 @@ public class TestDbTxnManager2 {
       0,//because it's using a DP write
       TxnDbUtil.countQueryAgent(conf, "select count(*) from TXN_COMPONENTS where tc_txnid=" + txnId1));
     //complete T1 transaction (simulate writing to 2 partitions)
-    AddDynamicPartitions adp = new AddDynamicPartitions(txnId1, "default", "target",
+    long writeId = txnMgr.getTableWriteId("default", "target");
+    AddDynamicPartitions adp = new AddDynamicPartitions(txnId1, writeId, "default", "target",
       Arrays.asList("p=1/q=2","p=1/q=3"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -2073,7 +2116,8 @@ public class TestDbTxnManager2 {
       TxnDbUtil.countQueryAgent(conf, "select count(*) from TXN_COMPONENTS where tc_txnid=" + txnid2));
     //complete T2 txn
     //simulate Insert into 2 partitions
-    adp = new AddDynamicPartitions(txnid2, "default", "target",
+    writeId = txnMgr2.getTableWriteId("default", "target");
+    adp = new AddDynamicPartitions(txnid2, writeId, "default", "target",
       Arrays.asList("p=1/q=2","p=1/q=3"));
     adp.setOperationType(DataOperationType.INSERT);
     txnHandler.addDynamicPartitions(adp);
@@ -2084,7 +2128,7 @@ public class TestDbTxnManager2 {
       TxnDbUtil.countQueryAgent(conf, "select count(*) from TXN_COMPONENTS where tc_txnid=" + txnid2 + " and tc_operation_type='i'"));
     //simulate Update of 1 partitions; depending on causeConflict, choose one of the partitions
     //which was modified by the T1 update stmt or choose a non-conflicting one
-    adp = new AddDynamicPartitions(txnid2, "default", "target",
+    adp = new AddDynamicPartitions(txnid2, writeId, "default", "target",
       Collections.singletonList(causeConflict ? "p=1/q=2" : "p=1/q=1"));
     adp.setOperationType(DataOperationType.UPDATE);
     txnHandler.addDynamicPartitions(adp);
@@ -2185,5 +2229,110 @@ public class TestDbTxnManager2 {
     txnMgr2.commitTxn();
     Assert.assertEquals("Lock remained", 0, getLocks().size());
     Assert.assertEquals("Lock remained", 0, getLocks(txnMgr2).size());
+  }
+  @Test
+  public void testFairness() throws Exception {
+    dropTable(new String[] {"T6"});
+    CommandProcessorResponse cpr = driver.run("create table if not exists T6(a int)");
+    checkCmdOnDriver(cpr);
+    cpr = driver.compileAndRespond("select a from T6");
+    checkCmdOnDriver(cpr);
+    txnMgr.acquireLocks(driver.getPlan(), ctx, "Fifer");//gets S lock on T6
+    HiveTxnManager txnMgr2 = TxnManagerFactory.getTxnManagerFactory().getTxnManager(conf);
+    swapTxnManager(txnMgr2);
+    cpr = driver.compileAndRespond("drop table if exists T6");
+    checkCmdOnDriver(cpr);
+    //tries to get X lock on T6 and gets Waiting state
+    LockState lockState = ((DbTxnManager) txnMgr2).acquireLocks(driver.getPlan(), ctx, "Fiddler", false);
+    List<ShowLocksResponseElement> locks = getLocks();
+    Assert.assertEquals("Unexpected lock count", 2, locks.size());
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T6", null, locks);
+    checkLock(LockType.EXCLUSIVE, LockState.WAITING, "default", "T6", null, locks);
+
+    HiveTxnManager txnMgr3 = TxnManagerFactory.getTxnManagerFactory().getTxnManager(conf);
+    swapTxnManager(txnMgr3);
+    //this should block behind the X lock on  T6
+    //this is a contrived example, in practice this query would of course fail after drop table
+    cpr = driver.compileAndRespond("select a from T6");
+    checkCmdOnDriver(cpr);
+    ((DbTxnManager)txnMgr3).acquireLocks(driver.getPlan(), ctx, "Fifer", false);//gets S lock on T6
+    locks = getLocks();
+    Assert.assertEquals("Unexpected lock count", 3, locks.size());
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T6", null, locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T6", null, locks);
+    checkLock(LockType.EXCLUSIVE, LockState.WAITING, "default", "T6", null, locks);
+  }
+
+  /**
+   * T7 is a table with 2 partitions
+   * 1. run select from T7
+   * 2. run drop partition from T7
+   * concurrently with 1 starting first so that 2 blocks
+   * 3. start another concurrent select on T7 - it should block behind waiting X (from drop) - LM should be fair
+   * 4. finish #1 so that drop unblocks
+   * 5. rollback the drop to release its X lock
+   * 6. # should unblock
+   */
+  @Test
+  public void testFairness2() throws Exception {
+    dropTable(new String[]{"T7"});
+    CommandProcessorResponse cpr = driver.run("create table if not exists T7 (a int) "
+        + "partitioned by (p int) stored as orc TBLPROPERTIES ('transactional'='true')");
+    checkCmdOnDriver(cpr);
+    checkCmdOnDriver(driver.run(
+        "insert into T7 partition(p) values(1,1),(1,2)"));//create 2 partitions
+    cpr = driver.compileAndRespond("select a from T7 ");
+    checkCmdOnDriver(cpr);
+    txnMgr.acquireLocks(driver.getPlan(), ctx, "Fifer");//gets S lock on T7
+    HiveTxnManager txnMgr2 = TxnManagerFactory.getTxnManagerFactory().getTxnManager(conf);
+    swapTxnManager(txnMgr2);
+    cpr = driver.compileAndRespond("alter table T7 drop partition (p=1)");
+    checkCmdOnDriver(cpr);
+    //tries to get X lock on T7.p=1 and gets Waiting state
+    LockState lockState = ((DbTxnManager) txnMgr2).acquireLocks(driver.getPlan(), ctx,
+        "Fiddler", false);
+    List<ShowLocksResponseElement> locks = getLocks();
+    Assert.assertEquals("Unexpected lock count", 4, locks.size());
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", null, locks);
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", "p=1", locks);
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", "p=2", locks);
+    checkLock(LockType.EXCLUSIVE, LockState.WAITING, "default", "T7", "p=1", locks);
+
+    HiveTxnManager txnMgr3 = TxnManagerFactory.getTxnManagerFactory().getTxnManager(conf);
+    swapTxnManager(txnMgr3);
+    //this should block behind the X lock on  T7.p=1
+    cpr = driver.compileAndRespond("select a from T7");
+    checkCmdOnDriver(cpr);
+    //tries to get S lock on T7, S on T7.p=1 and S on T7.p=2
+    ((DbTxnManager)txnMgr3).acquireLocks(driver.getPlan(), ctx, "Fifer", false);
+    locks = getLocks();
+    Assert.assertEquals("Unexpected lock count", 7, locks.size());
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", null, locks);
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", "p=1", locks);
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", "p=2", locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T7", null, locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T7", "p=1", locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T7", "p=2", locks);
+    checkLock(LockType.EXCLUSIVE, LockState.WAITING, "default", "T7", "p=1", locks);
+
+    txnMgr.commitTxn();//release locks from "select a from T7" - to unblock hte drop partition
+    //retest the the "drop partiton" X lock
+    lockState = ((DbLockManager)txnMgr2.getLockManager()).checkLock(locks.get(6).getLockid());
+    locks = getLocks();
+    Assert.assertEquals("Unexpected lock count", 4, locks.size());
+    checkLock(LockType.EXCLUSIVE, LockState.ACQUIRED, "default", "T7", "p=1", locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T7", null, locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T7", "p=1", locks);
+    checkLock(LockType.SHARED_READ, LockState.WAITING, "default", "T7", "p=2", locks);
+
+    txnMgr2.rollbackTxn();//release the X lock on T7.p=1
+    //re-test the locks
+    lockState = ((DbLockManager)txnMgr2.getLockManager()).checkLock(locks.get(1).getLockid());//S lock on T7
+    locks = getLocks();
+    Assert.assertEquals("Unexpected lock count", 3, locks.size());
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", null, locks);
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", "p=1", locks);
+    checkLock(LockType.SHARED_READ, LockState.ACQUIRED, "default", "T7", "p=2", locks);
+
   }
 }

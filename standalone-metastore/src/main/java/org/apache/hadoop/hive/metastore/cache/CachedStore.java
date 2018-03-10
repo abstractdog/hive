@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hive.metastore.cache;
 
+import org.apache.hadoop.hive.metastore.api.CreationMetadata;
 import org.apache.hadoop.hive.metastore.api.WMFullResourcePlan;
 
 import java.nio.ByteBuffer;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.FileMetadataExprType;
 import org.apache.hadoop.hive.metastore.api.Function;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -86,6 +86,7 @@ import org.apache.hadoop.hive.metastore.columnstats.aggr.ColumnStatsAggregator;
 import org.apache.hadoop.hive.metastore.columnstats.aggr.ColumnStatsAggregatorFactory;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.RolePrincipalGrant;
+import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
@@ -707,7 +708,9 @@ public class CachedStore implements RawStore, Configurable {
   public void createDatabase(Database db) throws InvalidObjectException, MetaException {
     rawStore.createDatabase(db);
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return;
+    if (sharedCache == null) {
+      return;
+    }
     try {
       // Wait if background cache update is happening
       databaseCacheLock.readLock().lock();
@@ -744,7 +747,9 @@ public class CachedStore implements RawStore, Configurable {
     boolean succ = rawStore.dropDatabase(dbname);
     if (succ) {
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         databaseCacheLock.readLock().lock();
@@ -763,7 +768,9 @@ public class CachedStore implements RawStore, Configurable {
     boolean succ = rawStore.alterDatabase(dbName, db);
     if (succ) {
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         databaseCacheLock.readLock().lock();
@@ -843,7 +850,9 @@ public class CachedStore implements RawStore, Configurable {
       return;
     }
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return;
+    if (sharedCache == null) {
+      return;
+    }
     validateTableType(tbl);
     try {
       // Wait if background cache update is happening
@@ -866,7 +875,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       // Remove table
       try {
         // Wait if background table cache update is happening
@@ -915,7 +926,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         partitionCacheLock.readLock().lock();
@@ -948,7 +961,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         partitionCacheLock.readLock().lock();
@@ -983,7 +998,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         partitionCacheLock.readLock().lock();
@@ -1051,7 +1068,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       // Remove partition
       try {
         // Wait if background cache update is happening
@@ -1107,7 +1126,9 @@ public class CachedStore implements RawStore, Configurable {
       return;
     }
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return;
+    if (sharedCache == null) {
+      return;
+    }
 
     if (shouldCacheTable(dbName, newTblName)) {
       validateTableType(newTable);
@@ -1172,6 +1193,12 @@ public class CachedStore implements RawStore, Configurable {
         partitionAggrColStatsCacheLock.readLock().unlock();
       }
     }
+  }
+
+  @Override
+  public void updateCreationMetadata(String dbname, String tablename, CreationMetadata cm)
+      throws MetaException {
+    rawStore.updateCreationMetadata(dbname, tablename, cm);
   }
 
   @Override
@@ -1332,7 +1359,9 @@ public class CachedStore implements RawStore, Configurable {
       return;
     }
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return;
+    if (sharedCache == null) {
+      return;
+    }
     // Update partition cache
     try {
       // Wait if background cache update is happening
@@ -1372,7 +1401,9 @@ public class CachedStore implements RawStore, Configurable {
       return;
     }
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return;
+    if (sharedCache == null) {
+      return;
+    }
     // Update partition cache
     try {
       // Wait if background cache update is happening
@@ -1408,42 +1439,6 @@ public class CachedStore implements RawStore, Configurable {
     } finally {
       partitionAggrColStatsCacheLock.readLock().unlock();
     }
-  }
-
-  @Override
-  public boolean addIndex(Index index)
-      throws InvalidObjectException, MetaException {
-    return rawStore.addIndex(index);
-  }
-
-  @Override
-  public Index getIndex(String dbName, String origTableName, String indexName)
-      throws MetaException {
-    return rawStore.getIndex(dbName, origTableName, indexName);
-  }
-
-  @Override
-  public boolean dropIndex(String dbName, String origTableName,
-      String indexName) throws MetaException {
-    return rawStore.dropIndex(dbName, origTableName, indexName);
-  }
-
-  @Override
-  public List<Index> getIndexes(String dbName, String origTableName, int max)
-      throws MetaException {
-    return rawStore.getIndexes(dbName, origTableName, max);
-  }
-
-  @Override
-  public List<String> listIndexNames(String dbName, String origTableName,
-      short max) throws MetaException {
-    return rawStore.listIndexNames(dbName, origTableName, max);
-  }
-
-  @Override
-  public void alterIndex(String dbname, String baseTblName, String name,
-      Index newIndex) throws InvalidObjectException, MetaException {
-    rawStore.alterIndex(dbname, baseTblName, name, newIndex);
   }
 
   private boolean getPartitionNamesPrunedByExprNoTxn(Table table, byte[] expr,
@@ -1510,7 +1505,9 @@ public class CachedStore implements RawStore, Configurable {
   }
 
   private static List<String> partNameToVals(String name) {
-    if (name == null) return null;
+    if (name == null) {
+      return null;
+    }
     List<String> vals = new ArrayList<>();
     String[] kvp = name.split("/");
     for (String kv : kvp) {
@@ -1824,7 +1821,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       List<ColumnStatisticsObj> statsObjs = colStats.getStatsObj();
       Table tbl = getTable(dbName, tblName);
       List<String> colNames = new ArrayList<>();
@@ -1890,7 +1889,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         tableColStatsCacheLock.readLock().lock();
@@ -1914,7 +1915,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       List<ColumnStatisticsObj> statsObjs = colStats.getStatsObj();
       Partition part = getPartition(dbName, tblName, partVals);
       List<String> colNames = new ArrayList<>();
@@ -1974,7 +1977,9 @@ public class CachedStore implements RawStore, Configurable {
         return succ;
       }
       SharedCache sharedCache = sharedCacheWrapper.get();
-      if (sharedCache == null) return succ;
+      if (sharedCache == null) {
+        return succ;
+      }
       try {
         // Wait if background cache update is happening
         partitionColStatsCacheLock.readLock().lock();
@@ -2172,7 +2177,9 @@ public class CachedStore implements RawStore, Configurable {
       return;
     }
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return;
+    if (sharedCache == null) {
+      return;
+    }
     // Remove partitions
     try {
       // Wait if background cache update is happening
@@ -2417,19 +2424,29 @@ public class CachedStore implements RawStore, Configurable {
   }
 
   @Override
+  public List<SQLDefaultConstraint> getDefaultConstraints(String db_name, String tbl_name)
+      throws MetaException {
+    // TODO constraintCache
+    return rawStore.getDefaultConstraints(db_name, tbl_name);
+  }
+
+  @Override
   public List<String> createTableWithConstraints(Table tbl, List<SQLPrimaryKey> primaryKeys,
       List<SQLForeignKey> foreignKeys, List<SQLUniqueConstraint> uniqueConstraints,
-      List<SQLNotNullConstraint> notNullConstraints) throws InvalidObjectException, MetaException {
+      List<SQLNotNullConstraint> notNullConstraints,
+      List<SQLDefaultConstraint> defaultConstraints) throws InvalidObjectException, MetaException {
     // TODO constraintCache
     List<String> constraintNames = rawStore.createTableWithConstraints(tbl, primaryKeys,
-        foreignKeys, uniqueConstraints, notNullConstraints);
+        foreignKeys, uniqueConstraints, notNullConstraints, defaultConstraints);
     String dbName = StringUtils.normalizeIdentifier(tbl.getDbName());
     String tblName = StringUtils.normalizeIdentifier(tbl.getTableName());
     if (!shouldCacheTable(dbName, tblName)) {
       return constraintNames;
     }
     SharedCache sharedCache = sharedCacheWrapper.get();
-    if (sharedCache == null) return constraintNames;
+    if (sharedCache == null) {
+      return constraintNames;
+    }
     sharedCache.addTableToCache(StringUtils.normalizeIdentifier(tbl.getDbName()),
         StringUtils.normalizeIdentifier(tbl.getTableName()), tbl);
     return constraintNames;
@@ -2468,6 +2485,13 @@ public class CachedStore implements RawStore, Configurable {
       throws InvalidObjectException, MetaException {
     // TODO constraintCache
     return rawStore.addNotNullConstraints(nns);
+  }
+
+  @Override
+  public List<String> addDefaultConstraints(List<SQLDefaultConstraint> nns)
+      throws InvalidObjectException, MetaException {
+    // TODO constraintCache
+    return rawStore.addDefaultConstraints(nns);
   }
 
   @Override
@@ -2544,7 +2568,9 @@ public class CachedStore implements RawStore, Configurable {
      * Fails on any initialization error, even if the init will be retried later.
      */
     public SharedCache get() throws MetaException {
-      if (!waitForInit()) return null;
+      if (!waitForInit()) {
+        return null;
+      }
       return instance;
     }
 

@@ -29,11 +29,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.common.ValidTxnList;
+import org.apache.hadoop.hive.common.ValidTxnWriteIdList;
+import org.apache.hadoop.hive.common.ValidWriteIdList;
 import org.apache.hadoop.hive.common.classification.RetrySemantics;
 import org.apache.hadoop.hive.metastore.annotation.NoReconnect;
 import org.apache.hadoop.hive.metastore.api.AggrStats;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
-import org.apache.hadoop.hive.metastore.api.BasicTxnInfo;
 import org.apache.hadoop.hive.metastore.api.CmRecycleRequest;
 import org.apache.hadoop.hive.metastore.api.CmRecycleResponse;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
@@ -41,8 +42,10 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.CompactionResponse;
 import org.apache.hadoop.hive.metastore.api.CompactionType;
 import org.apache.hadoop.hive.metastore.api.ConfigValSecurityException;
+import org.apache.hadoop.hive.metastore.api.CreationMetadata;
 import org.apache.hadoop.hive.metastore.api.CurrentNotificationEventId;
 import org.apache.hadoop.hive.metastore.api.DataOperationType;
+import org.apache.hadoop.hive.metastore.api.DefaultConstraintsRequest;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -59,7 +62,6 @@ import org.apache.hadoop.hive.metastore.api.GetRoleGrantsForPrincipalResponse;
 import org.apache.hadoop.hive.metastore.api.HeartbeatTxnRangeResponse;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
 import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
-import org.apache.hadoop.hive.metastore.api.Index;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -87,6 +89,7 @@ import org.apache.hadoop.hive.metastore.api.PrincipalPrivilegeSet;
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
 import org.apache.hadoop.hive.metastore.api.Role;
+import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
@@ -99,6 +102,7 @@ import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.api.TableMeta;
 import org.apache.hadoop.hive.metastore.api.TxnAbortedException;
 import org.apache.hadoop.hive.metastore.api.TxnOpenException;
+import org.apache.hadoop.hive.metastore.api.TxnToWriteId;
 import org.apache.hadoop.hive.metastore.api.UniqueConstraintsRequest;
 import org.apache.hadoop.hive.metastore.api.UnknownDBException;
 import org.apache.hadoop.hive.metastore.api.UnknownPartitionException;
@@ -448,6 +452,12 @@ public interface IMetaStoreClient {
    */
   Map<String, Materialization> getMaterializationsInvalidationInfo(String dbName, List<String> viewNames)
       throws MetaException, InvalidOperationException, UnknownDBException, TException;
+
+  /**
+   * Updates the creation metadata for the materialized view.
+   */
+  void updateCreationMetadata(String dbName, String tableName, CreationMetadata cm)
+      throws MetaException, TException;
 
   /**
    * @param tableName
@@ -916,7 +926,7 @@ public interface IMetaStoreClient {
    *          table name of the old partition
    * @param newParts
    *          list of partitions
-   * @param environmentContext 
+   * @param environmentContext
    * @throws InvalidOperationException
    *           if the old partition does not exist
    * @throws MetaException
@@ -1009,77 +1019,6 @@ public interface IMetaStoreClient {
    */
   Map<String, String> partitionNameToSpec(String name)
       throws MetaException, TException;
-
-  /**
-   * create an index
-   * @param index the index object
-   * @throws InvalidObjectException
-   * @throws MetaException
-   * @throws NoSuchObjectException
-   * @throws TException
-   * @throws AlreadyExistsException
-   */
-  void createIndex(Index index, Table indexTable) throws InvalidObjectException,
-      MetaException, NoSuchObjectException, TException, AlreadyExistsException;
-
-  void alter_index(String dbName, String tblName, String indexName,
-      Index index) throws InvalidOperationException, MetaException, TException;
-
-  /**
-   *
-   * @param dbName
-   * @param tblName
-   * @param indexName
-   * @return the index
-   * @throws MetaException
-   * @throws UnknownTableException
-   * @throws NoSuchObjectException
-   * @throws TException
-   */
-  Index getIndex(String dbName, String tblName, String indexName)
-      throws MetaException, UnknownTableException, NoSuchObjectException,
-      TException;
-
-
-  /**
-   * list indexes of the give base table
-   * @param db_name
-   * @param tbl_name
-   * @param max
-   * @return the list of indexes
-   * @throws NoSuchObjectException
-   * @throws MetaException
-   * @throws TException
-   */
-  List<Index> listIndexes(String db_name, String tbl_name,
-      short max) throws NoSuchObjectException, MetaException, TException;
-
-  /**
-   * list all the index names of the give base table.
-   *
-   * @param db_name
-   * @param tbl_name
-   * @param max
-   * @return the list of names
-   * @throws MetaException
-   * @throws TException
-   */
-  List<String> listIndexNames(String db_name, String tbl_name,
-      short max) throws MetaException, TException;
-
-  /**
-   * @param db_name
-   * @param tbl_name
-   * @param name index name
-   * @param deleteData
-   * @return true on success
-   * @throws NoSuchObjectException
-   * @throws MetaException
-   * @throws TException
-   */
-  boolean dropIndex(String db_name, String tbl_name,
-      String name, boolean deleteData) throws NoSuchObjectException,
-      MetaException, TException;
 
   /**
    * Write table level column statistics to persistent store
@@ -1338,24 +1277,6 @@ public interface IMetaStoreClient {
           throws MetaException, TException;
 
   /**
-   * Get the last completed transaction for the given tables. Although transactions in Hive
-   * might happen concurrently, the order is based on the actual commit to the metastore
-   * table holding the completed transactions.
-   */
-  @InterfaceAudience.LimitedPrivate({"HCatalog"})
-  List<BasicTxnInfo> getLastCompletedTransactionForTables(List<String> dbNames, List<String> tableNames, ValidTxnList txnList)
-      throws TException;
-
-  /**
-   * Get the last completed transaction for the given table. Although transactions in Hive
-   * might happen concurrently, the order is based on the actual commit to the metastore
-   * table holding the completed transactions.
-   */
-  @InterfaceAudience.LimitedPrivate({"HCatalog"})
-  BasicTxnInfo getLastCompletedTransactionForTable(String dbName, String tableName, ValidTxnList txnList)
-      throws TException;
-
-  /**
    * Get a structure that details valid transactions.
    * @return list of valid transactions
    * @throws TException
@@ -1364,12 +1285,32 @@ public interface IMetaStoreClient {
 
   /**
    * Get a structure that details valid transactions.
-   * @param currentTxn The current transaction of the caller.  This will be removed from the
+   * @param currentTxn The current transaction of the caller. This will be removed from the
    *                   exceptions list so that the caller sees records from his own transaction.
-   * @return list of valid transactions
+   * @return list of valid transactions and also valid write IDs for each input table.
    * @throws TException
    */
   ValidTxnList getValidTxns(long currentTxn) throws TException;
+
+  /**
+   * Get a structure that details valid transactions.
+   * @param fullTableName full table name of format <db_name>.<table_name>
+   * @return list of valid write ids for the given table
+   * @throws TException
+   */
+  ValidWriteIdList getValidWriteIds(String fullTableName) throws TException;
+
+  /**
+   * Get a structure that details valid write ids list for all tables read by current txn.
+   * @param currentTxnId current txn ID for which we try to get valid write ids list
+   * @param tablesList list of tables (format: <db_name>.<table_name>) read from the current transaction
+   *                   for which needs to populate the valid write ids
+   * @param validTxnList snapshot of valid txns for the current txn
+   * @return list of valid write ids for the given list of tables.
+   * @throws TException
+   */
+  ValidTxnWriteIdList getValidWriteIds(Long currentTxnId, List<String> tablesList, String validTxnList)
+          throws TException;
 
   /**
    * Initiate a transaction.
@@ -1438,6 +1379,24 @@ public interface IMetaStoreClient {
    * @throws TException
    */
   void abortTxns(List<Long> txnids) throws TException;
+
+  /**
+   * Allocate a per table write ID and associate it with the given transaction.
+   * @param txnId id of transaction to which the allocated write ID to be associated.
+   * @param dbName name of DB in which the table belongs.
+   * @param tableName table to which the write ID to be allocated
+   * @throws TException
+   */
+  long allocateTableWriteId(long txnId, String dbName, String tableName) throws TException;
+
+  /**
+   * Allocate a per table write ID and associate it with the given transaction.
+   * @param txnIds ids of transaction batchto which the allocated write ID to be associated.
+   * @param dbName name of DB in which the table belongs.
+   * @param tableName table to which the write ID to be allocated
+   * @throws TException
+   */
+  List<TxnToWriteId> allocateTableWriteIdsBatch(List<Long> txnIds, String dbName, String tableName) throws TException;
 
   /**
    * Show the list of currently open transactions.  This is for use by "show transactions" in the
@@ -1621,18 +1580,19 @@ public interface IMetaStoreClient {
    * @deprecated in Hive 1.3.0/2.1.0 - will be removed in 2 releases
    */
   @Deprecated
-  void addDynamicPartitions(long txnId, String dbName, String tableName, List<String> partNames)
+  void addDynamicPartitions(long txnId, long writeId, String dbName, String tableName, List<String> partNames)
     throws TException;
   /**
    * Send a list of partitions to the metastore to indicate which partitions were loaded
    * dynamically.
    * @param txnId id of the transaction
+   * @param writeId table write id for this txn
    * @param dbName database name
    * @param tableName table name
    * @param partNames partition name, as constructed by Warehouse.makePartName
    * @throws TException
    */
-  void addDynamicPartitions(long txnId, String dbName, String tableName, List<String> partNames,
+  void addDynamicPartitions(long txnId, long writeId, String dbName, String tableName, List<String> partNames,
                             DataOperationType operationType)
     throws TException;
 
@@ -1780,11 +1740,15 @@ public interface IMetaStoreClient {
   List<SQLNotNullConstraint> getNotNullConstraints(NotNullConstraintsRequest request) throws MetaException,
     NoSuchObjectException, TException;
 
+  List<SQLDefaultConstraint> getDefaultConstraints(DefaultConstraintsRequest request) throws MetaException,
+      NoSuchObjectException, TException;
+
   void createTableWithConstraints(
     org.apache.hadoop.hive.metastore.api.Table tTbl,
     List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys,
     List<SQLUniqueConstraint> uniqueConstraints,
-    List<SQLNotNullConstraint> notNullConstraints)
+    List<SQLNotNullConstraint> notNullConstraints,
+    List<SQLDefaultConstraint> defaultConstraints)
     throws AlreadyExistsException, InvalidObjectException, MetaException, NoSuchObjectException, TException;
 
   void dropConstraint(String dbName, String tableName, String constraintName) throws
@@ -1801,6 +1765,9 @@ public interface IMetaStoreClient {
 
   void addNotNullConstraint(List<SQLNotNullConstraint> notNullConstraintCols) throws
   MetaException, NoSuchObjectException, TException;
+
+  void addDefaultConstraint(List<SQLDefaultConstraint> defaultConstraints) throws
+      MetaException, NoSuchObjectException, TException;
 
   /**
    * Gets the unique id of the backing database instance used for storing metadata

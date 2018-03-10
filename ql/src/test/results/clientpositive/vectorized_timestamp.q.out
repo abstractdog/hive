@@ -119,7 +119,7 @@ STAGE PLANS:
             Statistics: Num rows: 2 Data size: 80 Basic stats: COMPLETE Column stats: NONE
             TableScan Vectorization:
                 native: true
-                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<transactionid:bigint,bucketid:int,rowid:bigint>]
+                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<writeid:bigint,bucketid:int,rowid:bigint>]
             Select Operator
               expressions: ts (type: timestamp)
               outputColumnNames: ts
@@ -225,13 +225,13 @@ STAGE PLANS:
             Statistics: Num rows: 2 Data size: 80 Basic stats: COMPLETE Column stats: NONE
             TableScan Vectorization:
                 native: true
-                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<transactionid:bigint,bucketid:int,rowid:bigint>]
+                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<writeid:bigint,bucketid:int,rowid:bigint>]
             Filter Operator
               Filter Vectorization:
                   className: VectorFilterOperator
                   native: true
                   predicateExpression: FilterTimestampColumnInList(col 0:timestamp, values [0001-01-01 00:00:00.0, 0002-02-02 00:00:00.0])
-              predicate: (ts) IN (0001-01-01 00:00:00.0, 0002-02-02 00:00:00.0) (type: boolean)
+              predicate: (ts) IN (TIMESTAMP'0001-01-01 00:00:00.0', TIMESTAMP'0002-02-02 00:00:00.0') (type: boolean)
               Statistics: Num rows: 1 Data size: 40 Basic stats: COMPLETE Column stats: NONE
               Select Operator
                 expressions: ts (type: timestamp)
@@ -306,7 +306,7 @@ STAGE PLANS:
             Statistics: Num rows: 2 Data size: 80 Basic stats: COMPLETE Column stats: NONE
             TableScan Vectorization:
                 native: true
-                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<transactionid:bigint,bucketid:int,rowid:bigint>]
+                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<writeid:bigint,bucketid:int,rowid:bigint>]
             Select Operator
               expressions: ts (type: timestamp)
               outputColumnNames: ts
@@ -412,7 +412,7 @@ STAGE PLANS:
             Statistics: Num rows: 2 Data size: 80 Basic stats: COMPLETE Column stats: NONE
             TableScan Vectorization:
                 native: true
-                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<transactionid:bigint,bucketid:int,rowid:bigint>]
+                vectorizationSchemaColumns: [0:ts:timestamp, 1:ROW__ID:struct<writeid:bigint,bucketid:int,rowid:bigint>]
             Select Operator
               expressions: ts (type: timestamp)
               outputColumnNames: ts

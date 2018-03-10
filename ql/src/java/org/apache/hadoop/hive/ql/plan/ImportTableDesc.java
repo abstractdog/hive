@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -81,7 +82,8 @@ public class ImportTableDesc {
                 null,
                 null,
                 null,
-                null);
+                null,
+            null);
         this.createTblDesc.setStoredAsSubDirectories(table.getSd().isStoredAsSubDirectories());
         break;
       case VIEW:
@@ -100,6 +102,10 @@ public class ImportTableDesc {
                   table.getSd().getSerdeInfo().getSerializationLib(),
                   null, // storagehandler passed as table params
                   table.getSd().getSerdeInfo().getParameters());
+          // TODO: If the DB name from the creation metadata for any of the tables has changed,
+          // we should update it. Currently it refers to the source database name.
+          this.createViewDesc.setTablesUsed(table.getCreationMetadata() != null ?
+              table.getCreationMetadata().getTablesUsed() : ImmutableSet.of());
         } else {
           this.createViewDesc = new CreateViewDesc(dbDotView,
                   table.getAllCols(),
@@ -314,10 +320,10 @@ public class ImportTableDesc {
   public Task<? extends Serializable> getCreateTableTask(HashSet<ReadEntity> inputs, HashSet<WriteEntity> outputs,
       HiveConf conf) {
     switch (getDescType()) {
-      case TABLE:
-        return TaskFactory.get(new DDLWork(inputs, outputs, createTblDesc), conf);
-      case VIEW:
-        return TaskFactory.get(new DDLWork(inputs, outputs, createViewDesc), conf);
+    case TABLE:
+      return TaskFactory.get(new DDLWork(inputs, outputs, createTblDesc), conf, true);
+    case VIEW:
+      return TaskFactory.get(new DDLWork(inputs, outputs, createViewDesc), conf, true);
     }
     return null;
   }

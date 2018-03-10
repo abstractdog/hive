@@ -960,12 +960,14 @@ public class TestJdbcWithMiniHS2 {
     conf.setIntVar(HiveConf.ConfVars.HIVE_SERVER2_THRIFT_HTTP_RESPONSE_HEADER_SIZE, 1024);
     startMiniHS2(conf, true);
 
-    // Username is added to the request header
-    String userName = StringUtils.leftPad("*", 100);
+    // Username and password are added to the http request header.
+    // We will test the reconfiguration of the header size by changing the password length.
+    String userName = "userName";
+    String password = StringUtils.leftPad("*", 100);
     Connection conn = null;
     // This should go fine, since header should be less than the configured header size
     try {
-      conn = getConnection(miniHS2.getJdbcURL(testDbName), userName, "password");
+      conn = getConnection(miniHS2.getJdbcURL(testDbName), userName, password);
     } catch (Exception e) {
       fail("Not expecting exception: " + e);
     } finally {
@@ -976,11 +978,11 @@ public class TestJdbcWithMiniHS2 {
 
     // This should fail with given HTTP response code 413 in error message, since header is more
     // than the configured the header size
-    userName = StringUtils.leftPad("*", 2000);
+    password = StringUtils.leftPad("*", 2000);
     Exception headerException = null;
     try {
       conn = null;
-      conn = getConnection(miniHS2.getJdbcURL(testDbName), userName, "password");
+      conn = getConnection(miniHS2.getJdbcURL(testDbName), userName, password);
     } catch (Exception e) {
       headerException = e;
     } finally {
@@ -1002,7 +1004,7 @@ public class TestJdbcWithMiniHS2 {
     // This should now go fine, since we increased the configured header size
     try {
       conn = null;
-      conn = getConnection(miniHS2.getJdbcURL(testDbName), userName, "password");
+      conn = getConnection(miniHS2.getJdbcURL(testDbName), userName, password);
     } catch (Exception e) {
       fail("Not expecting exception: " + e);
     } finally {
@@ -1630,9 +1632,22 @@ public class TestJdbcWithMiniHS2 {
           + " ROW FORMAT DELIMITED FIELDS terminated by '\\t' LINES terminated by '\\n'");
       String extendedDescription = getDetailedTableDescription(stmt, table);
       assertNotNull("could not get Detailed Table Information", extendedDescription);
-      assertTrue("description appears truncated", extendedDescription.endsWith(")"));
-      assertTrue("bad line delimiter", extendedDescription.contains("line.delim=\\n"));
-      assertTrue("bad field delimiter", extendedDescription.contains("field.delim=\\t"));
+      assertTrue("description appears truncated: " + extendedDescription,
+          extendedDescription.endsWith(")"));
+      assertTrue("bad line delimiter: " + extendedDescription,
+          extendedDescription.contains("line.delim=\\n"));
+      assertTrue("bad field delimiter: " + extendedDescription,
+          extendedDescription.contains("field.delim=\\t"));
+
+      String view = "testDescribeView";
+      stmt.execute("create view " + view + " as select * from " + table);
+      String extendedViewDescription = getDetailedTableDescription(stmt, view);
+      assertTrue("bad view text: " + extendedViewDescription,
+          extendedViewDescription.contains("viewOriginalText:select * from " + table));
+      assertTrue("bad expanded view text: " + extendedViewDescription,
+          extendedViewDescription.contains(
+              "viewExpandedText:select `testdescribe`.`orderid`, `testdescribe`.`orderdate`, "
+                  + "`testdescribe`.`customerid` from `testjdbcminihs2`"));
     }
   }
 

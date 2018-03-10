@@ -276,6 +276,13 @@ public class TestTrigger {
     assertEquals(expected, expression);
     assertEquals(expected.hashCode(), expression.hashCode());
 
+    expression = ExpressionFactory.fromString(" elapsed_TIME > 300000ms");
+    expected = ExpressionFactory.createExpression(new TimeCounterLimit(TimeCounterLimit.TimeCounter
+      .ELAPSED_TIME, 300000));
+    assertEquals(expected, expression);
+    assertEquals(expected.hashCode(), expression.hashCode());
+
+
     expression = ExpressionFactory.fromString(" elapsed_TIME > 300000000microseconds");
     expected = ExpressionFactory.createExpression(new TimeCounterLimit(TimeCounterLimit.TimeCounter
       .ELAPSED_TIME, 300000));
@@ -307,6 +314,8 @@ public class TestTrigger {
   public void testActionFromMetastoreStr() {
     assertEquals(Action.Type.KILL_QUERY, Action.fromMetastoreExpression("KILL").getType());
     assertEquals(Action.Type.MOVE_TO_POOL, Action.fromMetastoreExpression("MOVE TO bi").getType());
+    assertEquals("bi", Action.fromMetastoreExpression("MOVE TO bi").getPoolName());
+    assertEquals("bi.c1.c2", Action.fromMetastoreExpression("MOVE TO bi.c1.c2").getPoolName());
     assertEquals("MOVE TO etl", Action.fromMetastoreExpression("MOVE TO etl").toString());
 
     thrown.expect(IllegalArgumentException.class);

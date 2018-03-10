@@ -92,6 +92,10 @@ public class DruidOutputFormat<K, V> implements HiveOutputFormat<K, DruidWritabl
             tableProperties.getProperty(Constants.DRUID_SEGMENT_GRANULARITY) != null ?
                     tableProperties.getProperty(Constants.DRUID_SEGMENT_GRANULARITY) :
                     HiveConf.getVar(jc, HiveConf.ConfVars.HIVE_DRUID_INDEXING_GRANULARITY);
+    final int targetNumShardsPerGranularity = Integer.parseUnsignedInt(
+        tableProperties.getProperty(Constants.DRUID_TARGET_SHARDS_PER_GRANULARITY, "0"));
+    final int maxPartitionSize = targetNumShardsPerGranularity > 0 ? -1 : HiveConf
+        .getIntVar(jc, HiveConf.ConfVars.HIVE_DRUID_MAX_PARTITION_SIZE);
     // If datasource is in the table properties, it is an INSERT/INSERT OVERWRITE as the datasource
     // name was already persisted. Otherwise, it is a CT/CTAS and we need to get the name from the
     // job properties that are set by configureOutputJobProperties in the DruidStorageHandler
@@ -129,6 +133,7 @@ public class DruidOutputFormat<K, V> implements HiveOutputFormat<K, DruidWritabl
     }
     ArrayList<TypeInfo> columnTypes = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
 
+    final boolean approximationAllowed = HiveConf.getBoolVar(jc, HiveConf.ConfVars.HIVE_DRUID_APPROX_RESULT);
     // Default, all columns that are not metrics or timestamp, are treated as dimensions
     final List<DimensionSchema> dimensions = new ArrayList<>();
     ImmutableList.Builder<AggregatorFactory> aggregatorFactoryBuilder = ImmutableList.builder();
@@ -145,8 +150,17 @@ public class DruidOutputFormat<K, V> implements HiveOutputFormat<K, DruidWritabl
           break;
         case FLOAT:
         case DOUBLE:
-        case DECIMAL:
           af = new DoubleSumAggregatorFactory(columnNames.get(i), columnNames.get(i));
+          break;
+        case DECIMAL:
+          if (approximationAllowed) {
+            af = new DoubleSumAggregatorFactory(columnNames.get(i), columnNames.get(i));
+          } else {
+            throw new UnsupportedOperationException(
+                String.format("Druid does not support decimal column type." +
+                        "Either cast column [%s] to double or Enable Approximate Result for Druid by setting property [%s] to true",
+                    columnNames.get(i), HiveConf.ConfVars.HIVE_DRUID_APPROX_RESULT.varname));
+          }
           break;
         case TIMESTAMP:
           // Granularity column
@@ -181,8 +195,10 @@ public class DruidOutputFormat<K, V> implements HiveOutputFormat<K, DruidWritabl
     List<AggregatorFactory> aggregatorFactories = aggregatorFactoryBuilder.build();
     final InputRowParser inputRowParser = new MapInputRowParser(new TimeAndDimsParseSpec(
             new TimestampSpec(DruidStorageHandlerUtils.DEFAULT_TIMESTAMP_COLUMN, "auto", null),
-            new DimensionsSpec(dimensions,
-                    Lists.newArrayList(Constants.DRUID_TIMESTAMP_GRANULARITY_COL_NAME), null
+            new DimensionsSpec(dimensions, Lists
+                .newArrayList(Constants.DRUID_TIMESTAMP_GRANULARITY_COL_NAME,
+                    Constants.DRUID_SHARD_KEY_COL_NAME
+                ), null
             )
     ));
 
@@ -199,8 +215,6 @@ public class DruidOutputFormat<K, V> implements HiveOutputFormat<K, DruidWritabl
 
     final String workingPath = jc.get(Constants.DRUID_JOB_WORKING_DIRECTORY);
     final String version = jc.get(Constants.DRUID_SEGMENT_VERSION);
-    Integer maxPartitionSize = HiveConf
-            .getIntVar(jc, HiveConf.ConfVars.HIVE_DRUID_MAX_PARTITION_SIZE);
     String basePersistDirectory = HiveConf
             .getVar(jc, HiveConf.ConfVars.HIVE_DRUID_BASE_PERSIST_DIRECTORY);
     if (Strings.isNullOrEmpty(basePersistDirectory)) {

@@ -41,6 +41,7 @@ import org.apache.hadoop.hive.common.io.encoded.EncodedColumnBatch.ColumnStreamD
 import org.apache.hadoop.hive.common.io.encoded.MemoryBuffer;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.orc.CompressionCodec;
+import org.apache.orc.CompressionKind;
 import org.apache.orc.DataReader;
 import org.apache.orc.OrcConf;
 import org.apache.orc.OrcFile.WriterVersion;
@@ -99,6 +100,8 @@ import sun.misc.Cleaner;
  * 6) Given that RG end boundaries in ORC are estimates, we can request data from cache and then
  *    not use it; thus, at the end we go thru all the MBs, and release those not released by (5).
  */
+// Note: this thing should know nothing about ACID or schema. It reads physical columns by index;
+//       schema evolution/ACID schema considerations should be on higher level.
 class EncodedReaderImpl implements EncodedReader {
   public static final Logger LOG = LoggerFactory.getLogger(EncodedReaderImpl.class);
   private static Field cleanerField;
@@ -129,6 +132,7 @@ class EncodedReaderImpl implements EncodedReader {
   private boolean isDataReaderOpen = false;
   private final CompressionCodec codec;
   private final boolean isCodecFromPool;
+  private boolean isCodecFailure = false;
   private final boolean isCompressed;
   private final org.apache.orc.CompressionKind compressionKind;
   private final int bufferSize;
@@ -280,7 +284,7 @@ class EncodedReaderImpl implements EncodedReader {
   @Override
   public void readEncodedColumns(int stripeIx, StripeInformation stripe,
       OrcProto.RowIndex[] indexes, List<OrcProto.ColumnEncoding> encodings,
-      List<OrcProto.Stream> streamList, boolean[] included, boolean[] rgs,
+      List<OrcProto.Stream> streamList, boolean[] physicalFileIncludes, boolean[] rgs,
       Consumer<OrcEncodedColumnBatch> consumer) throws IOException {
     // Note: for now we don't have to setError here, caller will setError if we throw.
     // We are also not supposed to call setDone, since we are only part of the operation.
@@ -296,11 +300,11 @@ class EncodedReaderImpl implements EncodedReader {
     // We assume stream list is sorted by column and that non-data
     // streams do not interleave data streams for the same column.
     // 1.2. With that in mind, determine disk ranges to read/get from cache (not by stream).
-    ColumnReadContext[] colCtxs = new ColumnReadContext[included.length];
+    ColumnReadContext[] colCtxs = new ColumnReadContext[physicalFileIncludes.length];
     int colRgIx = -1;
     // Don't create context for the 0-s column.
-    for (int i = 1; i < included.length; ++i) {
-      if (!included[i]) continue;
+    for (int i = 1; i < physicalFileIncludes.length; ++i) {
+      if (!physicalFileIncludes[i]) continue;
       ColumnEncoding enc = encodings.get(i);
       colCtxs[i] = new ColumnReadContext(i, enc, indexes[i], ++colRgIx);
       if (isTracingEnabled) {
@@ -314,10 +318,10 @@ class EncodedReaderImpl implements EncodedReader {
       long length = stream.getLength();
       int colIx = stream.getColumn();
       OrcProto.Stream.Kind streamKind = stream.getKind();
-      if (!included[colIx] || StreamName.getArea(streamKind) != StreamName.Area.DATA) {
+      if (!physicalFileIncludes[colIx] || StreamName.getArea(streamKind) != StreamName.Area.DATA) {
         // We have a stream for included column, but in future it might have no data streams.
         // It's more like "has at least one column included that has an index stream".
-        hasIndexOnlyCols = hasIndexOnlyCols || included[colIx];
+        hasIndexOnlyCols = hasIndexOnlyCols || physicalFileIncludes[colIx];
         if (isTracingEnabled) {
           LOG.trace("Skipping stream for column " + colIx + ": "
               + streamKind + " at " + offset + ", " + length);
@@ -356,7 +360,7 @@ class EncodedReaderImpl implements EncodedReader {
       // TODO: there may be a bug here. Could there be partial RG filtering on index-only column?
       if (hasIndexOnlyCols && (rgs == null)) {
         OrcEncodedColumnBatch ecb = POOLS.ecbPool.take();
-        ecb.init(fileKey, stripeIx, OrcEncodedColumnBatch.ALL_RGS, included.length);
+        ecb.init(fileKey, stripeIx, OrcEncodedColumnBatch.ALL_RGS, physicalFileIncludes.length);
         try {
           consumer.consumeData(ecb);
         } catch (InterruptedException e) {
@@ -398,7 +402,7 @@ class EncodedReaderImpl implements EncodedReader {
         trace.logStartRg(rgIx);
         boolean hasErrorForEcb = true;
         try {
-          ecb.init(fileKey, stripeIx, rgIx, included.length);
+          ecb.init(fileKey, stripeIx, rgIx, physicalFileIncludes.length);
           for (int colIx = 0; colIx < colCtxs.length; ++colIx) {
             ColumnReadContext ctx = colCtxs[colIx];
             if (ctx == null) continue; // This column is not included.
@@ -676,12 +680,17 @@ class EncodedReaderImpl implements EncodedReader {
 
   @Override
   public void close() throws IOException {
-    if (isCodecFromPool) {
-      OrcCodecPool.returnCodec(compressionKind, codec);
-    } else {
-      codec.close();
+    try {
+      if (isCodecFromPool && !isCodecFailure) {
+        OrcCodecPool.returnCodec(compressionKind, codec);
+      } else {
+        codec.close();
+      }
+    } catch (Exception ex) {
+      LOG.error("Ignoring error from codec", ex);
+    } finally {
+      dataReader.close();
     }
-    dataReader.close();
   }
 
   /**
@@ -869,7 +878,15 @@ class EncodedReaderImpl implements EncodedReader {
     for (ProcCacheChunk chunk : toDecompress) {
       ByteBuffer dest = chunk.getBuffer().getByteBufferRaw();
       if (chunk.isOriginalDataCompressed) {
-        decompressChunk(chunk.originalData, codec, dest);
+        boolean isOk = false;
+        try {
+          decompressChunk(chunk.originalData, codec, dest);
+          isOk = true;
+        } finally {
+          if (!isOk) {
+            isCodecFailure = true;
+          }
+        }
       } else {
         copyUncompressedChunk(chunk.originalData, dest);
       }
@@ -1242,6 +1259,7 @@ class EncodedReaderImpl implements EncodedReader {
       LOG.trace("Decompressing " + src.remaining() + " bytes to dest buffer pos "
           + dest.position() + ", limit " + dest.limit());
     }
+    codec.reset(); // We always need to call reset on the codec.
     codec.decompress(src, dest);
     dest.position(startPos);
     int newLim = dest.limit();
@@ -1249,49 +1267,11 @@ class EncodedReaderImpl implements EncodedReader {
       throw new AssertionError("After codec, buffer [" + startPos + ", " + startLim
           + ") became [" + dest.position() + ", " + newLim + ")");
     }
-    if (dest.remaining() > 0) return;
-
-    // There's a bug in native decompressor. See HADOOP-15171
-    dest.limit(startLim);
-    src.position(startSrcPos);
-    src.limit(startSrcLim);
-    LOG.warn("The codec has produced 0 bytes for " + src.remaining() + " bytes at pos "
-        + src.position() + ", data hash " + src.hashCode() + ": [" +  logSomeBytes(src));
-    ByteBuffer srcHeap = ByteBuffer.allocate(src.remaining()),
-        destHeap = ByteBuffer.allocate(dest.remaining());
-    int destHeapPos = destHeap.position();
-    srcHeap.put(src);
-    srcHeap.position(startSrcPos);
-    codec.decompress(srcHeap, destHeap);
-    destHeap.position(destHeapPos);
-    int newLen = destHeap.remaining();
-    LOG.warn("Fell back to JDK decompressor with memcopy; got " + newLen + " bytes");
-    dest.put(destHeap);
-    dest.position(startPos);
-    dest.limit(startPos + newLen);
-  }
-
-  private static String logSomeBytes(ByteBuffer src) {
-    final int max = 500;
-    StringBuilder sb = new StringBuilder();
-    int base = src.position(), end = base + Math.min(max, src.remaining());
-    for (int i = base; i < end; ++i) {
-      if (i != base) {
-        sb.append(' ');
-      }
-      int b = src.get(i) & 0xff;
-      if (b <= 0xf) {
-        sb.append('0');
-      }
-      sb.append(Integer.toHexString(b));
+    if (dest.remaining() == 0) {
+      throw new IOException("The codec has produced 0 bytes for {" + src.isDirect() + ", "
+        + src.position() + ", " + src.remaining() + "} into {" + dest.isDirect() + ", "
+        + dest.position()  + ", " + dest.remaining() + "}");
     }
-    int rem = src.remaining() - max;
-    if (rem > 0) {
-      sb.append(" ... (").append(rem).append(" bytes)]");
-    } else {
-      sb.append("]");
-    }
-    return sb.toString();
   }
 
   private void ponderReleaseInitialRefcount(
@@ -1741,8 +1721,7 @@ class EncodedReaderImpl implements EncodedReader {
 
   /** Pool factory that is used if another one isn't specified - just creates the objects. */
   private static class NoopPoolFactory implements PoolFactory {
-    @Override
-    public <T> Pool<T> createPool(final int size, final PoolObjectHelper<T> helper) {
+    private <T> Pool<T> createPool(final int size, final PoolObjectHelper<T> helper) {
       return new Pool<T>() {
         public void offer(T t) {
         }
@@ -1851,21 +1830,21 @@ class EncodedReaderImpl implements EncodedReader {
 
   @Override
   public void readIndexStreams(OrcIndex index, StripeInformation stripe,
-      List<OrcProto.Stream> streams, boolean[] included, boolean[] sargColumns)
+      List<OrcProto.Stream> streams, boolean[] physicalFileIncludes, boolean[] sargColumns)
           throws IOException {
     long stripeOffset = stripe.getOffset();
-    DiskRangeList indexRanges = planIndexReading(
-        fileSchema, streams, true, included, sargColumns, version, index.getBloomFilterKinds());
+    DiskRangeList indexRanges = planIndexReading(fileSchema, streams, true, physicalFileIncludes,
+        sargColumns, version, index.getBloomFilterKinds());
     if (indexRanges == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Nothing to read for stripe [" + stripe + "]");
       }
       return;
     }
-    ReadContext[] colCtxs = new ReadContext[included.length];
+    ReadContext[] colCtxs = new ReadContext[physicalFileIncludes.length];
     int colRgIx = -1;
-    for (int i = 0; i < included.length; ++i) {
-      if (!included[i] && (sargColumns == null || !sargColumns[i])) continue;
+    for (int i = 0; i < physicalFileIncludes.length; ++i) {
+      if (!physicalFileIncludes[i] && (sargColumns == null || !sargColumns[i])) continue;
       colCtxs[i] = new ReadContext(i, ++colRgIx);
       if (isTracingEnabled) {
         LOG.trace("Creating context: " + colCtxs[i].toString());
@@ -1880,7 +1859,7 @@ class EncodedReaderImpl implements EncodedReader {
       // See planIndexReading - only read non-row-index streams if involved in SARGs.
       if ((StreamName.getArea(streamKind) == StreamName.Area.INDEX)
           && ((sargColumns != null && sargColumns[colIx])
-              || (included[colIx] && streamKind == Kind.ROW_INDEX))) {
+              || (physicalFileIncludes[colIx] && streamKind == Kind.ROW_INDEX))) {
         trace.logAddStream(colIx, streamKind, offset, length, -1, true);
         colCtxs[colIx].addStream(offset, stream, -1);
         if (isTracingEnabled) {

@@ -615,13 +615,13 @@ import org.slf4j.LoggerFactory;
           case 2: // OPEN_TXNS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list542 = iprot.readListBegin();
-                struct.open_txns = new ArrayList<Long>(_list542.size);
-                long _elem543;
-                for (int _i544 = 0; _i544 < _list542.size; ++_i544)
+                org.apache.thrift.protocol.TList _list538 = iprot.readListBegin();
+                struct.open_txns = new ArrayList<Long>(_list538.size);
+                long _elem539;
+                for (int _i540 = 0; _i540 < _list538.size; ++_i540)
                 {
-                  _elem543 = iprot.readI64();
-                  struct.open_txns.add(_elem543);
+                  _elem539 = iprot.readI64();
+                  struct.open_txns.add(_elem539);
                 }
                 iprot.readListEnd();
               }
@@ -666,9 +666,9 @@ import org.slf4j.LoggerFactory;
         oprot.writeFieldBegin(OPEN_TXNS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, struct.open_txns.size()));
-          for (long _iter545 : struct.open_txns)
+          for (long _iter541 : struct.open_txns)
           {
-            oprot.writeI64(_iter545);
+            oprot.writeI64(_iter541);
           }
           oprot.writeListEnd();
         }
@@ -704,9 +704,9 @@ import org.slf4j.LoggerFactory;
       oprot.writeI64(struct.txn_high_water_mark);
       {
         oprot.writeI32(struct.open_txns.size());
-        for (long _iter546 : struct.open_txns)
+        for (long _iter542 : struct.open_txns)
         {
-          oprot.writeI64(_iter546);
+          oprot.writeI64(_iter542);
         }
       }
       oprot.writeBinary(struct.abortedBits);
@@ -726,13 +726,13 @@ import org.slf4j.LoggerFactory;
       struct.txn_high_water_mark = iprot.readI64();
       struct.setTxn_high_water_markIsSet(true);
       {
-        org.apache.thrift.protocol.TList _list547 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
-        struct.open_txns = new ArrayList<Long>(_list547.size);
-        long _elem548;
-        for (int _i549 = 0; _i549 < _list547.size; ++_i549)
+        org.apache.thrift.protocol.TList _list543 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.I64, iprot.readI32());
+        struct.open_txns = new ArrayList<Long>(_list543.size);
+        long _elem544;
+        for (int _i545 = 0; _i545 < _list543.size; ++_i545)
         {
-          _elem548 = iprot.readI64();
-          struct.open_txns.add(_elem548);
+          _elem544 = iprot.readI64();
+          struct.open_txns.add(_elem544);
         }
       }
       struct.setOpen_txnsIsSet(true);

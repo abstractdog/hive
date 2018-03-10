@@ -29,7 +29,7 @@
 
   <properties>
     <hive.path.to.root>..</hive.path.to.root>
-    <druid.metamx.util.version>0.27.10</druid.metamx.util.version>
+    <druid.metamx.util.version>1.3.2</druid.metamx.util.version>
     <druid.guava.version>16.0.1</druid.guava.version>
   </properties>
 
@@ -153,6 +153,14 @@
         <exclusion>
           <groupId>com.fasterxml.jackson.core</groupId>
           <artifactId>jackson-databind</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-aws</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-s3</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:dest1
 DESCRIBE FUNCTION reverse;
 DESCRIBE FUNCTION EXTENDED reverse;
 

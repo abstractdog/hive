@@ -1,4 +1,3 @@
---! qt:dataset:src
 DESCRIBE FUNCTION collect_set;
 DESCRIBE FUNCTION EXTENDED collect_set;
 

@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 set hive.map.aggr=true;
 set hive.groupby.skewindata=false;
 set mapred.reduce.tasks=31;

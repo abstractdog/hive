@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 set hive.fetch.task.conversion=more;
 
 use default;

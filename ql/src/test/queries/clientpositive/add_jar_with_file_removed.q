@@ -1,4 +1,3 @@
---! qt:dataset:src
 !mkdir ${system:test.tmp.dir}/tmpjars;
 !touch ${system:test.tmp.dir}/tmpjars/added1.jar;
 !touch ${system:test.tmp.dir}/tmpjars/added2.jar;

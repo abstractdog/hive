@@ -1,4 +1,3 @@
---! qt:dataset:src_thrift
 -- SORT_QUERY_RESULTS
 
 DESCRIBE src_thrift;

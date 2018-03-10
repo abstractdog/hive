@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 CREATE TABLE dest1(c1 STRING) STORED AS TEXTFILE;
 
 FROM src INSERT OVERWRITE TABLE dest1 SELECT '' WHERE src.key = 86;

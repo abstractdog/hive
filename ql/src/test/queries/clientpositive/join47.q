@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:src
 set hive.strict.checks.cartesian.product=false;
 set hive.join.inner.residual=true;
 

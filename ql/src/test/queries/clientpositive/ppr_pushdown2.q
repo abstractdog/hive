@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.fetch.task.conversion=more;
 
 create table ppr_test (key string) partitioned by (ds string);

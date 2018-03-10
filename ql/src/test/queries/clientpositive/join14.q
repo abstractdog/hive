@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 set hive.mapred.mode=nonstrict;
 -- SORT_QUERY_RESULTS
 -- EXCLUDE_HADOOP_MAJOR_VERSIONS(0.20S)

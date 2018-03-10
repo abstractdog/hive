@@ -1,6 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest2
---! qt:dataset:dest1
 set hive.stats.column.autogather=false;
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;

@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.map.aggr = true;
 -- SORT_BEFORE_DIFF

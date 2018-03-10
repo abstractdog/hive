@@ -1,4 +1,3 @@
---! qt:dataset:src
 explain
 select distinct key, "" as dummy1, "" as dummy2 from src tablesample (10 rows);
 

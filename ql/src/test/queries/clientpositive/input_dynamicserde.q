@@ -1,5 +1,3 @@
---! qt:dataset:src_thrift
---! qt:dataset:dest1
 CREATE TABLE dest1(a array<int>, b array<string>, c map<string,string>, d int, e string)
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY '1'

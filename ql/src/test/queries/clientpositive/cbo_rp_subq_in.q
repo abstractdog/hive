@@ -1,5 +1,3 @@
---! qt:dataset:part
---! qt:dataset:lineitem
 set hive.mapred.mode=nonstrict;
 set hive.cbo.enable=true;
 set hive.cbo.returnpath.hiveop=true;

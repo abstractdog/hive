@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 set hive.mapred.mode=nonstrict;
 -- Some tables might have extra columns and struct elements on the schema than the on Parquet schema;
 -- This is called 'schema evolution' as the Parquet file is not ready yet for such new columns;

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.spark.dynamic.partition.pruning=true;
 
 -- This qfile tests whether we can handle nested DPP sinks

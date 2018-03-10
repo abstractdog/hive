@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.merge.rcfile.block.level=false;
 set hive.exec.dynamic.partition=true;
 set mapred.max.split.size=100;

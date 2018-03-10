@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest1
 set hive.explain.user=false;
 set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat;
 set hive.mapred.mode=nonstrict;

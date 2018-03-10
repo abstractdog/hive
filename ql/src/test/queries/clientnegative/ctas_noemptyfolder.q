@@ -1,4 +1,3 @@
---! qt:dataset:src
 create table ctas1 
 location 'file:${system:test.tmp.dir}/ctastmpfolder' 
 as 

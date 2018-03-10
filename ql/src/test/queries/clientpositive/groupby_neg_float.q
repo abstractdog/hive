@@ -1,4 +1,3 @@
---! qt:dataset:src
 FROM src
 SELECT cast('-30.33' as DOUBLE)
 GROUP BY cast('-30.33' as DOUBLE)

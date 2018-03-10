@@ -1,4 +1,3 @@
---! qt:dataset:src
 CREATE TABLE part_special (
   a STRING,
   b STRING

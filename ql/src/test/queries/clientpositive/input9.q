@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:dest1
 CREATE TABLE dest1(value STRING, key INT) STORED AS TEXTFILE;
 
 EXPLAIN

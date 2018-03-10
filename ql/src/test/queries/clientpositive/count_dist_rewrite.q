@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.optimize.metadataonly=true;
 
 explain select count(distinct key) from src; 

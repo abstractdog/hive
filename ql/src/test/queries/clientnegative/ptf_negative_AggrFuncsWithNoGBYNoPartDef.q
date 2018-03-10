@@ -1,4 +1,3 @@
---! qt:dataset:part
 -- testAggrFuncsWithNoGBYNoPartDef
 select p_mfgr, 
 sum(p_retailprice) as s1  

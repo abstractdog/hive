@@ -1,4 +1,3 @@
---! qt:dataset:src
 create external table result(key string) location "${system:test.tmp.dir}/result";
 
 set mapreduce.job.reduces=2;

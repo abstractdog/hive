@@ -1,4 +1,3 @@
---! qt:dataset:src
 DESCRIBE FUNCTION logged_in_user;
 DESCRIBE FUNCTION EXTENDED logged_in_user;
 

@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:dest4_sequencefile
 set mapred.output.compress=true;
 set mapred.output.compression.type=BLOCK;
 

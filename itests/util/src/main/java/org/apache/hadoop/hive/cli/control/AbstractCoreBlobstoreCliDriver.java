@@ -20,12 +20,10 @@ package org.apache.hadoop.hive.cli.control;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.common.base.Strings;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 
-import org.apache.hadoop.hive.cli.control.AbstractCliConfig.MetastoreType;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveVariableSource;
 import org.apache.hadoop.hive.conf.VariableSubstitution;
@@ -36,6 +34,8 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+
+import com.google.common.base.Strings;
 
 public abstract class AbstractCoreBlobstoreCliDriver extends CliAdapter {
 
@@ -177,6 +177,7 @@ public abstract class AbstractCoreBlobstoreCliDriver extends CliAdapter {
         + "-" + String.format("%03d", (int)(Math.random() * 999));
     testBlobstorePathUnique = testBlobstorePath + uid;
 
-    qt.addPatternWithMaskComment(testBlobstorePathUnique, String.format("### %s ###", HCONF_TEST_BLOBSTORE_PATH));
+    qt.getQOutProcessor().addPatternWithMaskComment(testBlobstorePathUnique,
+        String.format("### %s ###", HCONF_TEST_BLOBSTORE_PATH));
   }
 }

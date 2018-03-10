@@ -1,3 +1,4 @@
+--! qt:dataset:src
 
 
 set hive.exec.infer.bucket.sort=true;

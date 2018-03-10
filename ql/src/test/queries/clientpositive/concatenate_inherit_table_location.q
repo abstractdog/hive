@@ -1,3 +1,4 @@
+--! qt:dataset:src
 CREATE TABLE citl_table (key STRING, value STRING) PARTITIONED BY (part STRING)
 STORED AS RCFILE
 LOCATION 'pfile:${system:test.tmp.dir}/citl_table';

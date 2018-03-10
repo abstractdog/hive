@@ -1,3 +1,5 @@
+--! qt:dataset:srcpart
+--! qt:dataset:src
 -- Some basic tests to test HoS works with spark.master = local
 
 -- Test that a basic explain plan can be generated

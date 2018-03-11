@@ -14,7 +14,7 @@ CREATE TABLE alltypesorc(
     STORED AS ORC;
 
 LOAD DATA LOCAL INPATH "${hiveconf:test.data.dir}/alltypesorc"
-OVERWRITE INTO  TABLE alltypesorc;
+OVERWRITE INTO TABLE alltypesorc;
 
 ANALYZE TABLE alltypesorc COMPUTE STATISTICS;
 

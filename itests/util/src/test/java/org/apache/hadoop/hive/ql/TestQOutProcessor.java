@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,6 +31,8 @@ public class TestQOutProcessor {
   public void testSelectiveHdfsPatternMaskOnlyHdfsPath() {
     Assert.assertEquals("nothing to be masked", processLine("nothing to be masked"));
     Assert.assertEquals("hdfs://", processLine("hdfs://"));
+    Assert.assertEquals(String.format("hdfs://%s", QOutProcessor.HDFS_MASK),
+        processLine("hdfs:///"));
     Assert.assertEquals(String.format("hdfs://%s", QOutProcessor.HDFS_MASK),
         processLine("hdfs://a"));
     Assert.assertEquals(String.format("hdfs://%s other text", QOutProcessor.HDFS_MASK),

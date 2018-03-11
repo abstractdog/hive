@@ -104,7 +104,8 @@ public class QOutProcessor {
       "pk_-?[0-9]*_[0-9]*_[0-9]*",
       "fk_-?[0-9]*_[0-9]*_[0-9]*",
       "uk_-?[0-9]*_[0-9]*_[0-9]*",
-      "nn_-?[0-9]*_[0-9]*_[0-9]*",
+      "nn_-?[0-9]*_[0-9]*_[0-9]*", // not null constraint name
+      "dc_-?[0-9]*_[0-9]*_[0-9]*", // default constraint name
       ".*at com\\.sun\\.proxy.*",
       ".*at com\\.jolbox.*",
       ".*at com\\.zaxxer.*",
@@ -231,10 +232,10 @@ public class QOutProcessor {
   private final PatternReplacementPair[] partialPlanMask;
   {
     ArrayList<PatternReplacementPair> ppm = new ArrayList<>();
-    ppm.add(new PatternReplacementPair(Pattern.compile("\\{\"transactionid\":[1-9][0-9]*,\"bucketid\":"),
-      "{\"transactionid\":### Masked txnid ###,\"bucketid\":"));
-
-    ppm.add(new PatternReplacementPair(Pattern.compile("attempt_[0-9]+"), "attempt_#ID#"));
+    ppm.add(new PatternReplacementPair(Pattern.compile("\\{\"writeid\":[1-9][0-9]*,\"bucketid\":"),
+        "{\"writeid\":### Masked writeid ###,\"bucketid\":"));
+    
+    ppm.add(new PatternReplacementPair(Pattern.compile("attempt_[0-9_]+"), "attempt_#ID#"));
     ppm.add(new PatternReplacementPair(Pattern.compile("vertex_[0-9_]+"), "vertex_#ID#"));
     ppm.add(new PatternReplacementPair(Pattern.compile("task_[0-9_]+"), "task_#ID#"));
     partialPlanMask = ppm.toArray(new PatternReplacementPair[ppm.size()]);

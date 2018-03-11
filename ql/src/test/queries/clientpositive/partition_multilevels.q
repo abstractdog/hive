@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 set hive.mapred.mode=nonstrict;
 create table partition_test_multilevel (key string, value string) partitioned by (level1 string, level2 string, level3 string);
 

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- union case: both subqueries are map jobs on same input, followed by filesink
 -- mostly copied from union.q

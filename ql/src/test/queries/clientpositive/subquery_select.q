@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:part
 -- following tests test queries in SELECT
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;

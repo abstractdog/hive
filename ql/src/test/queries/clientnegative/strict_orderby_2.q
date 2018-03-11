@@ -1,4 +1,3 @@
---! qt:dataset:src
 reset hive.mapred.mode;
 set hive.strict.checks.orderby.no.limit=true;
 

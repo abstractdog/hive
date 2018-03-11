@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 
 set hive.mapred.mode=nonstrict;
 set hive.support.concurrency=true;

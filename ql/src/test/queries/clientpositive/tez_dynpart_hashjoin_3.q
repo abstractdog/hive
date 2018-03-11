@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 set hive.optimize.limittranspose=true;
 set hive.optimize.limittranspose.reductionpercentage=0.1f;
 set hive.optimize.limittranspose.reductiontuples=100;

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.fetch.task.conversion=more;
 
 SELECT 1 NOT IN (1, 2, 3),

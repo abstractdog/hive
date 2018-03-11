@@ -1,4 +1,3 @@
---! qt:dataset:src1
 create table src_stat as select * from src1;
 
 create table src_stat_int (

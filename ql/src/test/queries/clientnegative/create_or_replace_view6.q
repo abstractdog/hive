@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 -- Can't update view to have an invalid definition
 
 drop view v;

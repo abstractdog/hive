@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 set hive.strict.checks.bucketing=false; 
 
 reset hive.mapred.mode;

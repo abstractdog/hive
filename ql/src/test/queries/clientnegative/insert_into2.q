@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.lock.numretries=5;
 set hive.lock.sleep.between.retries=5;
 

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 -- SORT_QUERY_RESULTS
 
 EXPLAIN

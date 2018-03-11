@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Verifies that script operator ID environment variables have unique values
 -- in each instance of the script operator.
 SELECT count(1) FROM

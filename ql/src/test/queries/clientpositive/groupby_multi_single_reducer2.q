@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.multigroupby.singlereducer=true;
 
 CREATE TABLE dest_g2(key STRING, c1 INT) STORED AS TEXTFILE;

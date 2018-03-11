@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop view v;
 create view v as select key, '12' from src;
 desc formatted v;

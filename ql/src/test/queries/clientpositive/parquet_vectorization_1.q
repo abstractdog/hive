@@ -1,4 +1,3 @@
---! qt:dataset:alltypesparquet
 SET hive.vectorized.execution.enabled=true;
 set hive.fetch.task.conversion=none;
 set hive.vectorized.execution.reduce.enabled=true;

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.cli.errors.ignore=true;
 
 ADD FILE ../../data/scripts/error_script;

@@ -1,4 +1,3 @@
---! qt:dataset:src
 create temporary function udtfCount2 as 'org.apache.hadoop.hive.contrib.udtf.example.GenericUDTFCount2';
 
 set hive.fetch.task.conversion=minimal;

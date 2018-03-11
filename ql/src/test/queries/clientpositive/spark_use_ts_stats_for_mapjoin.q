@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.auto.convert.join=true;
 set hive.spark.use.ts.stats.for.mapjoin=true;

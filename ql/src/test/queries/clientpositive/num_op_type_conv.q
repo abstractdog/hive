@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.fetch.task.conversion=more;
 
 EXPLAIN SELECT null + 7, 1.0 - null, null + null,

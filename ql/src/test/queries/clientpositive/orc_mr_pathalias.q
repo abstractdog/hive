@@ -1,4 +1,3 @@
---! qt:dataset:src
 create database if not exists test;
 drop table if exists test.test_orc_src;
 drop table if exists test.test_orc_src2;

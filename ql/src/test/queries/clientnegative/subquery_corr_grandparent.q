@@ -1,4 +1,3 @@
---! qt:dataset:part
 -- inner query can only refer to it's parent query columns
 select *
 from part x 

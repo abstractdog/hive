@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- UDTF forwards nothing, OUTER LV add null for that
 explain
 select * from src LATERAL VIEW OUTER explode(array()) C AS a limit 10;

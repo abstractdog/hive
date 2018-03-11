@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.compute.query.using.stats=false;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.max.dynamic.partitions=400;

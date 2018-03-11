@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.ddl.output.format=json;
 
 DROP VIEW view_partitioned;

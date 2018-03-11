@@ -1,4 +1,3 @@
---! qt:dataset:cbo_t3
 set hive.explain.user=false;
 set hive.cli.print.header=true;
 SET hive.vectorized.execution.enabled=true;

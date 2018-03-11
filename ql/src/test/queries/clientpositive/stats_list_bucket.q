@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 -- INCLUDE_HADOOP_MAJOR_VERSIONS(0.23)
 

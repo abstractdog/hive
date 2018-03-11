@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.autogather=false;
 
 drop table stats16;

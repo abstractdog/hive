@@ -27,8 +27,6 @@ INSERT OVERWRITE TABLE bay SELECT * FROM src ORDER BY key;
 
 select * from bay order by key limit 10;
 
-SHOW TABLES;
-
 CREATE DATABASE two;
 
 USE two;

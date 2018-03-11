@@ -48,6 +48,4 @@ from
   on (t2.key-1) = t1.db_id
 order by a,b;
 
-show tables;
-
 describe tables;

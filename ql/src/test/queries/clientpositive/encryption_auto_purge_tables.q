@@ -10,7 +10,7 @@ CREATE TABLE encrypted_table (key INT, value STRING) LOCATION '${hiveconf:hive.m
 CRYPTO CREATE_KEY --keyName key_128 --bitLength 128;
 CRYPTO CREATE_ZONE --keyName key_128 --path ${hiveconf:hive.metastore.warehouse.dir}/default/encrypted_table;
 
-SHOW TABLES;
+SHOW TABLES LIKE "encrypted_*";
 
 ALTER TABLE encrypted_table SET TBLPROPERTIES("auto.purge"="true");
 
@@ -31,7 +31,7 @@ SELECT COUNT(*) from encrypted_ext_table;
 
 DROP TABLE encrypted_table;
 DROP TABLE encrypted_ext_table;
-SHOW TABLES;
+SHOW TABLES LIKE "encrypted_*";
 
 -- cleanup
 DROP TABLE IF EXISTS encrypted_table PURGE;

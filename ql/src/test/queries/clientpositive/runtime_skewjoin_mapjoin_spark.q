@@ -1,3 +1,4 @@
+--! qt:dataset:src
 set hive.stats.deserialization.factor=1.0;
 set hive.mapred.mode=nonstrict;
 set hive.optimize.skewjoin = true;

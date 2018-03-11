@@ -1,3 +1,4 @@
+--! qt:dataset:cbo_t3
 set hive.mapred.mode=nonstrict;
 
 explain

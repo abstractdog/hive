@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- This test is used for testing explain for DDL/DML statements
 
 -- Create some views and tabels

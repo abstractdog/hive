@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.exec.mode.local.auto=false;
 set hive.exec.reducers.max = 2;
 

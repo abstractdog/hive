@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 DROP VIEW xxx4;
 

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.autogather=true;
 
 set hive.compute.query.using.stats=true;

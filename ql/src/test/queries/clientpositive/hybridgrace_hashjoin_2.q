@@ -1,4 +1,3 @@
---! qt:dataset:src1
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;
 -- Hybrid Grace Hash Join

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- Tests truncating columns from a bucketed table, table should remain bucketed
 

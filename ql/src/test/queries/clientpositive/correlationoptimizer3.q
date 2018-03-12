@@ -1,4 +1,3 @@
---! qt:dataset:src1
 set hive.mapred.mode=nonstrict;
 set hive.auto.convert.join=false;
 set hive.optimize.correlation=false;

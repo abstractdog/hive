@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Duplicate column name: key
 
 drop view if exists v;

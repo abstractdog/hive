@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- SORT_QUERY_RESULTS;
 
 set hive.cli.errors.ignore=true;

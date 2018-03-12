@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 DESCRIBE FUNCTION minute;
 DESCRIBE FUNCTION EXTENDED minute;

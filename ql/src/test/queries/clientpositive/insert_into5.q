@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 DROP TABLE insert_into5a;
 DROP TABLE insert_into5b;

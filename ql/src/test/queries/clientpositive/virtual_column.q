@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 select INPUT__FILE__NAME, key, BLOCK__OFFSET__INSIDE__FILE from src;
 

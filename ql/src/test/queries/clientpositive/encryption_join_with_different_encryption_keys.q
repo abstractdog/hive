@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.column.autogather=false;
 --SORT_QUERY_RESULTS
 

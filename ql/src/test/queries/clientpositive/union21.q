@@ -1,5 +1,3 @@
---! qt:dataset:src_thrift
---! qt:dataset:src
 -- SORT_QUERY_RESULTS
 -- union of constants, udf outputs, and columns from text table and thrift table
 

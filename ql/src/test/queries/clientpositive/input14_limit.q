@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.column.autogather=false;
 
 CREATE TABLE dest1(key INT, value STRING) STORED AS TEXTFILE;

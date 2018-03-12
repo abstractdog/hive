@@ -1,6 +1,3 @@
---! qt:dataset:srcbucket
---! qt:dataset:src
---! qt:dataset:alltypesorc
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;
 SET hive.vectorized.execution.enabled=true;

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 -- Cannot add or drop partition columns with CREATE OR REPLACE VIEW if partitions currently exist
 
 drop view v;

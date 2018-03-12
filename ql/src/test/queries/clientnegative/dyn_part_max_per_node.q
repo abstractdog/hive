@@ -1,4 +1,3 @@
---! qt:dataset:src
 USE default;
 
 -- Test of hive.exec.max.dynamic.partitions.pernode

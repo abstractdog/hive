@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 SET hive.fetch.task.conversion=more;
 SET hive.explain.user=false;
 SET hive.stats.fetch.column.stats=false;

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- Tests truncating column(s) from a table, also tests that stats are updated
 

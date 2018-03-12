@@ -1,4 +1,3 @@
---! qt:dataset:src
 explain
 with Q1 as ( select key from sRc where key = '5')
 select CPS.key from Q1 CPS;

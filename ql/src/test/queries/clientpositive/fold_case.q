@@ -1,4 +1,3 @@
---! qt:dataset:src
 explain
 select count(1) from src where (case key when '238' then true else false end);
 explain 

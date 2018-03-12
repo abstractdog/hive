@@ -1,5 +1,3 @@
---! qt:dataset:src
---! qt:dataset:alltypesorc
 set hive.mapred.mode=nonstrict;
 set hive.transpose.aggr.join=true;
 EXPLAIN

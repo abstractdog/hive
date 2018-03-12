@@ -1,4 +1,3 @@
---! qt:dataset:cbo_t1
 set hive.optimize.point.lookup.min=2;
 
 EXPLAIN

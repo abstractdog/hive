@@ -1,4 +1,3 @@
---! qt:dataset:cbo_t3
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=true;
 explain

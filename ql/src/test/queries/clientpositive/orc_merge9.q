@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 create table ts_merge (
 userid bigint,
 string1 string,

@@ -1,4 +1,3 @@
---! qt:dataset:src1
 CREATE TABLE dest_j1(key STRING, value STRING) STORED AS TEXTFILE;
 set hive.cbo.enable=false;
 -- Mapjoin followed by mapjoin is not supported.

@@ -1,3 +1,5 @@
+--! qt:dataset:src1
+--! qt:dataset:src
 set hive.cbo.returnpath.hiveop=true;
 set hive.stats.fetch.column.stats=true;
 set hive.optimize.semijoin.conversion=true;

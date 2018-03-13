@@ -319,7 +319,11 @@ CREATE TABLE "SEQUENCE_TABLE" (
 CREATE TABLE "SERDES" (
     "SERDE_ID" bigint NOT NULL,
     "NAME" character varying(128) DEFAULT NULL::character varying,
-    "SLIB" character varying(4000) DEFAULT NULL::character varying
+    "SLIB" character varying(4000) DEFAULT NULL::character varying,
+    "DESCRIPTION" varchar(4000),
+    "SERIALIZER_CLASS" varchar(4000),
+    "DESERIALIZER_CLASS" varchar(4000),
+    "SERDE_TYPE" integer
 );
 
 
@@ -1654,7 +1658,7 @@ INSERT INTO NEXT_TXN_ID VALUES(1);
 CREATE TABLE HIVE_LOCKS (
   HL_LOCK_EXT_ID bigint NOT NULL,
   HL_LOCK_INT_ID bigint NOT NULL,
-  HL_TXNID bigint,
+  HL_TXNID bigint NOT NULL,
   HL_DB varchar(128) NOT NULL,
   HL_TABLE varchar(128),
   HL_PARTITION varchar(767) DEFAULT NULL,
@@ -1669,7 +1673,7 @@ CREATE TABLE HIVE_LOCKS (
   HL_BLOCKEDBY_EXT_ID bigint,
   HL_BLOCKEDBY_INT_ID bigint,
   PRIMARY KEY(HL_LOCK_EXT_ID, HL_LOCK_INT_ID)
-); 
+);
 
 CREATE INDEX HL_TXNID_INDEX ON HIVE_LOCKS USING hash (HL_TXNID);
 
@@ -1748,6 +1752,33 @@ CREATE TABLE NEXT_WRITE_ID (
 );
 
 CREATE UNIQUE INDEX NEXT_WRITE_ID_IDX ON NEXT_WRITE_ID (NWI_DATABASE, NWI_TABLE);
+
+CREATE TABLE "I_SCHEMA" (
+  "SCHEMA_ID" bigint primary key,
+  "SCHEMA_TYPE" integer not null,
+  "NAME" varchar(256) unique,
+  "DB_ID" bigint references "DBS" ("DB_ID"),
+  "COMPATIBILITY" integer not null,
+  "VALIDATION_LEVEL" integer not null,
+  "CAN_EVOLVE" boolean not null,
+  "SCHEMA_GROUP" varchar(256),
+  "DESCRIPTION" varchar(4000)
+);
+
+CREATE TABLE "SCHEMA_VERSION" (
+  "SCHEMA_VERSION_ID" bigint primary key,
+  "SCHEMA_ID" bigint references "I_SCHEMA" ("SCHEMA_ID"),
+  "VERSION" integer not null,
+  "CREATED_AT" bigint not null,
+  "CD_ID" bigint references "CDS" ("CD_ID"), 
+  "STATE" integer not null,
+  "DESCRIPTION" varchar(4000),
+  "SCHEMA_TEXT" text,
+  "FINGERPRINT" varchar(256),
+  "SCHEMA_VERSION_NAME" varchar(256),
+  "SERDE_ID" bigint references "SERDES" ("SERDE_ID"), 
+  unique ("SCHEMA_ID", "VERSION")
+);
 
 -- -----------------------------------------------------------------
 -- Record schema version. Should be the last step in the init script

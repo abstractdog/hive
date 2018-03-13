@@ -100,7 +100,11 @@ CREATE TABLE SERDES
 (
     SERDE_ID NUMBER NOT NULL,
     "NAME" VARCHAR2(128) NULL,
-    SLIB VARCHAR2(4000) NULL
+    SLIB VARCHAR2(4000) NULL,
+    "DESCRIPTION" VARCHAR2(4000),
+    "SERIALIZER_CLASS" VARCHAR2(4000),
+    "DESERIALIZER_CLASS" VARCHAR2(4000),
+    "SERDE_TYPE" NUMBER
 );
 
 ALTER TABLE SERDES ADD CONSTRAINT SERDES_PK PRIMARY KEY (SERDE_ID);
@@ -962,7 +966,7 @@ INSERT INTO NEXT_TXN_ID VALUES(1);
 CREATE TABLE HIVE_LOCKS (
   HL_LOCK_EXT_ID NUMBER(19) NOT NULL,
   HL_LOCK_INT_ID NUMBER(19) NOT NULL,
-  HL_TXNID NUMBER(19),
+  HL_TXNID NUMBER(19) NOT NULL,
   HL_DB VARCHAR2(128) NOT NULL,
   HL_TABLE VARCHAR2(128),
   HL_PARTITION VARCHAR2(767),
@@ -1056,6 +1060,33 @@ CREATE TABLE NEXT_WRITE_ID (
 );
 
 CREATE UNIQUE INDEX NEXT_WRITE_ID_IDX ON NEXT_WRITE_ID (NWI_DATABASE, NWI_TABLE);
+
+CREATE TABLE "I_SCHEMA" (
+  "SCHEMA_ID" number primary key,
+  "SCHEMA_TYPE" number not null,
+  "NAME" varchar2(256) unique,
+  "DB_ID" number references "DBS" ("DB_ID"),
+  "COMPATIBILITY" number not null,
+  "VALIDATION_LEVEL" number not null,
+  "CAN_EVOLVE" number(1) not null,
+  "SCHEMA_GROUP" varchar2(256),
+  "DESCRIPTION" varchar2(4000)
+);
+
+CREATE TABLE "SCHEMA_VERSION" (
+  "SCHEMA_VERSION_ID" number primary key,
+  "SCHEMA_ID" number references "I_SCHEMA" ("SCHEMA_ID"),
+  "VERSION" number not null,
+  "CREATED_AT" number not null,
+  "CD_ID" number references "CDS" ("CD_ID"), 
+  "STATE" number not null,
+  "DESCRIPTION" varchar2(4000),
+  "SCHEMA_TEXT" clob,
+  "FINGERPRINT" varchar2(256),
+  "SCHEMA_VERSION_NAME" varchar2(256),
+  "SERDE_ID" number references "SERDES" ("SERDE_ID"), 
+  UNIQUE ("SCHEMA_ID", "VERSION")
+);
 
 -- -----------------------------------------------------------------
 -- Record schema version. Should be the last step in the init script

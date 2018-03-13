@@ -312,7 +312,11 @@ CREATE TABLE SERDES
 (
     SERDE_ID bigint NOT NULL,
     "NAME" nvarchar(128) NULL,
-    SLIB nvarchar(4000) NULL
+    SLIB nvarchar(4000) NULL,
+    "DESCRIPTION" nvarchar(4000),
+    "SERIALIZER_CLASS" nvarchar(4000),
+    "DESERIALIZER_CLASS" nvarchar(4000),
+    "SERDE_TYPE" int
 );
 
 ALTER TABLE SERDES ADD CONSTRAINT SERDES_PK PRIMARY KEY (SERDE_ID);
@@ -972,7 +976,7 @@ CREATE TABLE COMPACTION_QUEUE(
     CQ_HIGHEST_WRITE_ID bigint NULL,
     CQ_META_INFO varbinary(2048) NULL,
 	CQ_HADOOP_JOB_ID nvarchar(128) NULL,
-PRIMARY KEY CLUSTERED 
+PRIMARY KEY CLUSTERED
 (
 	CQ_ID ASC
 )
@@ -993,7 +997,7 @@ CREATE TABLE COMPLETED_COMPACTIONS (
     CC_HIGHEST_WRITE_ID bigint NULL,
     CC_META_INFO varbinary(2048) NULL,
 	CC_HADOOP_JOB_ID nvarchar(128) NULL,
-PRIMARY KEY CLUSTERED 
+PRIMARY KEY CLUSTERED
 (
 	CC_ID ASC
 )
@@ -1013,7 +1017,7 @@ CREATE INDEX COMPLETED_TXN_COMPONENTS_IDX2 ON COMPLETED_TXN_COMPONENTS (CTC_DATA
 CREATE TABLE HIVE_LOCKS(
 	HL_LOCK_EXT_ID bigint NOT NULL,
 	HL_LOCK_INT_ID bigint NOT NULL,
-	HL_TXNID bigint NULL,
+	HL_TXNID bigint NOT NULL,
 	HL_DB nvarchar(128) NOT NULL,
 	HL_TABLE nvarchar(128) NULL,
 	HL_PARTITION nvarchar(767) NULL,
@@ -1027,7 +1031,7 @@ CREATE TABLE HIVE_LOCKS(
     HL_AGENT_INFO nvarchar(128) NULL,
     HL_BLOCKEDBY_EXT_ID bigint NULL,
     HL_BLOCKEDBY_INT_ID bigint NULL,
-PRIMARY KEY CLUSTERED 
+PRIMARY KEY CLUSTERED
 (
 	HL_LOCK_EXT_ID ASC,
 	HL_LOCK_INT_ID ASC
@@ -1062,7 +1066,7 @@ CREATE TABLE TXNS(
     TXN_AGENT_INFO nvarchar(128) NULL,
     TXN_META_INFO nvarchar(128) NULL,
     TXN_HEARTBEAT_COUNT int NULL,
-PRIMARY KEY CLUSTERED 
+PRIMARY KEY CLUSTERED
 (
 	TXN_ID ASC
 )
@@ -1148,6 +1152,33 @@ CREATE TABLE NEXT_WRITE_ID (
 );
 
 CREATE UNIQUE INDEX NEXT_WRITE_ID_IDX ON NEXT_WRITE_ID (NWI_DATABASE, NWI_TABLE);
+
+CREATE TABLE "I_SCHEMA" (
+  "SCHEMA_ID" bigint primary key,
+  "SCHEMA_TYPE" int not null,
+  "NAME" nvarchar(256) unique,
+  "DB_ID" bigint references "DBS" ("DB_ID"),
+  "COMPATIBILITY" int not null,
+  "VALIDATION_LEVEL" int not null,
+  "CAN_EVOLVE" bit not null,
+  "SCHEMA_GROUP" nvarchar(256),
+  "DESCRIPTION" nvarchar(4000),
+);
+
+CREATE TABLE "SCHEMA_VERSION" (
+  "SCHEMA_VERSION_ID" bigint primary key,
+  "SCHEMA_ID" bigint references "I_SCHEMA" ("SCHEMA_ID"),
+  "VERSION" int not null,
+  "CREATED_AT" bigint not null,
+  "CD_ID" bigint references "CDS" ("CD_ID"),
+  "STATE" int not null,
+  "DESCRIPTION" nvarchar(4000),
+  "SCHEMA_TEXT" varchar(max),
+  "FINGERPRINT" nvarchar(256),
+  "SCHEMA_VERSION_NAME" nvarchar(256),
+  "SERDE_ID" bigint references "SERDES" ("SERDE_ID"),
+  unique ("SCHEMA_ID", "VERSION")
+);
 
 -- -----------------------------------------------------------------
 -- Record schema version. Should be the last step in the init script

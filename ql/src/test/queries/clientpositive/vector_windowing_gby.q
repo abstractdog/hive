@@ -1,5 +1,3 @@
---! qt:dataset:cbo_t3
---! qt:dataset:alltypesorc
 set hive.explain.user=false;
 set hive.cli.print.header=true;
 SET hive.vectorized.execution.enabled=true;

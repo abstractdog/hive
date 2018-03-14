@@ -1,4 +1,3 @@
---! qt:dataset:srcbucket
 -- SORT_QUERY_RESULTS
 
 -- no input pruning, sample filter

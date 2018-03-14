@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.exec.mode.local.auto=true;
 set hive.exec.failure.hooks=org.apache.hadoop.hive.ql.hooks.VerifySessionStateLocalErrorsHook;
 

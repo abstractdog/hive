@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.column.autogather=false;
 set hive.strict.checks.bucketing=false;
 

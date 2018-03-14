@@ -1,6 +1,3 @@
---! qt:dataset:srcbucket
---! qt:dataset:src1
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 DROP VIEW view1;
 DROP VIEW view2;

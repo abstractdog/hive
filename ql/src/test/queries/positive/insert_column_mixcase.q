@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP TABLE IF EXISTS insert_camel_case;
 CREATE TABLE insert_camel_case (key int, value string);
 

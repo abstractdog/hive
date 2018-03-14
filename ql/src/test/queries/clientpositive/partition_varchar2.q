@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table partition_varchar_2;
 
 create table partition_varchar_2 (key string, value varchar(20)) partitioned by (dt varchar(15), region int);

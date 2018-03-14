@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 drop table partition_char_1;
 

@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 set hive.map.aggr=false;
 
 set hive.strict.checks.bucketing=false;

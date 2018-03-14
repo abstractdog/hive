@@ -1,5 +1,3 @@
---! qt:dataset:src_thrift
---! qt:dataset:src
 -- SORT_QUERY_RESULTS
 
 CREATE TABLE columnarserde_create_shortcut(a array<int>, b array<string>, c map<string,string>, d int, e string) STORED AS RCFILE;

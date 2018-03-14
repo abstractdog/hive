@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table ba_test;
 
 -- Everything in ba_table1.q + columnar serde in RCFILE.

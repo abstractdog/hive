@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.autogather=true;
 
 CREATE TABLE stats_invalid (key string, value string);

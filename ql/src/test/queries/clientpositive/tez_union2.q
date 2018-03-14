@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.explain.user=false;
 explain 
 SELECT key, value FROM

@@ -1,4 +1,3 @@
---! qt:dataset:src
 FROM (
   FROM src
    MAP value, key

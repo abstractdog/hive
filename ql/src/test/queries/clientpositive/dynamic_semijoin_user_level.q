@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:alltypesorc
 set hive.explain.user=true;
 set hive.compute.query.using.stats=false;
 set hive.mapred.mode=nonstrict;

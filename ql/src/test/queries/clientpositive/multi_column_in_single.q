@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 
 select * from src where (key, value) in (('238','val_238'));

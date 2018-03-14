@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP VIEW xxx17;
 
 -- should fail:  partitioning key must be at end

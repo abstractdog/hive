@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 DROP VIEW vp1;
 DROP VIEW vp2;
 DROP VIEW vp3;

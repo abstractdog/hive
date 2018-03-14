@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table testreserved;
 
 create table testreserved (data struct<`end`:string, id: string>);

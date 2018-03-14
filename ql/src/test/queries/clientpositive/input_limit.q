@@ -1,4 +1,3 @@
---! qt:dataset:src
 EXPLAIN
 SELECT x.* FROM SRC x LIMIT 20;
 

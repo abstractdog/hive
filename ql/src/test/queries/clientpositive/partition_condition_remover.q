@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 
 drop table foo;
 

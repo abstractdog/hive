@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP TABLE IF EXISTS testCT.encrypted_tablectas PURGE;
 DROP DATABASE IF EXISTS testCT;
 CREATE DATABASE testCT;

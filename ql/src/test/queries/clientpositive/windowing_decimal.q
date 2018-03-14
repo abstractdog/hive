@@ -1,4 +1,3 @@
---! qt:dataset:part
 create table part_dec(
     p_partkey INT,
     p_name STRING,

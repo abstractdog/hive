@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP VIEW big_view;
 
 -- Define a view with long SQL text to test metastore and other limits.

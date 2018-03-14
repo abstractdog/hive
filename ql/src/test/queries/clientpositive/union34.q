@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- SORT_QUERY_RESULTS
 create table src10_1 (key string, value string);

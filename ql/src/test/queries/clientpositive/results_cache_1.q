@@ -1,6 +1,3 @@
---! qt:dataset:src
---! qt:dataset:cbo_t3
---! qt:dataset:cbo_t2
 
 set hive.query.results.cache.enabled=true;
 

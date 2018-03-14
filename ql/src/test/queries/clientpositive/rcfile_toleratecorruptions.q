@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 CREATE TABLE test_src(key int, value string) stored as RCFILE;
 set hive.io.rcfile.record.interval=5;

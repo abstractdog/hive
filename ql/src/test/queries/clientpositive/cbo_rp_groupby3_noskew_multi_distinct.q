@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.cbo.returnpath.hiveop=true;
 set hive.map.aggr=false;
 set hive.mapred.mode=nonstrict;

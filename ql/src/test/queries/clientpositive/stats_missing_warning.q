@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.autogather=false;
 
 -- Explictily DROP vs. CREATE IF NOT EXISTS to ensure stats are not carried over

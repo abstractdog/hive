@@ -1,3 +1,4 @@
+--! qt:dataset:src
 CREATE TABLE hbase_pushdown(key string, value string) 
 STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
 WITH SERDEPROPERTIES ("hbase.columns.mapping" = ":key,cf:string");

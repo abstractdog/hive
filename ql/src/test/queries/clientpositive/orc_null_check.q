@@ -1,3 +1,4 @@
+--! qt:dataset:src
 create table listtable(l array<string>);
 create table listtable_orc(l array<string>) stored as orc;
 

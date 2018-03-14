@@ -1,4 +1,3 @@
---! qt:dataset:src
 --  SIMPLE TABLE
 -- create table with first and last column with not null
 CREATE TABLE table1 (a STRING NOT NULL ENFORCED, b STRING, c STRING NOT NULL ENFORCED);

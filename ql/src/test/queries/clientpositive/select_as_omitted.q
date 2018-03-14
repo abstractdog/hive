@@ -1,4 +1,3 @@
---! qt:dataset:src
 EXPLAIn
 SELECT a, b FROM (
   SELECT key a, value b

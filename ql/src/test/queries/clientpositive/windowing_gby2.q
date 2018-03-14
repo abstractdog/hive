@@ -1,5 +1,3 @@
---! qt:dataset:cbo_t3
---! qt:dataset:alltypesorc
 set hive.mapred.mode=nonstrict;
 
 explain

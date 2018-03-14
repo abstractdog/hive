@@ -1,4 +1,3 @@
---! qt:dataset:src
 FROM (
   FROM src select src.key, src.value WHERE src.key < 100
   UNION ALL

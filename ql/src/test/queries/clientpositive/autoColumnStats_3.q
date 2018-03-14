@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.column.autogather=false;
 set hive.stats.fetch.column.stats=true;
 set hive.exec.dynamic.partition=true;

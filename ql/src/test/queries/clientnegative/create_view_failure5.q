@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP VIEW xxx14;
 
 -- Ideally (and according to SQL:200n), this should actually be legal,

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 EXPLAIN EXTENDED
 SELECT * FROM (
   SELECT X.* FROM SRCPART X WHERE X.ds = '2008-04-08' and X.key < 100

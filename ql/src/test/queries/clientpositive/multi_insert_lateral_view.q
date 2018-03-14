@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.dbclass=fs;
 -- SORT_QUERY_RESULTS
 

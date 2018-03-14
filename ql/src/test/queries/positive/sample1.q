@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 -- no input pruning, no sample filter
 SELECT s.*
 FROM srcpart TABLESAMPLE (BUCKET 1 OUT OF 1 ON rand()) s

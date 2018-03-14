@@ -1,4 +1,3 @@
---! qt:dataset:src_cbo
 set hive.cbo.enable=true;
 set hive.cbo.returnpath.hiveop=true;
 set hive.exec.check.crossproducts=false;

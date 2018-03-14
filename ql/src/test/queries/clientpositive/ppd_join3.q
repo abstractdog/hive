@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.optimize.ppd=true;
 set hive.ppd.remove.duplicatefilters=false;

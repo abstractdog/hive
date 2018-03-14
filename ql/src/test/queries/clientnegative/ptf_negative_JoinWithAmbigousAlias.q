@@ -1,4 +1,3 @@
---! qt:dataset:part
 -- testJoinWithAmbigousAlias
 select abc.* 
 from noop(on part

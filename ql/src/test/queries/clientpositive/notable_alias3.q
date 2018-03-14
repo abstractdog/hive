@@ -1,4 +1,3 @@
---! qt:dataset:src
 CREATE TABLE dest1(c string, key INT, value DOUBLE) STORED AS TEXTFILE;
 
 FROM src

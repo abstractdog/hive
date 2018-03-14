@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.spark.dynamic.partition.pruning=true;
 set hive.combine.equivalent.work.optimization=true;
 

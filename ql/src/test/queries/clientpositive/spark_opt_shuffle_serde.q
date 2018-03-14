@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.spark.optimize.shuffle.serde=true;
 
 set hive.spark.use.groupby.shuffle=true;

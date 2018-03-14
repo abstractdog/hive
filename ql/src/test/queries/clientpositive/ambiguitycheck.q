@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- check cluster/distribute/partitionBy
 SELECT * FROM SRC x where x.key = 20 CLUSTER BY (key,value) ;
 

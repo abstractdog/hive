@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 create table a (val1 int, val2 int);
 create table b (val1 int, val2 int);

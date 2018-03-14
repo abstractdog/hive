@@ -1,7 +1,3 @@
---! qt:dataset:src
---! qt:dataset:cbo_t3
---! qt:dataset:cbo_t2
---! qt:dataset:cbo_t1
 set hive.mapred.mode=nonstrict;
 EXPLAIN
 SELECT f.key, g.value

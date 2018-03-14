@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;
 set hive.compute.query.using.stats=true;

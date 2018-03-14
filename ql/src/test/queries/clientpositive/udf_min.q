@@ -1,4 +1,3 @@
---! qt:dataset:src
 DESCRIBE FUNCTION min;
 DESCRIBE FUNCTION EXTENDED min;
 

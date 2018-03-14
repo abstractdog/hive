@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.exec.copyfile.maxsize=400;
 
 set tez.am.log.level=INFO;

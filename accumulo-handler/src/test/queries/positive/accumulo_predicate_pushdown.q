@@ -1,4 +1,3 @@
---! qt:dataset:src
 CREATE TABLE accumulo_pushdown(key string, value string) 
 STORED BY 'org.apache.hadoop.hive.accumulo.AccumuloStorageHandler'
 WITH SERDEPROPERTIES ("accumulo.columns.mapping" = ":rowid,cf:string");

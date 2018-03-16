@@ -1184,7 +1184,7 @@ public class QTestUtil {
     }
   }
 
-  private void initDataset(String table) {
+  protected void initDataset(String table) {
     if (getSrcTables().contains(table)){
       return;
     }

@@ -86,9 +86,6 @@ public class HBaseQTestUtil extends QTestUtil {
   public void cleanUp(String tname) throws Exception {
     super.cleanUp(tname);
 
-    // drop in case leftover from unsuccessful run
-    db.dropTable(Warehouse.DEFAULT_DATABASE_NAME, HBASE_SRC_NAME);
-
     Admin admin = null;
     try {
       admin = conn.getAdmin();

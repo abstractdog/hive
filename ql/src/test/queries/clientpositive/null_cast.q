@@ -1,4 +1,3 @@
---! qt:dataset:src
 EXPLAIN SELECT ARRAY(NULL, 0), 
                ARRAY(NULL, ARRAY()),
                ARRAY(NULL, MAP()),

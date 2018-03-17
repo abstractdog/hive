@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- following tests are to test ALL quantifier (HIVE-16064)
 
 -- count

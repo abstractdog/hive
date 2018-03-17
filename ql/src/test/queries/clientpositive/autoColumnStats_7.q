@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.column.autogather=true;
 set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat;
 set hive.map.aggr=false;

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 USE default;
 
 set hive.archive.enabled = true;

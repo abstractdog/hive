@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.fetch.task.conversion=more;
 
 -- 'true' cases:

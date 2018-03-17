@@ -1,5 +1,3 @@
---! qt:dataset:part
---! qt:dataset:alltypesorc
 set hive.merge.nway.joins=false;
 
 drop table foo;

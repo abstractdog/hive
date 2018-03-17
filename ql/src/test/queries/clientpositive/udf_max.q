@@ -1,4 +1,3 @@
---! qt:dataset:src
 DESCRIBE FUNCTION max;
 DESCRIBE FUNCTION EXTENDED max;
 

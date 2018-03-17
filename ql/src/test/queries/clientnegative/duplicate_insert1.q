@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 create table dest1_din1(key int, value string);
 

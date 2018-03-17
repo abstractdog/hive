@@ -1,4 +1,3 @@
---! qt:dataset:src_thrift
 set hive.optimize.ppd=false;
 
 EXPLAIN

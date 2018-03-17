@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Create a table with binary output format
 CREATE TABLE dest1(mydata STRING)
 ROW FORMAT SERDE

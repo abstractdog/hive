@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table if exists testSets;
 drop table if exists testSets2;
 create table testSets (

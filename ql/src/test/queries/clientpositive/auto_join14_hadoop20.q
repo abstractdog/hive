@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 
 set hive.auto.convert.join = true;
 

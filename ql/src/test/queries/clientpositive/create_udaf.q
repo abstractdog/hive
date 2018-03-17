@@ -1,4 +1,3 @@
---! qt:dataset:src
 EXPLAIN
 CREATE TEMPORARY FUNCTION test_max AS 'org.apache.hadoop.hive.ql.udf.UDAFTestMax';
 

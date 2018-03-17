@@ -1,4 +1,3 @@
---! qt:dataset:part
 explain select 1 is distinct from 1,
                1 is distinct from 2,
                1 is distinct from null,

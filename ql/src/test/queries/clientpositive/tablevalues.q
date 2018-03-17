@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- VALUES -> array(struct(),struct())
 -- TABLE -> LATERAL VIEW INLINE
 

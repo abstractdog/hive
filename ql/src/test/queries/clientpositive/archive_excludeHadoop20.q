@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.archive.enabled = true;
 set hive.exec.submitviachild=false;

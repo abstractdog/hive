@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 create table quoted1 (
   `_c1` int,

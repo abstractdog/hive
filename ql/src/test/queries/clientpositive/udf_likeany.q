@@ -1,4 +1,3 @@
---! qt:dataset:src
 SELECT 'abc' like any ('a%','%d','%cd%')
 FROM src WHERE src.key = 86;
 

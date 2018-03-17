@@ -1,4 +1,3 @@
---! qt:dataset:src
 select
   interval '10-11' year to month,
   interval '10' year,

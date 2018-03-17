@@ -1,4 +1,3 @@
---! qt:dataset:src
 CREATE TEMPORARY FUNCTION test_error AS 'org.apache.hadoop.hive.ql.udf.UDFTestErrorOnFalse';
 
 

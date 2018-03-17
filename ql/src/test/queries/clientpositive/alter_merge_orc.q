@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.compute.query.using.stats=false;
 set hive.mapred.mode=nonstrict;
 create table src_orc_merge_test(key int, value string) stored as orc;

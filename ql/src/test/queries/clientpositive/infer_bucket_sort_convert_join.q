@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.stats.column.autogather=false;
 -- sounds weird:
 -- on master, when auto=true, hive.mapjoin.localtask.max.memory.usage will be 0.55 as there is a gby

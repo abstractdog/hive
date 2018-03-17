@@ -1,4 +1,3 @@
---! qt:dataset:alltypesparquet
 set hive.explain.user=false;
 set hive.fetch.task.conversion=none;
 

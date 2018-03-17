@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.map.aggr=true;
 
 -- SORT_QUERY_RESULTS

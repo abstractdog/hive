@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- group-by/order-by/aggregation functions
 
 select

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 create table srcpart_empty(key int, value string) partitioned by (ds string);
 create table src2_empty (key int, value string);

@@ -1,4 +1,3 @@
---! qt:dataset:src
 from src
 select transform('aa\;') using 'cat' as a  limit 1;
 

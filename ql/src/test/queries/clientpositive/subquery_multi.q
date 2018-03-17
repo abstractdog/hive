@@ -1,6 +1,3 @@
---! qt:dataset:src
---! qt:dataset:part
---! qt:dataset:lineitem
 set hive.mapred.mode=nonstrict;
 set hive.explain.user=false;
 

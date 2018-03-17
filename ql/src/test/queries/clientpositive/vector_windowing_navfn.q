@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.explain.user=false;
 set hive.cli.print.header=true;
 SET hive.vectorized.execution.enabled=true;

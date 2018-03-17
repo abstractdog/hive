@@ -1,4 +1,3 @@
---! qt:dataset:src1
 set hive.fetch.task.conversion=more;
 
 DESCRIBE FUNCTION length;

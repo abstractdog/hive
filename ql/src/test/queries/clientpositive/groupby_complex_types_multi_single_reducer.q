@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.multigroupby.singlereducer=true;
 
 -- SORT_QUERY_RESULTS

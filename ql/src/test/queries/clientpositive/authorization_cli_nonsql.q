@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.security.authorization.manager=org.apache.hadoop.hive.ql.security.authorization.plugin.sqlstd.SQLStdHiveAuthorizerFactory;
 set hive.security.authorization.enabled=false;
 

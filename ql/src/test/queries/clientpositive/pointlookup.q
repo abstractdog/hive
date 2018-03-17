@@ -1,4 +1,3 @@
---! qt:dataset:src
 explain
 SELECT key
 FROM src

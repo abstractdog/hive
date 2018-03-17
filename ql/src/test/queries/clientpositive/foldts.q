@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:alltypesorc
 
 set hive.vectorized.execution.enabled=true;
 set hive.fetch.task.conversion=none;

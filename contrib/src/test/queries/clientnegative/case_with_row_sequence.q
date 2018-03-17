@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.exec.submitviachild=true;
 set hive.exec.submit.local.task.via.child=true;
 

@@ -1,5 +1,3 @@
---! qt:dataset:src_thrift
---! qt:dataset:src
 set hive.fetch.task.conversion=more;
 
 DESCRIBE FUNCTION isnull;

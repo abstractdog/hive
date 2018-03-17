@@ -1,4 +1,3 @@
---! qt:dataset:src
 From (select * from src) a
 insert overwrite directory 'target/warehouse/destemp.out/dir1/'
 select key

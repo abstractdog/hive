@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP TABLE users;
 DROP TABLE states;
 DROP TABLE countries;

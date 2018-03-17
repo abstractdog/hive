@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 EXPLAIN SELECT * FROM src a LEFT OUTER JOIN src b on (a.key=b.key);
 EXPLAIN SELECT * FROM src a LEFT JOIN src b on (a.key=b.key);

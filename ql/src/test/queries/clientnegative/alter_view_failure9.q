@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP VIEW xxx4;
 CREATE VIEW xxx4 
 AS 

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.exec.max.dynamic.partitions=600;
 set hive.exec.max.dynamic.partitions.pernode=600;
 set hive.exec.dynamic.partition.mode=nonstrict;

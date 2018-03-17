@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- was negative/ambiguous_table_col.q
 
 drop table ambiguous;

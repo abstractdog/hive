@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.map.aggr=true;
 set hive.multigroupby.singlereducer=false;
 set hive.groupby.skewindata=false;

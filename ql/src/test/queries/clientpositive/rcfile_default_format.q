@@ -1,4 +1,3 @@
---! qt:dataset:src
 SET hive.default.fileformat = RCFile;
 
 CREATE TABLE rcfile_default_format (key STRING);

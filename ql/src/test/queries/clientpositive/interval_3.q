@@ -1,4 +1,3 @@
---! qt:dataset:lineitem
 set hive.mapred.mode=nonstrict;
 -- where clause
 select

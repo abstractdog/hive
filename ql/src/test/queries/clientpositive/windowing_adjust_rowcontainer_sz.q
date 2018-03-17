@@ -1,4 +1,3 @@
---! qt:dataset:part
 set hive.join.cache.size=1;
 
 select p_mfgr, p_name, p_size,

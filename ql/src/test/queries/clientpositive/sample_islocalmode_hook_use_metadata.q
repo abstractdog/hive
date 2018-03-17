@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.exec.submitviachild=false;
 set hive.exec.submit.local.task.via.child=false;

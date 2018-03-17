@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Test partition column type is considered as the type given in table def
 -- and not as 'string'
 CREATE TABLE datePartTbl(col1 string) PARTITIONED BY (date_prt date);

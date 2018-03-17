@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 set hive.stats.dbclass=fs;
 set hive.merge.mapfiles=false;
 set hive.merge.mapredfiles=false;

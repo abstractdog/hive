@@ -1,4 +1,3 @@
---! qt:dataset:src
 create table src_multi1 (a STRING NOT NULL ENFORCED, b STRING);
 create table src_multi2 (i STRING, j STRING NOT NULL ENFORCED);
 

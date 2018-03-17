@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- SORT_QUERY_RESULTS
 
 create table e1 (key string, count int);

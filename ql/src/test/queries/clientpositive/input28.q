@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 
 create table tst(a string, b string) partitioned by (d string);

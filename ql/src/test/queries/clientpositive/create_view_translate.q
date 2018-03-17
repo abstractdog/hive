@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop view if exists v;
 drop view if exists w;
 

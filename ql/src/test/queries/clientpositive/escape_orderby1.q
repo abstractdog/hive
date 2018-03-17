@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 -- escaped column names in order by are not working jira 3267
 explain

@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 -- SORT_QUERY_RESULTS
 
 show partitions srcpart;

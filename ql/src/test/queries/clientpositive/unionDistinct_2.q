@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- SORT_QUERY_RESULTS
 
 CREATE TABLE u1 as select key, value from src order by key limit 5;

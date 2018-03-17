@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.auto.convert.join=true;
 set hive.auto.convert.join.noconditionaltask.size=10000000;

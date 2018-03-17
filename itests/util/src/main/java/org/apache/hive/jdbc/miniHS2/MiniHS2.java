@@ -41,6 +41,7 @@ import org.apache.hadoop.hive.ql.util.ZooKeeperHiveHelper;
 import org.apache.hadoop.hive.shims.HadoopShims.MiniDFSShim;
 import org.apache.hadoop.hive.shims.HadoopShims.MiniMrShim;
 import org.apache.hadoop.hive.shims.ShimLoader;
+import org.apache.hive.jdbc.Utils;
 import org.apache.hive.service.Service;
 import org.apache.hive.service.cli.CLIServiceClient;
 import org.apache.hive.service.cli.SessionHandle;
@@ -217,6 +218,8 @@ public class MiniHS2 extends AbstractHiveService {
         (usePortsFromConf ? hiveConf.getIntVar(HiveConf.ConfVars.HIVE_SERVER2_THRIFT_PORT) : MetaStoreTestUtils
             .findFreePort()),
         (usePortsFromConf ? hiveConf.getIntVar(HiveConf.ConfVars.HIVE_SERVER2_THRIFT_HTTP_PORT) : MetaStoreTestUtils
+            .findFreePort()),
+        (usePortsFromConf ? hiveConf.getIntVar(ConfVars.HIVE_SERVER2_WEBUI_PORT) : MetaStoreTestUtils
             .findFreePort()));
     hiveConf.setLongVar(ConfVars.HIVE_SERVER2_MAX_START_ATTEMPTS, 3l);
     hiveConf.setTimeVar(ConfVars.HIVE_SERVER2_SLEEP_INTERVAL_BETWEEN_START_ATTEMPTS, 10,
@@ -306,6 +309,7 @@ public class MiniHS2 extends AbstractHiveService {
     hiveConf.setVar(ConfVars.HIVE_SERVER2_THRIFT_BIND_HOST, getHost());
     hiveConf.setIntVar(ConfVars.HIVE_SERVER2_THRIFT_PORT, getBinaryPort());
     hiveConf.setIntVar(ConfVars.HIVE_SERVER2_THRIFT_HTTP_PORT, getHttpPort());
+    hiveConf.setIntVar(ConfVars.HIVE_SERVER2_WEBUI_PORT, getWebPort());
 
     Path scratchDir = new Path(baseFsDir, "scratch");
     // Create root scratchdir with write all, so that user impersonation has no issues.
@@ -404,6 +408,10 @@ public class MiniHS2 extends AbstractHiveService {
   }
 
 
+  public boolean isLeader() {
+    return hiveServer2.isLeader();
+  }
+
   public CLIServiceClient getServiceClient() {
     verifyStarted();
     return getServiceClientInternal();
@@ -483,10 +491,14 @@ public class MiniHS2 extends AbstractHiveService {
     }
     String baseJdbcURL;
     if (isDynamicServiceDiscovery()) {
-      sessionConfExt =
-          "serviceDiscoveryMode=zooKeeper;zooKeeperNamespace="
-              + getServerConf().getVar(HiveConf.ConfVars.HIVE_SERVER2_ZOOKEEPER_NAMESPACE) + ";"
-              + sessionConfExt;
+      String namespace = getServerConf().getVar(HiveConf.ConfVars.HIVE_SERVER2_ZOOKEEPER_NAMESPACE);
+      String serviceDiscoveryMode = Utils.JdbcConnectionParams.SERVICE_DISCOVERY_MODE_ZOOKEEPER;
+      if (HiveConf.getBoolVar(getServerConf(), ConfVars.HIVE_SERVER2_ACTIVE_PASSIVE_HA_ENABLE)) {
+        namespace = getServerConf().getVar(ConfVars.HIVE_SERVER2_ACTIVE_PASSIVE_HA_REGISTRY_NAMESPACE);
+        serviceDiscoveryMode = Utils.JdbcConnectionParams.SERVICE_DISCOVERY_MODE_ZOOKEEPER_HA;
+      }
+      sessionConfExt = "serviceDiscoveryMode=" + serviceDiscoveryMode + ";zooKeeperNamespace="
+        + namespace + ";" + sessionConfExt;
       baseJdbcURL = getZKBaseJdbcURL();
     } else {
       baseJdbcURL = getBaseJdbcURL();

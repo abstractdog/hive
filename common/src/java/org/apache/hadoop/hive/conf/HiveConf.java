@@ -1407,7 +1407,7 @@ public class HiveConf extends Configuration {
         "while writing a table with ORC file format, enabling this config will do stripe-level\n" +
         "fast merge for small ORC files. Note that enabling this config will not honor the\n" +
         "padding tolerance config (hive.exec.orc.block.padding.tolerance)."),
-    HIVE_ORC_CODEC_POOL("hive.use.orc.codec.pool", true,
+    HIVE_ORC_CODEC_POOL("hive.use.orc.codec.pool", false,
         "Whether to use codec pool in ORC. Disable if there are bugs with codec reuse."),
 
     HIVEUSEEXPLICITRCFILEHEADER("hive.exec.rcfile.use.explicit.header", true,
@@ -1916,6 +1916,10 @@ public class HiveConf extends Configuration {
         new TimeValidator(TimeUnit.MILLISECONDS),
         "ZooKeeper client's session timeout (in milliseconds). The client is disconnected, and as a result, all locks released, \n" +
         "if a heartbeat is not sent in the timeout."),
+    HIVE_ZOOKEEPER_CONNECTION_TIMEOUT("hive.zookeeper.connection.timeout", "15s",
+      new TimeValidator(TimeUnit.SECONDS),
+      "ZooKeeper client's connection timeout in seconds. Connection timeout * hive.zookeeper.connection.max.retries\n" +
+        "with exponential backoff is when curator client deems connection is lost to zookeeper."),
     HIVE_ZOOKEEPER_NAMESPACE("hive.zookeeper.namespace", "hive_zookeeper_namespace",
         "The parent node under which all ZooKeeper nodes are created."),
     HIVE_ZOOKEEPER_CLEAN_EXTRA_NODES("hive.zookeeper.clean.extra.nodes", false,
@@ -2465,6 +2469,13 @@ public class HiveConf extends Configuration {
         "If true, the HiveServer2 WebUI will be secured with PAM."),
 
     // Tez session settings
+    HIVE_SERVER2_ACTIVE_PASSIVE_HA_ENABLE("hive.server2.active.passive.ha.enable", false,
+      "Whether HiveServer2 Active/Passive High Availability be enabled when Hive Interactive sessions are enabled." +
+        "This will also require hive.server2.support.dynamic.service.discovery to be enabled."),
+    HIVE_SERVER2_ACTIVE_PASSIVE_HA_REGISTRY_NAMESPACE("hive.server2.active.passive.ha.registry.namespace",
+      "hs2ActivePassiveHA",
+      "When HiveServer2 Active/Passive High Availability is enabled, uses this namespace for registering HS2\n" +
+        "instances with zookeeper"),
     HIVE_SERVER2_TEZ_INTERACTIVE_QUEUE("hive.server2.tez.interactive.queue", "",
         "A single YARN queues to use for Hive Interactive sessions. When this is specified,\n" +
         "workload management is enabled and used for these sessions."),
@@ -3179,11 +3190,17 @@ public class HiveConf extends Configuration {
     LLAP_ALLOCATOR_DEFRAG_HEADROOM("hive.llap.io.allocator.defrag.headroom", "1Mb",
         "How much of a headroom to leave to allow allocator more flexibility to defragment.\n" +
         "The allocator would further cap it to a fraction of total memory."),
+    LLAP_TRACK_CACHE_USAGE("hive.llap.io.track.cache.usage", true,
+         "Whether to tag LLAP cache contents, mapping them to Hive entities (paths for\n" +
+         "partitions and tables) for reporting."),
     LLAP_USE_LRFU("hive.llap.io.use.lrfu", true,
         "Whether ORC low-level cache should use LRFU cache policy instead of default (FIFO)."),
-    LLAP_LRFU_LAMBDA("hive.llap.io.lrfu.lambda", 0.01f,
+    LLAP_LRFU_LAMBDA("hive.llap.io.lrfu.lambda", 0.000001f,
         "Lambda for ORC low-level cache LRFU cache policy. Must be in [0, 1]. 0 makes LRFU\n" +
-        "behave like LFU, 1 makes it behave like LRU, values in between balance accordingly."),
+        "behave like LFU, 1 makes it behave like LRU, values in between balance accordingly.\n" +
+        "The meaning of this parameter is the inverse of the number of time ticks (cache\n" +
+        " operations, currently) that cause the combined recency-frequency of a block in cache\n" +
+        " to be halved."),
     LLAP_CACHE_ALLOW_SYNTHETIC_FILEID("hive.llap.cache.allow.synthetic.fileid", false,
         "Whether LLAP cache should use synthetic file ID if real one is not available. Systems\n" +
         "like HDFS, Isilon, etc. provide a unique file/inode ID. On other FSes (e.g. local\n" +
@@ -3712,6 +3729,10 @@ public class HiveConf extends Configuration {
     HIVE_QUERY_RESULTS_CACHE_ENABLED("hive.query.results.cache.enabled", true,
         "If the query results cache is enabled. This will keep results of previously executed queries " +
         "to be reused if the same query is executed again."),
+
+    HIVE_QUERY_RESULTS_CACHE_WAIT_FOR_PENDING_RESULTS("hive.query.results.cache.wait.for.pending.results", true,
+        "Should a query wait for the pending results of an already running query, " +
+        "in order to use the cached result when it becomes ready"),
 
     HIVE_QUERY_RESULTS_CACHE_DIRECTORY("hive.query.results.cache.directory",
         "/tmp/hive/_resultscache_",

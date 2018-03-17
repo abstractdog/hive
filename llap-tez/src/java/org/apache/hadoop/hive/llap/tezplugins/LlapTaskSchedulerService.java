@@ -14,6 +14,16 @@
 
 package org.apache.hadoop.hive.llap.tezplugins;
 
+import com.google.common.io.ByteArrayDataOutput;
+
+import org.apache.hadoop.hive.registry.ServiceInstanceSet;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+
+import org.apache.hadoop.hive.registry.impl.TezAmRegistryImpl;
+
+import org.apache.hadoop.hive.registry.ServiceInstanceStateChangeListener;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -992,8 +1002,12 @@ public class LlapTaskSchedulerService extends TaskScheduler {
       }
 
       totalGuaranteed = unusedGuaranteed = 0;
-      LOG.info(
-          "DAG reset. Current knownTaskCount={}, pendingTaskCount={}, runningTaskCount={}",
+      if (metrics != null) {
+        metrics.setDagId(null);
+        // We remove the tasks above without state checks so just reset all metrics to 0.
+        metrics.resetWmMetrics();
+      }
+      LOG.info("DAG reset. Current knownTaskCount={}, pendingTaskCount={}, runningTaskCount={}",
           knownTasks.size(), pendingCount, runningCount);
     } finally {
       writeLock.unlock();
@@ -1019,12 +1033,16 @@ public class LlapTaskSchedulerService extends TaskScheduler {
   @Override
   public void allocateTask(Object task, Resource capability, String[] hosts, String[] racks,
       Priority priority, Object containerSignature, Object clientCookie) {
+    TezTaskAttemptID id = getTaskAttemptId(task);
     TaskInfo taskInfo = new TaskInfo(localityDelayConf, clock, task, clientCookie, priority,
-        capability, hosts, racks, clock.getTime(), getTaskAttemptId(task));
-    LOG.info("Received allocateRequest. task={}, priority={}, capability={}, hosts={}", task,
-        priority, capability, Arrays.toString(hosts));
+        capability, hosts, racks, clock.getTime(), id);
+    LOG.info("Received allocateRequest. task={}, priority={}, capability={}, hosts={}",
+        task, priority, capability, Arrays.toString(hosts));
     writeLock.lock();
     try {
+      if (!dagRunning && metrics != null && id != null) {
+        metrics.setDagId(id.getTaskID().getVertexID().getDAGId().toString());
+      }
       dagRunning = true;
       dagStats.registerTaskRequest(hosts, racks);
     } finally {
@@ -1039,13 +1057,16 @@ public class LlapTaskSchedulerService extends TaskScheduler {
       Priority priority, Object containerSignature, Object clientCookie) {
     // Container affinity can be implemented as Host affinity for LLAP. Not required until
     // 1:1 edges are used in Hive.
-    TaskInfo taskInfo =
-        new TaskInfo(localityDelayConf, clock, task, clientCookie, priority, capability, null,
-            null, clock.getTime(), getTaskAttemptId(task));
-    LOG.info("Received allocateRequest. task={}, priority={}, capability={}, containerId={}", task,
-        priority, capability, containerId);
+    TezTaskAttemptID id = getTaskAttemptId(task);
+    TaskInfo taskInfo = new TaskInfo(localityDelayConf, clock, task, clientCookie, priority,
+        capability, null, null, clock.getTime(), id);
+    LOG.info("Received allocateRequest. task={}, priority={}, capability={}, containerId={}",
+        task, priority, capability, containerId);
     writeLock.lock();
     try {
+      if (!dagRunning && metrics != null && id != null) {
+        metrics.setDagId(id.getTaskID().getVertexID().getDAGId().toString());
+      }
       dagRunning = true;
       dagStats.registerTaskRequest(null, null);
     } finally {
@@ -3002,5 +3023,42 @@ public class LlapTaskSchedulerService extends TaskScheduler {
     return unusedGuaranteed;
   }
 
+  /**
+   * A direct call from communicator to scheduler to propagate data that cannot be passed via Tez.
+   */
+  public void taskInfoUpdated(TezTaskAttemptID attemptId, boolean isGuaranteed) {
+    TaskInfo ti = null;
+    writeLock.lock();
+    try {
+      ti = tasksById.get(attemptId);
+      if (ti == null) {
+        WM_LOG.warn("Unknown task from heartbeat " + attemptId);
+        return;
+      }
+    } finally {
+      writeLock.unlock();
+    }
 
+    boolean newState = false;
+    synchronized (ti) {
+      if (ti.isPendingUpdate) return; // A pending update is not done.
+      if (ti.isGuaranteed == null) return; // The task has terminated, out of date heartbeat.
+      if (ti.lastSetGuaranteed != null && ti.lastSetGuaranteed == isGuaranteed) {
+        return; // The heartbeat is consistent with what we have.
+      }
+      ti.lastSetGuaranteed = isGuaranteed;
+      if (isGuaranteed == ti.isGuaranteed) return; // Already consistent. Can happen w/null lSG.
+
+      // There could be races here, e.g. heartbeat delivered us the old value just after we have
+      // received a successful confirmation from the API, so we are about to overwrite the latter.
+      // We could solve this by adding a version or smth like that; or by ignoring discrepancies
+      // unless we have previously received an update error for this task; however, the only effect
+      // right now are a few cheap redundant update calls; let's just do the simple thing.
+      newState = ti.isGuaranteed;
+      setUpdateStartedUnderTiLock(ti);
+    } // End of synchronized (ti)
+    WM_LOG.info("Sending an update based on inconsistent state from heartbeat for "
+        + attemptId + ", " + newState);
+    sendUpdateMessageAsync(ti, newState);
+  }
 }

@@ -1,3 +1,5 @@
+--! qt:dataset:cbo_t3
+--! qt:dataset:cbo_t2
 set hive.mapred.mode=nonstrict;
 set hive.cbo.enable=true;
 set hive.exec.check.crossproducts=false;

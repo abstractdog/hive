@@ -1,3 +1,4 @@
+--! qt:dataset:srcpart
 set hive.mapred.mode=nonstrict;
 set hive.map.aggr=false;
 set hive.groupby.skewindata=false;

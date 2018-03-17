@@ -1177,7 +1177,7 @@ public class QTestUtil {
     }
   }
 
-  protected void initDataset(String table) {
+  protected synchronized void initDataset(String table) {
     if (getSrcTables().contains(table)){
       return;
     }

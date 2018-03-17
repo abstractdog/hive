@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.insert.into.external.tables=false;
 
 

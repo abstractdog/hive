@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 create table hbase_str(rowkey string,mytime string,mystr string)
   STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'

@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table hbsort;
 drop table hbpartition;
 

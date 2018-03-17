@@ -1,4 +1,3 @@
---! qt:dataset:part
 set hive.mapred.mode=nonstrict;
 explain select p1.p_name, p2.p_name
 from part p1 , part p2;

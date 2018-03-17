@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.explain.user=false;
 set hive.query.name='test_parallel';
 set hive.exec.parallel=true;

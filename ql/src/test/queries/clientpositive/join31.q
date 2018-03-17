@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 set hive.optimize.semijoin.conversion=true;
 -- SORT_QUERY_RESULTS

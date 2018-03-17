@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 add file ../../data/scripts/newline.py;
 set hive.transform.escape.input=true;

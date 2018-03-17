@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Tests truncating a column from a table stored as a sequence file
 
 CREATE TABLE test_tab (key STRING, value STRING) STORED AS SEQUENCEFILE;

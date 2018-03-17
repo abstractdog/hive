@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table varchar_2;
 
 create table varchar_2 (

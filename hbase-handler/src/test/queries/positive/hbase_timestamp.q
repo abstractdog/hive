@@ -1,4 +1,3 @@
---! qt:dataset:src
 DROP TABLE hbase_table;
 CREATE TABLE hbase_table (key string, value string, `time` timestamp)
   STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'

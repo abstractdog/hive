@@ -1,4 +1,3 @@
---! qt:dataset:src_thrift
 CREATE TABLE dest1(key INT, value STRING, mapvalue STRING) STORED AS TEXTFILE;
 
 EXPLAIN

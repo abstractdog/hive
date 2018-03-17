@@ -1,11 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:srcbucket2
---! qt:dataset:srcbucket
---! qt:dataset:src_sequencefile
---! qt:dataset:src_json
---! qt:dataset:src1
---! qt:dataset:src
---! qt:dataset:alltypesorc
 describe extended src;
 
 describe formatted src key;

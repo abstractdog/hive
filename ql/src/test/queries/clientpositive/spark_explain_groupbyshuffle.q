@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.spark.use.groupby.shuffle=true;
 
 explain select key, count(value) from src group by key;

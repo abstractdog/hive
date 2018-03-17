@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.explain.user=false;
 set hive.compute.query.using.stats=true;
 

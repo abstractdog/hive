@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 set hive.query.results.cache.enabled=true;
 

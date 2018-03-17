@@ -1,5 +1,3 @@
---! qt:dataset:src1
---! qt:dataset:src
 set hive.auto.convert.join=false;
 set hive.cbo.enable=false;
 

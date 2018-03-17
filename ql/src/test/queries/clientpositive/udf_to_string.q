@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.fetch.task.conversion=more;
 
 -- Conversion of main primitive types to String type:

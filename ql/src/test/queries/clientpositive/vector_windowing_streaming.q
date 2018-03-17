@@ -1,5 +1,3 @@
---! qt:dataset:part
---! qt:dataset:alltypesorc
 set hive.cli.print.header=true;
 SET hive.vectorized.execution.enabled=true;
 SET hive.vectorized.execution.reduce.enabled=true;

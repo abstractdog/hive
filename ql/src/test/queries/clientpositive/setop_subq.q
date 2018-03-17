@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 
 explain select key from ((select key from src) union (select key from src))subq;

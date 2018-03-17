@@ -1,4 +1,3 @@
---! qt:dataset:part
 
 create temporary function mylastval as 'org.apache.hadoop.hive.ql.udf.generic.GenericUDAFLastValue';
 

@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table NULLS;
 
 create table NULLS (LAST string);

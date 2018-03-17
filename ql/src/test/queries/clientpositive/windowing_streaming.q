@@ -1,5 +1,3 @@
---! qt:dataset:part
---! qt:dataset:alltypesorc
 drop table over10k;
 
 create table over10k(

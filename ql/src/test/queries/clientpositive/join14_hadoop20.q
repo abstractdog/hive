@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 -- INCLUDE_HADOOP_MAJOR_VERSIONS(0.20, 0.20S)
 
 CREATE TABLE dest1(c1 INT, c2 STRING) STORED AS TEXTFILE;

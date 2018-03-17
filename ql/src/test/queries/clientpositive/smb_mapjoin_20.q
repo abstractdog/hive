@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- SORT_BEFORE_DIFF
 
 set hive.optimize.bucketmapjoin = true;

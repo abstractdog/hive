@@ -1,4 +1,3 @@
---! qt:dataset:alltypesorc
 ADD JAR ivy://org.apache.hive.hive-it-custom-udfs:udf-vectorized-badexample:+;
 set hive.fetch.task.conversion=none;
 

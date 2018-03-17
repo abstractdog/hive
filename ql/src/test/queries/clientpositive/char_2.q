@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table char_2;
 
 create table char_2 (

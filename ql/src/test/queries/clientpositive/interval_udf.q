@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 select
   year(iym), month(iym), day(idt), hour(idt), minute(idt), second(idt)

@@ -1,4 +1,3 @@
---! qt:dataset:srcpart
 describe srcpart;
 describe srcpart key;
 describe srcpart PARTITION(ds='2008-04-08', hr='12');

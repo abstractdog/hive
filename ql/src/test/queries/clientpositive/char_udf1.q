@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table char_udf_1;
 
 create table char_udf_1 (c1 string, c2 string, c3 char(10), c4 char(20));

@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.auto.convert.join=true;
 set hive.optimize.dynamic.partition.hashjoin=true;
 set hive.auto.convert.join.hashtable.max.entries=500;

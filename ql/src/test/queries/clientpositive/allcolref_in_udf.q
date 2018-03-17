@@ -1,4 +1,3 @@
---! qt:dataset:src
 set hive.mapred.mode=nonstrict;
 explain
 select concat(*),array(*) from src where key < 100 limit 10;

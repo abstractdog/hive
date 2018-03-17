@@ -1,4 +1,3 @@
---! qt:dataset:src
 
 set hive.strict.checks.cartesian.product= false;
 CREATE EXTERNAL TABLE tables

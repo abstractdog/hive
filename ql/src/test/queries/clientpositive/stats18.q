@@ -1,5 +1,3 @@
---! qt:dataset:srcpart
---! qt:dataset:src
 set hive.strict.checks.bucketing=false;
 
 set datanucleus.cache.collections=false;

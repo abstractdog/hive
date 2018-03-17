@@ -1,4 +1,3 @@
---! qt:dataset:src
 drop table ba_test;
 
 -- this query tests ba_table1.q + nested queries with multiple operations on binary data types + union on binary types 

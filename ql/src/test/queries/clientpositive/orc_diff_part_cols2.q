@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- Create a table with one column, write to it, then add an additional column
 -- This can break reads
 

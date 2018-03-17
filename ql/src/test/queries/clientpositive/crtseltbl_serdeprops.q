@@ -1,4 +1,3 @@
---! qt:dataset:src
 dfs ${system:test.dfs.mkdir} ${system:test.tmp.dir}/tmpsepatest;
 CREATE TABLE separator_test 
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'

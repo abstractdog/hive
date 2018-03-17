@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- SORT_QUERY_RESULTS
 
 --HIVE-3699 Multiple insert overwrite into multiple tables query stores same results in all tables

@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- The ORDER BY on the outer query will typically have no effect,
 -- but there is really no guarantee that the ordering is preserved
 -- across various SQL operators.

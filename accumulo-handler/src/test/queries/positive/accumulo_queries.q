@@ -1,4 +1,3 @@
---! qt:dataset:src
 -- remove these; after HIVE-18802 is fixed
 set hive.optimize.index.filter=false;
 set hive.optimize.ppd=false;

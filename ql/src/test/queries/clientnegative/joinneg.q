@@ -1,4 +1,3 @@
---! qt:dataset:src
 EXPLAIN FROM 
 (SELECT src.* FROM src) x
 JOIN 

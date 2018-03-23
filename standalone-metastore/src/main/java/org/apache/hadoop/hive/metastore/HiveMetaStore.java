@@ -73,7 +73,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.metastore.api.*;
 import org.apache.hadoop.hive.metastore.events.AddForeignKeyEvent;
-import org.apache.hadoop.hive.metastore.cache.CachedStore;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf.ConfVars;
 import org.apache.hadoop.hive.metastore.events.AddNotNullConstraintEvent;
@@ -3390,12 +3389,25 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     public List<Partition> exchange_partitions(Map<String, String> partitionSpecs,
         String sourceDbName, String sourceTableName, String destDbName,
         String destTableName) throws TException {
+      if (partitionSpecs == null || sourceDbName == null || sourceTableName == null
+          || destDbName == null || destTableName == null) {
+        throw new MetaException("The DB and table name for the source and destination tables,"
+            + " and the partition specs must not be null.");
+      }
       boolean success = false;
       boolean pathCreated = false;
       RawStore ms = getMS();
       ms.openTransaction();
       Table destinationTable = ms.getTable(destDbName, destTableName);
+      if (destinationTable == null) {
+        throw new MetaException(
+            "The destination table " + destDbName + "." + destTableName + " not found");
+      }
       Table sourceTable = ms.getTable(sourceDbName, sourceTableName);
+      if (sourceTable == null) {
+        throw new MetaException(
+            "The source table " + sourceDbName + "." + sourceTableName + " not found");
+      }
       List<String> partVals = MetaStoreUtils.getPvals(sourceTable.getPartitionKeys(),
           partitionSpecs);
       List<String> partValsPresent = new ArrayList<> ();
@@ -3432,6 +3444,20 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       Map<String, String> transactionalListenerResponsesForAddPartition = Collections.emptyMap();
       List<Map<String, String>> transactionalListenerResponsesForDropPartition =
           Lists.newArrayListWithCapacity(partitionsToExchange.size());
+
+      // Check if any of the partitions already exists in destTable.
+      List<String> destPartitionNames =
+          ms.listPartitionNames(destDbName, destTableName, (short) -1);
+      if (destPartitionNames != null && !destPartitionNames.isEmpty()) {
+        for (Partition partition : partitionsToExchange) {
+          String partToExchangeName =
+              Warehouse.makePartName(destinationTable.getPartitionKeys(), partition.getValues());
+          if (destPartitionNames.contains(partToExchangeName)) {
+            throw new MetaException("The partition " + partToExchangeName
+                + " already exists in the table " + destTableName);
+          }
+        }
+      }
 
       try {
         for (Partition partition: partitionsToExchange) {
@@ -3528,6 +3554,16 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       boolean mustPurge = false;
       boolean isExternalTbl = false;
       Map<String, String> transactionalListenerResponses = Collections.emptyMap();
+
+      if (db_name == null) {
+        throw new MetaException("The DB name cannot be null.");
+      }
+      if (tbl_name == null) {
+        throw new MetaException("The table name cannot be null.");
+      }
+      if (part_vals == null) {
+        throw new MetaException("The partition values cannot be null.");
+      }
 
       try {
         ms.openTransaction();
@@ -7961,9 +7997,6 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         }
         ThreadPool.shutdown();
       }, 10);
-
-      // This will only initialize the cache if configured.
-      CachedStore.initSharedCacheAsync(conf);
 
       //Start Metrics for Standalone (Remote) Mode
       if (MetastoreConf.getBoolVar(conf, ConfVars.METRICS_ENABLED)) {

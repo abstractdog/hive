@@ -1593,6 +1593,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           HashMap<String, String> partition = new HashMap<String, String>();
           for (int i = 0; i < childCount; i++) {
             String partitionName = partitions.getChild(i).getChild(0).getText();
+            // Convert to lowercase for the comparison
+            partitionName = partitionName.toLowerCase();
             Tree pvalue = partitions.getChild(i).getChild(1);
             if (pvalue == null) {
               break;
@@ -6701,7 +6703,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     alterTblDesc.setOldName(tableName);
     alterTblDesc.setProps(mapProp);
     alterTblDesc.setDropIfExists(true);
-    this.rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), alterTblDesc), conf));
+    this.rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), alterTblDesc)));
   }
 
   private ImmutableBitSet getEnabledNotNullConstraints(Table tbl) throws HiveException{
@@ -7567,7 +7569,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     PreInsertTableDesc preInsertTableDesc = new PreInsertTableDesc(table, overwrite);
     InsertTableDesc insertTableDesc = new InsertTableDesc(table, overwrite);
     this.rootTasks
-        .add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), preInsertTableDesc), conf));
+        .add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), preInsertTableDesc)));
     TaskFactory
         .getAndMakeChild(new DDLWork(getInputs(), getOutputs(), insertTableDesc), conf, tasks);
   }
@@ -12746,7 +12748,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       // outputs is empty, which means this create table happens in the current
       // database.
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
-          crtTblDesc), conf));
+            crtTblDesc)));
       break;
 
     case CTLT: // create table like <tbl_name>
@@ -12766,7 +12768,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           storageFormat.getSerde(), storageFormat.getSerdeProps(), tblProps, ifNotExists,
           likeTableName, isUserStorageFormat);
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
-          crtTblLikeDesc), conf));
+            crtTblLikeDesc)));
       break;
 
     case CTAS: // create table as select
@@ -12970,7 +12972,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           ifNotExists, orReplace, isAlterViewAs, storageFormat.getInputFormat(),
           storageFormat.getOutputFormat(), storageFormat.getSerde());
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
-          createVwDesc), conf));
+          createVwDesc)));
       addDbAndTabToOutputs(qualTabName, TableType.VIRTUAL_VIEW, tblProps);
       queryState.setCommandType(HiveOperation.CREATEVIEW);
     }
@@ -14207,7 +14209,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    */
   private void useCachedResult(QueryResultsCache.CacheEntry cacheEntry) {
     // Change query FetchTask to use new location specified in results cache.
-    FetchTask fetchTask = (FetchTask) TaskFactory.get(cacheEntry.getFetchWork(), conf);
+    FetchTask fetchTask = (FetchTask) TaskFactory.get(cacheEntry.getFetchWork());
     setFetchTask(fetchTask);
 
     queryState.setCommandType(cacheEntry.getQueryInfo().getHiveOperation());

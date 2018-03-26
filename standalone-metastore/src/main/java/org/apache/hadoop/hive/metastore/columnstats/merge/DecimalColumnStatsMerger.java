@@ -31,15 +31,19 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
         (DecimalColumnStatsDataInspector) aggregateColStats.getStatsData().getDecimalStats();
     DecimalColumnStatsDataInspector newData =
         (DecimalColumnStatsDataInspector) newColStats.getStatsData().getDecimalStats();
-    Decimal lowValue = aggregateData.getLowValue() != null
-        && (aggregateData.getLowValue().compareTo(newData.getLowValue()) > 0) ? aggregateData
-        .getLowValue() : newData.getLowValue();
+
+    Decimal lowValue = (newData.getLowValue() == null || (aggregateData.getLowValue() != null
+        && (aggregateData.getLowValue().compareTo(newData.getLowValue()) > 0)))
+          ? aggregateData.getLowValue() : newData.getLowValue();
     aggregateData.setLowValue(lowValue);
-    Decimal highValue = aggregateData.getHighValue() != null
-        && (aggregateData.getHighValue().compareTo(newData.getHighValue()) > 0) ? aggregateData
-        .getHighValue() : newData.getHighValue();
+
+    Decimal highValue = (newData.getHighValue() == null || (aggregateData.getHighValue() != null
+        && (aggregateData.getHighValue().compareTo(newData.getHighValue()) > 0)))
+          ? aggregateData.getHighValue() : newData.getHighValue();
     aggregateData.setHighValue(highValue);
+   
     aggregateData.setNumNulls(aggregateData.getNumNulls() + newData.getNumNulls());
+    
     if (aggregateData.getNdvEstimator() == null || newData.getNdvEstimator() == null) {
       aggregateData.setNumDVs(Math.max(aggregateData.getNumDVs(), newData.getNumDVs()));
     } else {

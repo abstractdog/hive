@@ -160,6 +160,7 @@ public class QTestUtil {
   private static final String BUILD_DIR_PROPERTY = "build.dir"; // typically target
 
   public static final String TEST_SRC_TABLES_PROPERTY = "test.src.tables";
+  public static final String TEST_HIVE_USER_PROPERTY = "test.hive.user";
 
   private String testWarehouse;
   private final String testFiles;
@@ -1047,6 +1048,13 @@ public class QTestUtil {
     clearTablesCreatedDuringTests();
     clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
+    clearAuthorizationSideEffects();
+  }
+  
+  protected void clearAuthorizationSideEffects() {
+    getCliDriver().processLine(String.format("set hive.security.authorization.enabled=false;"));
+    getCliDriver().processLine(String.format("set user.name=%s;",
+        System.getProperty(TEST_HIVE_USER_PROPERTY, "hive_test_user")));
   }
 
   protected void initConfFromSetup() throws Exception {

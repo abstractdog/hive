@@ -1162,6 +1162,13 @@ public class HiveConf extends Configuration {
     // materialized views
     HIVE_MATERIALIZED_VIEW_ENABLE_AUTO_REWRITING("hive.materializedview.rewriting", false,
         "Whether to try to rewrite queries using the materialized views enabled for rewriting"),
+    HIVE_MATERIALIZED_VIEW_REWRITING_SELECTION_STRATEGY("hive.materializedview.rewriting.strategy", "heuristic",
+        new StringSet("heuristic", "costbased"),
+        "The strategy that should be used to cost and select the materialized view rewriting. \n" +
+            "  heuristic: Always try to select the plan using the materialized view if rewriting produced one," +
+            "choosing the plan with lower cost among possible plans containing a materialized view\n" +
+            "  costbased: Fully cost-based strategy, always use plan with lower cost, independently on whether " +
+            "it uses a materialized view or not"),
     HIVE_MATERIALIZED_VIEW_REWRITING_TIME_WINDOW("hive.materializedview.rewriting.time.window", "0s", new TimeValidator(TimeUnit.SECONDS),
         "Time window, specified in seconds, after which outdated materialized views become invalid for automatic query rewriting.\n" +
         "For instance, if a materialized view is created and afterwards one of its source tables is changed at " +
@@ -2486,6 +2493,8 @@ public class HiveConf extends Configuration {
         "Applies when a user specifies a target WM pool in the JDBC connection string. If\n" +
         "false, the user can only specify a pool he is mapped to (e.g. make a choice among\n" +
         "multiple group mappings); if true, the user can specify any existing pool."),
+    HIVE_SERVER2_WM_POOL_METRICS("hive.server2.wm.pool.metrics", true,
+        "Whether per-pool WM metrics should be enabled."),
     HIVE_SERVER2_TEZ_WM_AM_REGISTRY_TIMEOUT("hive.server2.tez.wm.am.registry.timeout", "30s",
         new TimeValidator(TimeUnit.SECONDS),
         "The timeout for AM registry registration, after which (on attempting to use the\n" +
@@ -4649,6 +4658,8 @@ public class HiveConf extends Configuration {
     ConfVars.HIVE_INSERT_INTO_MULTILEVEL_DIRS.varname,
     ConfVars.HIVE_LOCALIZE_RESOURCE_NUM_WAIT_ATTEMPTS.varname,
     ConfVars.HIVE_MULTI_INSERT_MOVE_TASKS_SHARE_DEPENDENCIES.varname,
+    ConfVars.HIVE_QUERY_RESULTS_CACHE_ENABLED.varname,
+    ConfVars.HIVE_QUERY_RESULTS_CACHE_WAIT_FOR_PENDING_RESULTS.varname,
     ConfVars.HIVE_QUOTEDID_SUPPORT.varname,
     ConfVars.HIVE_RESULTSET_USE_UNIQUE_COLUMN_NAMES.varname,
     ConfVars.HIVE_STATS_COLLECT_PART_LEVEL_STATS.varname,

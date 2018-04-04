@@ -1051,7 +1051,11 @@ public class QTestUtil {
     clearSettingsCreatedInTests();
   }
   
-  protected void clearSettingsCreatedInTests() {
+  protected void clearSettingsCreatedInTests() throws IOException {
+    if(!isSessionStateStarted) { // force create a new CliSessionState
+      startSessionState(true);
+    }
+
     getCliDriver().processLine(String.format("set hive.security.authorization.enabled=false;"));
     getCliDriver().processLine(String.format("set user.name=%s;",
         System.getProperty(TEST_HIVE_USER_PROPERTY, "hive_test_user")));

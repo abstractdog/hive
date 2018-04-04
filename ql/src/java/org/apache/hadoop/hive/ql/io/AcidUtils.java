@@ -1653,6 +1653,9 @@ public class AcidUtils {
         //directory is empty or doesn't have any that could have been produced by load data
         return false;
       }
+      return isRawFormatFile(dataFile, fs);
+    }
+    public static boolean isRawFormatFile(Path dataFile, FileSystem fs) throws IOException {
       try {
         Reader reader = OrcFile.createReader(dataFile, OrcFile.readerOptions(fs.getConf()));
         /*
@@ -1790,5 +1793,15 @@ public class AcidUtils {
       }
     }
     return fileList;
+  }
+
+  public static boolean isAcidEnabled(HiveConf hiveConf) {
+    String txnMgr = hiveConf.getVar(HiveConf.ConfVars.HIVE_TXN_MANAGER);
+    boolean concurrency =  hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY);
+    String dbTxnMgr = "org.apache.hadoop.hive.ql.lockmgr.DbTxnManager";
+    if (txnMgr.equals(dbTxnMgr) && concurrency) {
+      return true;
+    }
+    return false;
   }
 }

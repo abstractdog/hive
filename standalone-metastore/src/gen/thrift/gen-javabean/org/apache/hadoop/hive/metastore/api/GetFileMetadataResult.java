@@ -433,15 +433,15 @@ import org.slf4j.LoggerFactory;
           case 1: // METADATA
             if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
               {
-                org.apache.thrift.protocol.TMap _map734 = iprot.readMapBegin();
-                struct.metadata = new HashMap<Long,ByteBuffer>(2*_map734.size);
-                long _key735;
-                ByteBuffer _val736;
-                for (int _i737 = 0; _i737 < _map734.size; ++_i737)
+                org.apache.thrift.protocol.TMap _map750 = iprot.readMapBegin();
+                struct.metadata = new HashMap<Long,ByteBuffer>(2*_map750.size);
+                long _key751;
+                ByteBuffer _val752;
+                for (int _i753 = 0; _i753 < _map750.size; ++_i753)
                 {
-                  _key735 = iprot.readI64();
-                  _val736 = iprot.readBinary();
-                  struct.metadata.put(_key735, _val736);
+                  _key751 = iprot.readI64();
+                  _val752 = iprot.readBinary();
+                  struct.metadata.put(_key751, _val752);
                 }
                 iprot.readMapEnd();
               }
@@ -475,10 +475,10 @@ import org.slf4j.LoggerFactory;
         oprot.writeFieldBegin(METADATA_FIELD_DESC);
         {
           oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.I64, org.apache.thrift.protocol.TType.STRING, struct.metadata.size()));
-          for (Map.Entry<Long, ByteBuffer> _iter738 : struct.metadata.entrySet())
+          for (Map.Entry<Long, ByteBuffer> _iter754 : struct.metadata.entrySet())
           {
-            oprot.writeI64(_iter738.getKey());
-            oprot.writeBinary(_iter738.getValue());
+            oprot.writeI64(_iter754.getKey());
+            oprot.writeBinary(_iter754.getValue());
           }
           oprot.writeMapEnd();
         }
@@ -506,10 +506,10 @@ import org.slf4j.LoggerFactory;
       TTupleProtocol oprot = (TTupleProtocol) prot;
       {
         oprot.writeI32(struct.metadata.size());
-        for (Map.Entry<Long, ByteBuffer> _iter739 : struct.metadata.entrySet())
+        for (Map.Entry<Long, ByteBuffer> _iter755 : struct.metadata.entrySet())
         {
-          oprot.writeI64(_iter739.getKey());
-          oprot.writeBinary(_iter739.getValue());
+          oprot.writeI64(_iter755.getKey());
+          oprot.writeBinary(_iter755.getValue());
         }
       }
       oprot.writeBool(struct.isSupported);
@@ -519,15 +519,15 @@ import org.slf4j.LoggerFactory;
     public void read(org.apache.thrift.protocol.TProtocol prot, GetFileMetadataResult struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       {
-        org.apache.thrift.protocol.TMap _map740 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.I64, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-        struct.metadata = new HashMap<Long,ByteBuffer>(2*_map740.size);
-        long _key741;
-        ByteBuffer _val742;
-        for (int _i743 = 0; _i743 < _map740.size; ++_i743)
+        org.apache.thrift.protocol.TMap _map756 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.I64, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+        struct.metadata = new HashMap<Long,ByteBuffer>(2*_map756.size);
+        long _key757;
+        ByteBuffer _val758;
+        for (int _i759 = 0; _i759 < _map756.size; ++_i759)
         {
-          _key741 = iprot.readI64();
-          _val742 = iprot.readBinary();
-          struct.metadata.put(_key741, _val742);
+          _key757 = iprot.readI64();
+          _val758 = iprot.readBinary();
+          struct.metadata.put(_key757, _val758);
         }
       }
       struct.setMetadataIsSet(true);

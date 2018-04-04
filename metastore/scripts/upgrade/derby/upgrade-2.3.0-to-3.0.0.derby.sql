@@ -10,5 +10,8 @@ RUN '049-HIVE-18489.derby.sql';
 RUN '050-HIVE-18192.derby.sql';
 RUN '051-HIVE-18675.derby.sql';
 RUN '052-HIVE-18965.derby.sql';
+RUN '053-HIVE-18755.derby.sql';
+RUN '054-HIVE-18781.derby.sql';
+RUN '055-HIVE-18747.derby.sql';
 
 UPDATE "APP".VERSION SET SCHEMA_VERSION='3.0.0', VERSION_COMMENT='Hive release version 3.0.0' where VER_ID=1;

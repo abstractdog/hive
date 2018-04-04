@@ -73,6 +73,7 @@ import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.exec.ArchiveUtils;
 import org.apache.hadoop.hive.ql.exec.ColumnStatsUpdateTask;
+import org.apache.hadoop.hive.ql.exec.DDLTask;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
@@ -285,6 +286,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     case HiveParser.TOK_ALTERTABLE: {
       ast = (ASTNode) input.getChild(1);
       String[] qualified = getQualifiedTableName((ASTNode) input.getChild(0));
+      // TODO CAT - for now always use the default catalog.  Eventually will want to see if
+      // the user specified a catalog
+      String catName = MetaStoreUtils.getDefaultCatalog(conf);
       String tableName = getDotName(qualified);
       HashMap<String, String> partSpec = null;
       ASTNode partSpecNode = (ASTNode)input.getChild(2);
@@ -312,7 +316,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       } else if (ast.getType() == HiveParser.TOK_ALTERTABLE_REPLACECOLS) {
         analyzeAlterTableModifyCols(qualified, ast, partSpec, AlterTableTypes.REPLACECOLS);
       } else if (ast.getType() == HiveParser.TOK_ALTERTABLE_RENAMECOL) {
-        analyzeAlterTableRenameCol(qualified, ast, partSpec);
+        analyzeAlterTableRenameCol(catName, qualified, ast, partSpec);
       } else if (ast.getType() == HiveParser.TOK_ALTERTABLE_ADDPARTS) {
         analyzeAlterTableAddParts(qualified, ast, false);
       } else if (ast.getType() == HiveParser.TOK_ALTERTABLE_DROPPARTS) {
@@ -1255,6 +1259,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       addServiceOutput();
     }
     if (poolChanges != null) {
+      if (!poolChanges.isSetPoolPath()) {
+        poolChanges.setPoolPath(poolPath);
+      }
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           new CreateOrAlterWMPoolDesc(poolChanges, poolPath, true))));
     }
@@ -2149,6 +2156,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     throws SemanticException {
     ASTNode parent = (ASTNode) ast.getParent();
     String[] qualifiedTabName = getQualifiedTableName((ASTNode) parent.getChild(0));
+    // TODO CAT - for now always use the default catalog.  Eventually will want to see if
+    // the user specified a catalog
+    String catName = MetaStoreUtils.getDefaultCatalog(conf);
     ASTNode child = (ASTNode) ast.getChild(0);
     List<SQLPrimaryKey> primaryKeys = new ArrayList<>();
     List<SQLForeignKey> foreignKeys = new ArrayList<>();
@@ -2156,7 +2166,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     switch (child.getToken().getType()) {
       case HiveParser.TOK_UNIQUE:
-        BaseSemanticAnalyzer.processUniqueConstraints(qualifiedTabName[0], qualifiedTabName[1],
+        BaseSemanticAnalyzer.processUniqueConstraints(catName, qualifiedTabName[0], qualifiedTabName[1],
                 child, uniqueConstraints);
         break;
       case HiveParser.TOK_PRIMARY_KEY:
@@ -3075,7 +3085,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         alterTblDesc)));
   }
 
-  private void analyzeAlterTableRenameCol(String[] qualified, ASTNode ast,
+  private void analyzeAlterTableRenameCol(String catName, String[] qualified, ASTNode ast,
       HashMap<String, String> partSpec) throws SemanticException {
     String newComment = null;
     boolean first = false;
@@ -3119,23 +3129,23 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       switch (constraintChild.getToken().getType()) {
       case HiveParser.TOK_CHECK_CONSTRAINT:
         checkConstraints = new ArrayList<>();
-        processCheckConstraints(qualified[0], qualified[1], constraintChild,
+        processCheckConstraints(catName, qualified[0], qualified[1], constraintChild,
                                   ImmutableList.of(newColName), checkConstraints, (ASTNode)ast.getChild(2),
                                 this.ctx.getTokenRewriteStream());
         break;
       case HiveParser.TOK_DEFAULT_VALUE:
         defaultConstraints = new ArrayList<>();
-        processDefaultConstraints(qualified[0], qualified[1], constraintChild,
+        processDefaultConstraints(catName, qualified[0], qualified[1], constraintChild,
                                   ImmutableList.of(newColName), defaultConstraints, (ASTNode)ast.getChild(2));
         break;
       case HiveParser.TOK_NOT_NULL:
         notNullConstraints = new ArrayList<>();
-        processNotNullConstraints(qualified[0], qualified[1], constraintChild,
+        processNotNullConstraints(catName, qualified[0], qualified[1], constraintChild,
                                   ImmutableList.of(newColName), notNullConstraints);
         break;
       case HiveParser.TOK_UNIQUE:
         uniqueConstraints = new ArrayList<>();
-        processUniqueConstraints(qualified[0], qualified[1], constraintChild,
+        processUniqueConstraints(catName, qualified[0], qualified[1], constraintChild,
                                  ImmutableList.of(newColName), uniqueConstraints);
         break;
       case HiveParser.TOK_PRIMARY_KEY:
@@ -3380,7 +3390,13 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     Table tab = getTable(qualified);
     boolean isView = tab.isView();
     validateAlterTableType(tab, AlterTableTypes.ADDPARTITION, expectView);
-    outputs.add(new WriteEntity(tab, WriteEntity.WriteType.DDL_SHARED));
+    outputs.add(new WriteEntity(tab,
+        /*use DDL_EXCLUSIVE to cause X lock to prevent races between concurrent add partition calls
+        with IF NOT EXISTS.  w/o this 2 concurrent calls to add the same partition may both add
+        data since for transactional tables creating partition metadata and moving data there are
+        2 separate actions. */
+        ifNotExists && AcidUtils.isTransactionalTable(tab) ? WriteType.DDL_EXCLUSIVE
+        : WriteEntity.WriteType.DDL_SHARED));
 
     int numCh = ast.getChildCount();
     int start = ifNotExists ? 1 : 0;
@@ -3437,7 +3453,10 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       return;
     }
 
-    rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(), addPartitionDesc)));
+    Task<DDLWork> ddlTask =
+        TaskFactory.get(new DDLWork(getInputs(), getOutputs(), addPartitionDesc));
+    rootTasks.add(ddlTask);
+    handleTransactionalTable(tab, addPartitionDesc, ddlTask);
 
     if (isView) {
       // Compile internal query to capture underlying table partition dependencies
@@ -3479,6 +3498,56 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  /**
+   * Add partition for Transactional tables needs to add (copy/rename) the data so that it lands
+   * in a delta_x_x/ folder in the partition dir.
+   */
+  private void handleTransactionalTable(Table tab, AddPartitionDesc addPartitionDesc,
+      Task ddlTask) throws SemanticException {
+    if(!AcidUtils.isTransactionalTable(tab)) {
+      return;
+    }
+    Long writeId;
+    int stmtId;
+    try {
+      writeId = SessionState.get().getTxnMgr().getTableWriteId(tab.getDbName(),
+          tab.getTableName());
+    } catch (LockException ex) {
+      throw new SemanticException("Failed to allocate the write id", ex);
+    }
+    stmtId = SessionState.get().getTxnMgr().getStmtIdAndIncrement();
+
+    for (int index = 0; index < addPartitionDesc.getPartitionCount(); index++) {
+      OnePartitionDesc desc = addPartitionDesc.getPartition(index);
+      if (desc.getLocation() != null) {
+        if(addPartitionDesc.isIfNotExists()) {
+          //Don't add
+          Partition oldPart = getPartition(tab, desc.getPartSpec(), false);
+          if(oldPart != null) {
+            continue;
+          }
+        }
+        LoadTableDesc loadTableWork = new LoadTableDesc(new Path(desc.getLocation()),
+            Utilities.getTableDesc(tab), desc.getPartSpec(),
+            LoadTableDesc.LoadFileType.KEEP_EXISTING,//not relevant - creating new partition
+            writeId);
+        loadTableWork.setStmtId(stmtId);
+        loadTableWork.setInheritTableSpecs(true);
+        try {
+          desc.setLocation(new Path(tab.getDataLocation(),
+              Warehouse.makePartPath(desc.getPartSpec())).toString());
+        }
+        catch (MetaException ex) {
+          throw new SemanticException("Could not determine partition path due to: " + ex.getMessage(), ex);
+        }
+        Task<MoveWork> moveTask = TaskFactory.get(
+            new MoveWork(getInputs(), getOutputs(), loadTableWork, null,
+                true,//make sure to check format
+                false));//is this right?
+        ddlTask.addDependentTask(moveTask);
+      }
+    }
+  }
   /**
    * Rewrite the metadata for one or more partitions in a table. Useful when
    * an external process modifies files on HDFS and you want the pre/post

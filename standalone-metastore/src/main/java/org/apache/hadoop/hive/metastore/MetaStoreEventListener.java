@@ -35,10 +35,12 @@ import org.apache.hadoop.hive.metastore.events.AlterPartitionEvent;
 import org.apache.hadoop.hive.metastore.events.AlterSchemaVersionEvent;
 import org.apache.hadoop.hive.metastore.events.AlterTableEvent;
 import org.apache.hadoop.hive.metastore.events.ConfigChangeEvent;
+import org.apache.hadoop.hive.metastore.events.CreateCatalogEvent;
 import org.apache.hadoop.hive.metastore.events.CreateDatabaseEvent;
 import org.apache.hadoop.hive.metastore.events.CreateFunctionEvent;
 import org.apache.hadoop.hive.metastore.events.CreateISchemaEvent;
 import org.apache.hadoop.hive.metastore.events.CreateTableEvent;
+import org.apache.hadoop.hive.metastore.events.DropCatalogEvent;
 import org.apache.hadoop.hive.metastore.events.DropConstraintEvent;
 import org.apache.hadoop.hive.metastore.events.DropDatabaseEvent;
 import org.apache.hadoop.hive.metastore.events.DropFunctionEvent;
@@ -48,6 +50,9 @@ import org.apache.hadoop.hive.metastore.events.DropSchemaVersionEvent;
 import org.apache.hadoop.hive.metastore.events.DropTableEvent;
 import org.apache.hadoop.hive.metastore.events.InsertEvent;
 import org.apache.hadoop.hive.metastore.events.LoadPartitionDoneEvent;
+import org.apache.hadoop.hive.metastore.events.OpenTxnEvent;
+import org.apache.hadoop.hive.metastore.events.CommitTxnEvent;
+import org.apache.hadoop.hive.metastore.events.AbortTxnEvent;
 
 /**
  * This abstract class needs to be extended to  provide implementation of actions that needs
@@ -164,7 +169,6 @@ public abstract class MetaStoreEventListener implements Configurable {
    * @throws MetaException
    */
   public void onInsert(InsertEvent insertEvent) throws MetaException {
-
   }
 
   /**
@@ -222,6 +226,36 @@ public abstract class MetaStoreEventListener implements Configurable {
       throws MetaException {
   }
 
+  public void onCreateCatalog(CreateCatalogEvent createCatalogEvent) throws MetaException {
+  }
+
+  public void onDropCatalog(DropCatalogEvent dropCatalogEvent) throws MetaException {
+  }
+
+  /**
+   * This will be called when a new transaction is started.
+   * @param openTxnEvent
+   * @throws MetaException
+   */
+  public void onOpenTxn(OpenTxnEvent openTxnEvent) throws MetaException {
+  }
+
+  /**
+   * This will be called to commit a transaction.
+   * @param commitTxnEvent
+   * @throws MetaException
+   */
+  public void onCommitTxn(CommitTxnEvent commitTxnEvent) throws MetaException {
+  }
+
+  /**
+   * This will be called to abort a transaction.
+   * @param abortTxnEvent
+   * @throws MetaException
+   */
+  public void onAbortTxn(AbortTxnEvent abortTxnEvent) throws MetaException {
+  }
+
   @Override
   public Configuration getConf() {
     return this.conf;
@@ -231,7 +265,4 @@ public abstract class MetaStoreEventListener implements Configurable {
   public void setConf(Configuration config) {
     this.conf = config;
   }
-
-
-
 }

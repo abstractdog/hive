@@ -129,6 +129,7 @@ CREATE TABLE `SCHEMA_VERSION` (
 -- 048-HIVE-14498
 CREATE TABLE IF NOT EXISTS `MV_CREATION_METADATA` (
   `MV_CREATION_METADATA_ID` bigint(20) NOT NULL,
+  `CAT_NAME` varchar(256) CHARACTER SET latin1 COLLATE latin1_bin NOT NULL,
   `DB_NAME` varchar(128) CHARACTER SET latin1 COLLATE latin1_bin NOT NULL,
   `TBL_NAME` varchar(256) CHARACTER SET latin1 COLLATE latin1_bin NOT NULL,
   `TXN_LIST` TEXT DEFAULT NULL,
@@ -175,7 +176,7 @@ CREATE TABLE TXN_TO_WRITE_ID (
   T2W_DATABASE varchar(128) NOT NULL,
   T2W_TABLE varchar(256) NOT NULL,
   T2W_WRITEID bigint NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE UNIQUE INDEX TBL_TO_TXN_ID_IDX ON TXN_TO_WRITE_ID (T2W_DATABASE, T2W_TABLE, T2W_TXNID);
 CREATE UNIQUE INDEX TBL_TO_WRITE_ID_IDX ON TXN_TO_WRITE_ID (T2W_DATABASE, T2W_TABLE, T2W_WRITEID);
@@ -184,7 +185,7 @@ CREATE TABLE NEXT_WRITE_ID (
   NWI_DATABASE varchar(128) NOT NULL,
   NWI_TABLE varchar(256) NOT NULL,
   NWI_NEXT bigint NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE UNIQUE INDEX NEXT_WRITE_ID_IDX ON NEXT_WRITE_ID (NWI_DATABASE, NWI_TABLE);
 
@@ -202,6 +203,81 @@ ALTER TABLE `KEY_CONSTRAINTS` ADD COLUMN `DEFAULT_VALUE` VARCHAR(400);
 
 ALTER TABLE `HIVE_LOCKS` CHANGE COLUMN `HL_TXNID` `HL_TXNID` bigint NOT NULL;
 
+CREATE TABLE REPL_TXN_MAP (
+  RTM_REPL_POLICY varchar(256) NOT NULL,
+  RTM_SRC_TXN_ID bigint NOT NULL,
+  RTM_TARGET_TXN_ID bigint NOT NULL,
+  PRIMARY KEY (RTM_REPL_POLICY, RTM_SRC_TXN_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- HIVE-18755, add catalogs
+-- new catalogs table
+CREATE TABLE `CTLGS` (
+    `CTLG_ID` BIGINT PRIMARY KEY,
+    `NAME` VARCHAR(256),
+    `DESC` VARCHAR(4000),
+    `LOCATION_URI` VARCHAR(4000) NOT NULL,
+    UNIQUE KEY `UNIQUE_CATALOG` (`NAME`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Insert a default value.  The location is TBD.  Hive will fix this when it starts
+INSERT INTO `CTLGS` VALUES (1, 'hive', 'Default catalog for Hive', 'TBD');
+
+-- Drop the unique index on DBS
+ALTER TABLE `DBS` DROP KEY `UNIQUE_DATABASE`;
+
+-- Add the new column to the DBS table, can't put in the not null constraint yet
+ALTER TABLE `DBS` ADD COLUMN `CTLG_NAME` VARCHAR(256);
+
+-- Update all records in the DBS table to point to the Hive catalog
+UPDATE `DBS` 
+  SET `CTLG_NAME` = 'hive';
+
+-- Add the not null constraint
+ALTER TABLE `DBS` CHANGE COLUMN `CTLG_NAME` `CTLG_NAME` varchar(256) NOT NULL;
+
+-- Put back the unique index 
+ALTER TABLE `DBS` ADD UNIQUE KEY `UNIQUE_DATABASE` (`NAME`, `CTLG_NAME`);
+
+-- Add the foreign key
+ALTER TABLE `DBS` ADD CONSTRAINT `CTLG_FK1` FOREIGN KEY (`CTLG_NAME`) REFERENCES `CTLGS` (`NAME`);
+
+-- Add columns to table stats and part stats
+ALTER TABLE `TAB_COL_STATS` ADD COLUMN `CAT_NAME` varchar(256);
+ALTER TABLE `PART_COL_STATS` ADD COLUMN `CAT_NAME` varchar(256);
+
+-- Set the existing column names to Hive
+UPDATE `TAB_COL_STATS`
+  SET `CAT_NAME` = 'hive';
+UPDATE `PART_COL_STATS`
+  SET `CAT_NAME` = 'hive';
+
+-- Add the not null constraint
+ALTER TABLE `TAB_COL_STATS` CHANGE COLUMN `CAT_NAME` `CAT_NAME` varchar(256) NOT NULL;
+ALTER TABLE `PART_COL_STATS` CHANGE COLUMN `CAT_NAME` `CAT_NAME` varchar(256) NOT NULL;
+
+-- Rebuild the index for Part col stats.  No such index for table stats, which seems weird
+DROP INDEX `PCS_STATS_IDX` ON `PART_COL_STATS`;
+CREATE INDEX `PCS_STATS_IDX` ON `PART_COL_STATS` (`CAT_NAME`, `DB_NAME`, `TABLE_NAME`, `COLUMN_NAME`, `PARTITION_NAME`);
+
+-- Add column to partition events
+ALTER TABLE `PARTITION_EVENTS` ADD COLUMN `CAT_NAME` varchar(256);
+
+-- Add column to notification log
+ALTER TABLE `NOTIFICATION_LOG` ADD COLUMN `CAT_NAME` varchar(256);
+
+INSERT INTO `SEQUENCE_TABLE` (`SEQUENCE_NAME`, `NEXT_VAL`) SELECT * from (select 'org.apache.hadoop.hive.metastore.model.MNotificationLog' as `SEQUENCE_NAME`, 1 as `NEXT_VAL`) a WHERE (SELECT COUNT(*) FROM `SEQUENCE_TABLE` where SEQUENCE_NAME = 'org.apache.hadoop.hive.metastore.model.MNotificationLog') = 0;
+
+-- HIVE-18747
+CREATE TABLE MIN_HISTORY_LEVEL (
+  MHL_TXNID bigint NOT NULL,
+  MHL_MIN_OPEN_TXNID bigint NOT NULL,
+  PRIMARY KEY(MHL_TXNID)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE INDEX MIN_HISTORY_LEVEL_IDX ON MIN_HISTORY_LEVEL (MHL_MIN_OPEN_TXNID);
+
 -- These lines need to be last.  Insert any changes above.
 UPDATE VERSION SET SCHEMA_VERSION='3.0.0', VERSION_COMMENT='Hive release version 3.0.0' where VER_ID=1;
 SELECT 'Finished upgrading MetaStore schema from 2.3.0 to 3.0.0' AS ' ';
+

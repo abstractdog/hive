@@ -32,14 +32,10 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
     DecimalColumnStatsDataInspector newData =
         (DecimalColumnStatsDataInspector) newColStats.getStatsData().getDecimalStats();
 
-    Decimal lowValue = (newData.getLowValue() == null || (aggregateData.getLowValue() != null
-        && (aggregateData.getLowValue().compareTo(newData.getLowValue()) > 0)))
-          ? aggregateData.getLowValue() : newData.getLowValue();
+    Decimal lowValue = compareValues(newData.getLowValue(), aggregateData.getLowValue());
     aggregateData.setLowValue(lowValue);
 
-    Decimal highValue = (newData.getHighValue() == null || (aggregateData.getHighValue() != null
-        && (aggregateData.getHighValue().compareTo(newData.getHighValue()) > 0)))
-          ? aggregateData.getHighValue() : newData.getHighValue();
+    Decimal highValue = compareValues(newData.getHighValue(), aggregateData.getHighValue());
     aggregateData.setHighValue(highValue);
    
     aggregateData.setNumNulls(aggregateData.getNumNulls() + newData.getNumNulls());
@@ -61,5 +57,17 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
           + aggregateData.getNumDVs() + " and " + newData.getNumDVs() + " to be " + ndv);
       aggregateData.setNumDVs(ndv);
     }
+  }
+  
+  protected Decimal compareValues(Decimal oldValue, Decimal newValue){
+    if (oldValue == null && newValue == null){
+      return null;
+    }
+    
+    if (oldValue != null && newValue != null) {
+      return oldValue.compareTo(newValue) > 0 ? oldValue : newValue;
+    }
+    
+    return oldValue == null ? newValue : oldValue;
   }
 }

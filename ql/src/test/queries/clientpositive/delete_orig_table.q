@@ -1,4 +1,8 @@
 --! qt:dataset:alltypesorc
+-- Suppress vectorization due to known bug.  See HIVE-19109.
+set hive.vectorized.execution.enabled=false;
+set hive.test.vectorized.execution.enabled.override=disable;
+
 set hive.support.concurrency=true;
 set hive.txn.manager=org.apache.hadoop.hive.ql.lockmgr.DbTxnManager;
 set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat;

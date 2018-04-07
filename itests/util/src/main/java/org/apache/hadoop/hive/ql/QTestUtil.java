@@ -67,6 +67,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import junit.framework.TestSuite;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
@@ -87,12 +88,11 @@ import org.apache.hadoop.hive.common.io.SortAndDigestPrintStream;
 import org.apache.hadoop.hive.common.io.SortPrintStream;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
-import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hive.druid.MiniDruidCluster;
 import org.apache.hadoop.hive.llap.LlapItUtils;
 import org.apache.hadoop.hive.llap.daemon.MiniLlapCluster;
 import org.apache.hadoop.hive.llap.io.api.LlapProxy;
 import org.apache.hadoop.hive.metastore.Warehouse;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.cache.results.QueryResultsCache;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
@@ -123,20 +123,23 @@ import org.apache.hadoop.hive.ql.dataset.Dataset;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hive.common.util.StreamPrinter;
+import org.apache.hive.druid.MiniDruidCluster;
+import org.apache.hive.kafka.SingleNodeKafkaCluster;
 import org.apache.logging.log4j.util.Strings;
 import org.apache.tools.ant.BuildException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
-import org.junit.Assert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_DATABASE_NAME;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
-import junit.framework.TestSuite;
+import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * QTestUtil.
@@ -204,6 +207,7 @@ public class QTestUtil {
   private final String cleanupScript;
 
   private MiniDruidCluster druidCluster;
+  private SingleNodeKafkaCluster kafkaCluster;
 
   public interface SuiteAddTestFunctor {
     public void addTestToSuite(TestSuite suite, Object setup, String tName);
@@ -397,6 +401,8 @@ public class QTestUtil {
       conf.set("hive.druid.storage.storageDirectory", druidDeepStorage.toUri().getPath());
       conf.set("hive.druid.metadata.db.type", "derby");
       conf.set("hive.druid.metadata.uri", druidCluster.getMetadataURI());
+      conf.set("hive.druid.coordinator.address.default", druidCluster.getCoordinatorURI());
+      conf.set("hive.druid.overlord.address.default", druidCluster.getOverlordURI());
       final Path scratchDir = fs
               .makeQualified(new Path(System.getProperty("test.tmp.dir"), "druidStagingDir"));
       fs.mkdirs(scratchDir);
@@ -496,7 +502,9 @@ public class QTestUtil {
     llap(CoreClusterType.TEZ, FsType.hdfs),
     llap_local(CoreClusterType.TEZ, FsType.local),
     none(CoreClusterType.MR, FsType.local),
-    druid(CoreClusterType.TEZ, FsType.hdfs);
+    druid(CoreClusterType.TEZ, FsType.hdfs),
+    druidKafka(CoreClusterType.TEZ, FsType.hdfs),
+    kafka(CoreClusterType.TEZ, FsType.hdfs);
 
 
     private final CoreClusterType coreClusterType;
@@ -532,8 +540,11 @@ public class QTestUtil {
       } else if (type.equals("llap_local")) {
         return llap_local;
       } else if (type.equals("druid")) {
-      return druid;
-      } else {
+        return druid;
+      } else if (type.equals("druid-kafka")) {
+        return druidKafka;
+      }
+      else {
         return none;
       }
     }
@@ -625,11 +636,7 @@ public class QTestUtil {
       ? new File(new File(dataDir).getAbsolutePath() + "/datasets")
       : new File(conf.get("test.data.set.files"));
 
-    // Use the current directory if it is not specified
-    String scriptsDir = conf.get("test.data.scripts");
-    if (scriptsDir == null) {
-      scriptsDir = new File(".").getAbsolutePath() + "/data/scripts";
-    }
+    String scriptsDir = getScriptsDir();
 
     this.initScript = scriptsDir + File.separator + initScript;
     this.cleanupScript = scriptsDir + File.separator + cleanupScript;
@@ -637,6 +644,14 @@ public class QTestUtil {
     overWrite = "true".equalsIgnoreCase(System.getProperty("test.output.overwrite"));
 
     init();
+  }
+  private String getScriptsDir() {
+    // Use the current directory if it is not specified
+    String scriptsDir = conf.get("test.data.scripts");
+    if (scriptsDir == null) {
+      scriptsDir = new File(".").getAbsolutePath() + "/data/scripts";
+    }
+    return scriptsDir;
   }
 
   private void setupFileSystem(HadoopShims shims) throws IOException {
@@ -673,7 +688,7 @@ public class QTestUtil {
 
     String uriString = fs.getUri().toString();
 
-    if (clusterType == MiniClusterType.druid) {
+    if (clusterType == MiniClusterType.druid || clusterType == MiniClusterType.druidKafka) {
       final String tempDir = System.getProperty("test.tmp.dir");
       druidCluster = new MiniDruidCluster("mini-druid",
           getLogDirectory(),
@@ -692,6 +707,19 @@ public class QTestUtil {
       conf.set("hive.druid.working.directory", scratchDir.toUri().getPath());
       druidCluster.init(conf);
       druidCluster.start();
+    }
+
+    if(clusterType == MiniClusterType.kafka || clusterType == MiniClusterType.druidKafka) {
+      kafkaCluster = new SingleNodeKafkaCluster("kafka",
+          getLogDirectory() + "/kafka-cluster",
+          setup.zkPort
+      );
+      kafkaCluster.init(conf);
+      kafkaCluster.start();
+      kafkaCluster.createTopicWithData(
+          "test-topic",
+          new File(getScriptsDir(), "kafka_init_data.json")
+      );
     }
 
     if (clusterType.getCoreClusterType() == CoreClusterType.TEZ) {
@@ -729,6 +757,11 @@ public class QTestUtil {
     if (druidCluster != null) {
       druidCluster.stop();
       druidCluster = null;
+    }
+
+    if (kafkaCluster != null) {
+      kafkaCluster.stop();
+      kafkaCluster = null;
     }
     setup.tearDown();
     if (sparkSession != null) {

@@ -32,10 +32,10 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
     DecimalColumnStatsDataInspector newData =
         (DecimalColumnStatsDataInspector) newColStats.getStatsData().getDecimalStats();
 
-    Decimal lowValue = compareValues(newData.getLowValue(), aggregateData.getLowValue());
+    Decimal lowValue = compareValues(aggregateData.getLowValue(), newData.getLowValue());
     aggregateData.setLowValue(lowValue);
 
-    Decimal highValue = compareValues(newData.getHighValue(), aggregateData.getHighValue());
+    Decimal highValue = compareValues(aggregateData.getHighValue(), newData.getHighValue());
     aggregateData.setHighValue(highValue);
    
     aggregateData.setNumNulls(aggregateData.getNumNulls() + newData.getNumNulls());

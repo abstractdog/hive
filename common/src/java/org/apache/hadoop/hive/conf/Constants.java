@@ -38,6 +38,8 @@ public class Constants {
   public static final String DRUID_TIMESTAMP_GRANULARITY_COL_NAME = "__time_granularity";
   public static final String DRUID_SHARD_KEY_COL_NAME = "__druid_extra_partition_key";
   public static final String DRUID_QUERY_JSON = "druid.query.json";
+  public static final String DRUID_QUERY_FIELD_NAMES = "druid.fieldNames";
+  public static final String DRUID_QUERY_FIELD_TYPES = "druid.fieldTypes";
   public static final String DRUID_QUERY_TYPE = "druid.query.type";
   public static final String DRUID_QUERY_FETCH = "druid.query.fetch";
   public static final String DRUID_SEGMENT_DIRECTORY = "druid.storage.storageDirectory";
@@ -45,6 +47,13 @@ public class Constants {
 
   public static final String DRUID_SEGMENT_VERSION = "druid.segment.version";
   public static final String DRUID_JOB_WORKING_DIRECTORY = "druid.job.workingDirectory";
+
+  public static final String KAFKA_TOPIC = "kafka.topic";
+  public static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
+
+  public static final String DRUID_KAFKA_INGESTION_PROPERTY_PREFIX = "druid.kafka.ingestion.";
+  /* Kafka Ingestion state - valid values - START/STOP/RESET */
+  public static final String DRUID_KAFKA_INGESTION = "druid.kafka.ingestion";
 
   public static final String HIVE_SERVER2_JOB_CREDSTORE_PASSWORD_ENVVAR = "HIVE_JOB_CREDSTORE_PASSWORD";
   public static final String HADOOP_CREDENTIAL_PASSWORD_ENVVAR = "HADOOP_CREDSTORE_PASSWORD";

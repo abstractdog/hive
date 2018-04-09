@@ -59,7 +59,9 @@ import org.apache.hadoop.hive.conf.HiveConfUtil;
 import org.apache.hadoop.hive.metastore.ObjectStore;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.cache.CachedStore;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.MapRedStats;
+import org.apache.hadoop.hive.ql.exec.FunctionInfo;
 import org.apache.hadoop.hive.ql.exec.Registry;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkSession;
@@ -273,6 +275,12 @@ public class SessionState {
   private final Set<String> preReloadableAuxJars = new HashSet<String>();
 
   private final Registry registry;
+
+  /**
+   * Used to cache functions in use for a query, during query planning
+   * and is later used for function usage authorization.
+   */
+  private final Map<String, FunctionInfo> currentFunctionsInUse = new HashMap<>();
 
   /**
    * CURRENT_TIMESTAMP value for query
@@ -1739,14 +1747,16 @@ public class SessionState {
 
   private void unCacheDataNucleusClassLoaders() {
     try {
-      boolean isLocalMetastore =
-          HiveConfUtil.isEmbeddedMetaStore(sessionConf.getVar(HiveConf.ConfVars.METASTOREURIS));
+      boolean isLocalMetastore = HiveConfUtil.isEmbeddedMetaStore(
+          MetastoreConf.getVar(sessionConf, MetastoreConf.ConfVars.THRIFT_URIS));
       if (isLocalMetastore) {
 
-        String rawStoreImpl = sessionConf.getVar(ConfVars.METASTORE_RAW_STORE_IMPL);
+        String rawStoreImpl =
+            MetastoreConf.getVar(sessionConf, MetastoreConf.ConfVars.RAW_STORE_IMPL);
         String realStoreImpl;
         if (rawStoreImpl.equals(CachedStore.class.getName())) {
-          realStoreImpl = sessionConf.getVar(ConfVars.METASTORE_CACHED_RAW_STORE_IMPL);
+          realStoreImpl =
+              MetastoreConf.getVar(sessionConf, MetastoreConf.ConfVars.CACHED_RAW_STORE_IMPL);
         } else {
           realStoreImpl = rawStoreImpl;
         }
@@ -1990,6 +2000,11 @@ public class SessionState {
   public void addCleanupItem(Closeable item) {
     cleanupItems.add(item);
   }
+
+  public Map<String, FunctionInfo> getCurrentFunctionsInUse() {
+    return currentFunctionsInUse;
+  }
+
 }
 
 class ResourceMaps {

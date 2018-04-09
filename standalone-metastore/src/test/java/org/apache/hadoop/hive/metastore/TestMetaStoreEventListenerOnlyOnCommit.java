@@ -39,7 +39,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -63,8 +62,7 @@ public class TestMetaStoreEventListenerOnlyOnCommit {
     MetastoreConf.setLongVar(conf, ConfVars.THRIFT_CONNECTION_RETRIES, 3);
     MetastoreConf.setBoolVar(conf, ConfVars.HIVE_SUPPORT_CONCURRENCY, false);
     MetaStoreTestUtils.setConfForStandloneMode(conf);
-    int port = MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
-    MetastoreConf.setVar(conf, ConfVars.THRIFT_URIS, "thrift://localhost:" + port);
+    MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
     msc = new HiveMetaStoreClient(conf);
 
     DummyListener.notifyList.clear();
@@ -79,8 +77,8 @@ public class TestMetaStoreEventListenerOnlyOnCommit {
     String dbName = "tmpDb";
     Database db = new DatabaseBuilder()
         .setName(dbName)
-        .build();
-    msc.createDatabase(db);
+        .setCatalogName(Warehouse.DEFAULT_CATALOG_NAME)
+        .create(msc, conf);
 
     listSize += 1;
     notifyList = DummyListener.notifyList;
@@ -89,22 +87,20 @@ public class TestMetaStoreEventListenerOnlyOnCommit {
 
     String tableName = "unittest_TestMetaStoreEventListenerOnlyOnCommit";
     Table table = new TableBuilder()
-        .setDbName(db)
+        .inDb(db)
         .setTableName(tableName)
         .addCol("id", "int")
         .addPartCol("ds", "string")
-        .build();
-    msc.createTable(table);
+        .create(msc, conf);
     listSize += 1;
     notifyList = DummyListener.notifyList;
     assertEquals(notifyList.size(), listSize);
     assertTrue(DummyListener.getLastEvent().getStatus());
 
-    Partition part = new PartitionBuilder()
-        .fromTable(table)
+    new PartitionBuilder()
+        .inTable(table)
         .addValue("foo1")
-        .build();
-    msc.add_partition(part);
+        .addToTable(msc, conf);
     listSize += 1;
     notifyList = DummyListener.notifyList;
     assertEquals(notifyList.size(), listSize);
@@ -112,11 +108,10 @@ public class TestMetaStoreEventListenerOnlyOnCommit {
 
     DummyRawStoreControlledCommit.setCommitSucceed(false);
 
-    part = new PartitionBuilder()
-        .fromTable(table)
+    new PartitionBuilder()
+        .inTable(table)
         .addValue("foo2")
-        .build();
-    msc.add_partition(part);
+        .addToTable(msc, conf);
     listSize += 1;
     notifyList = DummyListener.notifyList;
     assertEquals(notifyList.size(), listSize);

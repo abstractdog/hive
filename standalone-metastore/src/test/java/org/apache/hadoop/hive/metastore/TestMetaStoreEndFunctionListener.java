@@ -57,8 +57,7 @@ public class TestMetaStoreEndFunctionListener {
     MetastoreConf.setLongVar(conf, ConfVars.THRIFT_CONNECTION_RETRIES, 3);
     MetastoreConf.setBoolVar(conf, ConfVars.HIVE_SUPPORT_CONCURRENCY, false);
     MetaStoreTestUtils.setConfForStandloneMode(conf);
-    int port = MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
-    MetastoreConf.setVar(conf, ConfVars.THRIFT_URIS, "thrift://localhost:" + port);
+    MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
     msc = new HiveMetaStoreClient(conf);
   }
 
@@ -73,8 +72,8 @@ public class TestMetaStoreEndFunctionListener {
 
     Database db = new DatabaseBuilder()
         .setName(dbName)
-        .build();
-    msc.createDatabase(db);
+        .setCatalogName(Warehouse.DEFAULT_CATALOG_NAME)
+        .create(msc, conf);
 
     try {
       msc.getDatabase("UnknownDB");
@@ -92,13 +91,12 @@ public class TestMetaStoreEndFunctionListener {
     assertEquals(context.getInputTableName(), null);
 
     String unknownTable = "UnknownTable";
-    Table table = new TableBuilder()
-        .setDbName(db)
+    new TableBuilder()
+        .inDb(db)
         .setTableName(tblName)
         .addCol("a", "string")
         .addPartCol("b", "string")
-        .build();
-    msc.createTable(table);
+        .create(msc, conf);
     try {
       msc.getTable(dbName, unknownTable);
     } catch (Exception e1) {

@@ -110,6 +110,7 @@ TOK_UNIQUE;
 TOK_PRIMARY_KEY;
 TOK_FOREIGN_KEY;
 TOK_DEFAULT_VALUE;
+TOK_CHECK_CONSTRAINT;
 TOK_VALIDATE;
 TOK_NOVALIDATE;
 TOK_RELY;
@@ -186,6 +187,7 @@ TOK_ALTERTABLE_CLUSTER_SORT;
 TOK_ALTERTABLE_COMPACT;
 TOK_ALTERTABLE_DROPCONSTRAINT;
 TOK_ALTERTABLE_ADDCONSTRAINT;
+TOK_ALTERTABLE_UPDATECOLUMNS;
 TOK_MSCK;
 TOK_SHOWDATABASES;
 TOK_SHOWTABLES;
@@ -598,6 +600,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
     xlateMap.put("KW_PLANS", "PLANS");
     xlateMap.put("KW_ACTIVATE", "ACTIVATE");
     xlateMap.put("KW_DEFAULT", "DEFAULT");
+    xlateMap.put("KW_CHECK", "CHECK");
     xlateMap.put("KW_POOL", "POOL");
     xlateMap.put("KW_MOVE", "MOVE");
     xlateMap.put("KW_DO", "DO");
@@ -1149,6 +1152,7 @@ alterTblPartitionStatementSuffix
   | alterStatementSuffixUpdateStats
   | alterStatementSuffixRenameCol
   | alterStatementSuffixAddCol
+  | alterStatementSuffixUpdateColumns
   ;
 
 alterStatementPartitionKeyType
@@ -1227,6 +1231,13 @@ alterStatementSuffixAddConstraint
    -> {fk != null}? ^(TOK_ALTERTABLE_ADDCONSTRAINT alterForeignKeyWithName)
    ->               ^(TOK_ALTERTABLE_ADDCONSTRAINT alterConstraintWithName)
    ;
+
+alterStatementSuffixUpdateColumns
+@init { pushMsg("update columns statement", state); }
+@after { popMsg(state); }
+    : KW_UPDATE KW_COLUMNS restrictOrCascade?
+    -> ^(TOK_ALTERTABLE_UPDATECOLUMNS restrictOrCascade?)
+    ;
 
 alterStatementSuffixDropConstraint
 @init { pushMsg("drop constraint statement", state); }
@@ -2411,6 +2422,7 @@ alterColConstraint
 columnConstraintType
     : KW_NOT KW_NULL       ->    TOK_NOT_NULL
     | KW_DEFAULT defaultVal->    ^(TOK_DEFAULT_VALUE defaultVal)
+    | KW_CHECK expression  ->    ^(TOK_CHECK_CONSTRAINT expression)
     | tableConstraintType
     ;
 

@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.metastore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.annotation.MetastoreCheckinTest;
 import org.apache.hadoop.hive.metastore.api.Database;
+import org.apache.hadoop.hive.metastore.client.builder.DatabaseBuilder;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf.ConfVars;
 import org.apache.hadoop.hive.metastore.security.HadoopThriftAuthBridge;
@@ -50,18 +51,16 @@ public class TestRemoteHiveMetaStoreIpAddress {
 
     System.setProperty(ConfVars.EVENT_LISTENERS.toString(), IpAddressListener.class.getName());
     MetaStoreTestUtils.setConfForStandloneMode(conf);
-    int port = MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
-    LOG.debug("Starting MetaStore Server on port " + port);
-    MetastoreConf.setVar(conf, ConfVars.THRIFT_URIS, "thrift://localhost:" + port);
+    MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
 
     msc = new HiveMetaStoreClient(conf);
   }
 
   @Test
   public void testIpAddress() throws Exception {
-    Database db = new Database();
-    db.setName("testIpAddressIp");
-    msc.createDatabase(db);
+    Database db = new DatabaseBuilder()
+        .setName("testIpAddressIp")
+        .create(msc, conf);
     msc.dropDatabase(db.getName());
   }
 }

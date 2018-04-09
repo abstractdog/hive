@@ -70,6 +70,9 @@ import org.apache.hadoop.hive.metastore.events.DropFunctionEvent;
 import org.apache.hadoop.hive.metastore.events.DropPartitionEvent;
 import org.apache.hadoop.hive.metastore.events.DropTableEvent;
 import org.apache.hadoop.hive.metastore.events.InsertEvent;
+import org.apache.hadoop.hive.metastore.events.OpenTxnEvent;
+import org.apache.hadoop.hive.metastore.events.CommitTxnEvent;
+import org.apache.hadoop.hive.metastore.events.AbortTxnEvent;
 import org.apache.hadoop.hive.metastore.events.ListenerEvent;
 import org.apache.hadoop.hive.metastore.messaging.AddPartitionMessage;
 import org.apache.hadoop.hive.metastore.messaging.AlterPartitionMessage;
@@ -116,7 +119,7 @@ public class TestDbNotificationListener {
   private long firstEventId;
 
   private static List<String> testsToSkipForReplV1BackwardCompatTesting =
-      new ArrayList<>(Arrays.asList("cleanupNotifs", "sqlTempTable"));
+      new ArrayList<>(Arrays.asList("cleanupNotifs", "cleanupNotificationWithError", "sqlTempTable"));
   // Make sure we skip backward-compat checking for those tests that don't generate events
 
   private static ReplicationV1CompatRule bcompat = null;
@@ -217,6 +220,18 @@ public class TestDbNotificationListener {
     @Override
     public void onInsert(InsertEvent insertEvent) throws MetaException {
       pushEventId(EventType.INSERT, insertEvent);
+    }
+
+    public void onOpenTxn(OpenTxnEvent openTxnEvent) throws MetaException {
+      pushEventId(EventType.OPEN_TXN, openTxnEvent);
+    }
+
+    public void onCommitTxn(CommitTxnEvent commitTxnEvent) throws MetaException {
+      pushEventId(EventType.COMMIT_TXN, commitTxnEvent);
+    }
+
+    public void onAbortTxn(AbortTxnEvent abortTxnEvent) throws MetaException {
+      pushEventId(EventType.ABORT_TXN, abortTxnEvent);
     }
   }
 
@@ -1353,6 +1368,34 @@ public class TestDbNotificationListener {
     LOG.info("Pulling events again after cleanup");
     NotificationEventResponse rsp2 = msClient.getNextNotification(firstEventId, 0, null);
     LOG.info("second trigger done");
+    assertEquals(0, rsp2.getEventsSize());
+  }
+
+  @Test
+  public void cleanupNotificationWithError() throws Exception {
+    Database db = new Database("cleanup1", "no description", "file:/tmp", emptyParameters);
+    msClient.createDatabase(db);
+    msClient.dropDatabase("cleanup1");
+
+    LOG.info("Pulling events immediately after createDatabase/dropDatabase");
+    NotificationEventResponse rsp = msClient.getNextNotification(firstEventId, 0, null);
+    assertEquals(2, rsp.getEventsSize());
+    //this simulates that cleaning thread will error out while cleaning the notifications
+    DummyRawStoreFailEvent.setEventSucceed(false);
+    // sleep for expiry time, and then fetch again
+    // sleep twice the TTL interval - things should have been cleaned by then.
+    Thread.sleep(EVENTS_TTL * 2 * 1000);
+
+    LOG.info("Pulling events again after failing to cleanup");
+    NotificationEventResponse rsp2 = msClient.getNextNotification(firstEventId, 0, null);
+    LOG.info("second trigger done");
+    assertEquals(2, rsp2.getEventsSize());
+    DummyRawStoreFailEvent.setEventSucceed(true);
+    Thread.sleep(EVENTS_TTL * 2 * 1000);
+
+    LOG.info("Pulling events again after cleanup");
+    rsp2 = msClient.getNextNotification(firstEventId, 0, null);
+    LOG.info("third trigger done");
     assertEquals(0, rsp2.getEventsSize());
   }
 }

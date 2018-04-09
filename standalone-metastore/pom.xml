@@ -73,7 +73,7 @@
     <guava.version>19.0</guava.version>
     <hadoop.version>3.0.0-beta1</hadoop.version>
     <hikaricp.version>2.6.1</hikaricp.version>
-    <jackson.new.version>2.6.5</jackson.new.version>
+    <jackson.version>2.9.4</jackson.version>
     <javolution.version>5.5.1</javolution.version>
     <junit.version>4.11</junit.version>
     <libfb303.version>0.9.3</libfb303.version>
@@ -95,7 +95,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>${jackson.new.version}</version>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>com.github.joshelser</groupId>
@@ -583,7 +583,7 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <protocVersion>2.5.0</protocVersion>
+              <protocArtifact>com.google.protobuf:protoc:2.5.0</protocArtifact>
               <addSources>none</addSources>
               <inputDirectories>
                 <include>${basedir}/src/main/protobuf/org/apache/hadoop/hive/metastore</include>
@@ -680,6 +680,9 @@
         <version>0.10</version>
         <configuration>
           <excludes>
+	    <exclude>binary-package-licenses/**</exclude>
+            <exclude>DEV-README</exclude>
+	    <exclude>**/src/main/sql/**</exclude>
             <exclude>**/README.md</exclude>
             <exclude>**/*.iml</exclude>
             <exclude>**/*.txt</exclude>

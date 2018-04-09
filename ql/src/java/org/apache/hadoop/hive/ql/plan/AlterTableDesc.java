@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.plan;
 import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
+import org.apache.hadoop.hive.metastore.api.SQLCheckConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
@@ -64,7 +65,8 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     DROPPARTITION("drop partition"), RENAMEPARTITION("rename partition"), ADDSKEWEDBY("add skew column"),
     ALTERSKEWEDLOCATION("alter skew location"), ALTERBUCKETNUM("alter bucket number"),
     ALTERPARTITION("alter partition"), COMPACT("compact"),
-    TRUNCATE("truncate"), MERGEFILES("merge files"), DROPCONSTRAINT("drop constraint"), ADDCONSTRAINT("add constraint");
+    TRUNCATE("truncate"), MERGEFILES("merge files"), DROPCONSTRAINT("drop constraint"), ADDCONSTRAINT("add constraint"),
+    UPDATECOLUMNS("update columns");
     ;
 
     private final String name;
@@ -72,7 +74,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     public String getName() { return name; }
 
     public static final List<AlterTableTypes> nonNativeTableAllowedTypes = 
-        ImmutableList.of(ADDPROPS, DROPPROPS); 
+        ImmutableList.of(ADDPROPS, DROPPROPS, ADDCOLS);
   }
 
   public static enum ProtectModeType {
@@ -133,6 +135,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   List<SQLUniqueConstraint> uniqueConstraintCols;
   List<SQLNotNullConstraint> notNullConstraintCols;
   List<SQLDefaultConstraint> defaultConstraintsCols;
+  List<SQLCheckConstraint> checkConstraintsCols;
   ReplicationSpec replicationSpec;
 
   public AlterTableDesc() {
@@ -168,7 +171,8 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
       String oldColName, String newColName, String newType, String newComment,
       boolean first, String afterCol, boolean isCascade, List<SQLPrimaryKey> primaryKeyCols,
       List<SQLForeignKey> foreignKeyCols, List<SQLUniqueConstraint> uniqueConstraintCols,
-      List<SQLNotNullConstraint> notNullConstraintCols, List<SQLDefaultConstraint> defaultConstraints) {
+      List<SQLNotNullConstraint> notNullConstraintCols, List<SQLDefaultConstraint> defaultConstraints,
+                        List<SQLCheckConstraint> checkConstraints) {
     super();
     oldName = tblName;
     this.partSpec = partSpec;
@@ -185,6 +189,7 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
     this.uniqueConstraintCols = uniqueConstraintCols;
     this.notNullConstraintCols = notNullConstraintCols;
     this.defaultConstraintsCols = defaultConstraints;
+    this.checkConstraintsCols = checkConstraints;
   }
 
   /**
@@ -345,13 +350,14 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   public AlterTableDesc(String tableName, List<SQLPrimaryKey> primaryKeyCols,
       List<SQLForeignKey> foreignKeyCols, List<SQLUniqueConstraint> uniqueConstraintCols,
       List<SQLNotNullConstraint> notNullConstraintCols, List<SQLDefaultConstraint> defaultConstraints,
-                        ReplicationSpec replicationSpec) {
+                        List<SQLCheckConstraint> checkConstraints, ReplicationSpec replicationSpec) {
     this.oldName = tableName;
     this.primaryKeyCols = primaryKeyCols;
     this.foreignKeyCols = foreignKeyCols;
     this.uniqueConstraintCols = uniqueConstraintCols;
     this.notNullConstraintCols = notNullConstraintCols;
     this.defaultConstraintsCols = defaultConstraints;
+    this.checkConstraintsCols = checkConstraints;
     this.replicationSpec = replicationSpec;
     op = AlterTableTypes.ADDCONSTRAINT;
   }
@@ -550,6 +556,11 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
   public List<SQLDefaultConstraint> getDefaultConstraintCols() {
     return defaultConstraintsCols;
   }
+
+  /**
+   * @return the check constraint cols
+   */
+  public List<SQLCheckConstraint> getCheckConstraintCols() { return checkConstraintsCols; }
 
   /**
    * @return the drop constraint name of the table
@@ -892,6 +903,13 @@ public class AlterTableDesc extends DDLDesc implements Serializable {
    */
   public boolean getIsCascade() {
     return isCascade;
+  }
+
+  /**
+   * @param cascade the isCascade to set
+   */
+  public void setIsCascade(boolean isCascade) {
+    this.isCascade = isCascade;
   }
 
   public static boolean doesAlterTableTypeSupportPartialPartitionSpec(AlterTableTypes type) {

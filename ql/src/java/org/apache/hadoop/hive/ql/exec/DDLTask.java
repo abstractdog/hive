@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.exec;
 
 import static org.apache.commons.lang.StringUtils.join;
+import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_CATALOG_NAME;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_STORAGE;
 
 import java.io.BufferedWriter;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.DefaultHiveMetaHook;
 import org.apache.hadoop.hive.metastore.HiveMetaHook;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreUtils;
+import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.PartitionDropOptions;
 import org.apache.hadoop.hive.metastore.StatObjectConverter;
 import org.apache.hadoop.hive.metastore.TableType;
@@ -92,6 +94,7 @@ import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.RolePrincipalGrant;
+import org.apache.hadoop.hive.metastore.api.SQLCheckConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
@@ -111,6 +114,7 @@ import org.apache.hadoop.hive.metastore.api.WMNullableResourcePlan;
 import org.apache.hadoop.hive.metastore.api.WMResourcePlanStatus;
 import org.apache.hadoop.hive.metastore.api.WMTrigger;
 import org.apache.hadoop.hive.metastore.api.WMValidateResourcePlanResponse;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.txn.TxnStore;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
@@ -143,6 +147,7 @@ import org.apache.hadoop.hive.ql.lockmgr.HiveLockMode;
 import org.apache.hadoop.hive.ql.lockmgr.HiveLockObject;
 import org.apache.hadoop.hive.ql.lockmgr.HiveLockObject.HiveLockObjectData;
 import org.apache.hadoop.hive.ql.lockmgr.HiveTxnManager;
+import org.apache.hadoop.hive.ql.metadata.CheckConstraint;
 import org.apache.hadoop.hive.ql.metadata.CheckResult;
 import org.apache.hadoop.hive.ql.metadata.DefaultConstraint;
 import org.apache.hadoop.hive.ql.metadata.ForeignKeyInfo;
@@ -3620,12 +3625,14 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       UniqueConstraint ukInfo = null;
       NotNullConstraint nnInfo = null;
       DefaultConstraint dInfo = null;
+      CheckConstraint cInfo = null;
       if (descTbl.isExt() || descTbl.isFormatted()) {
         pkInfo = db.getPrimaryKeys(tbl.getDbName(), tbl.getTableName());
         fkInfo = db.getForeignKeys(tbl.getDbName(), tbl.getTableName());
         ukInfo = db.getUniqueConstraints(tbl.getDbName(), tbl.getTableName());
         nnInfo = db.getNotNullConstraints(tbl.getDbName(), tbl.getTableName());
         dInfo = db.getDefaultConstraints(tbl.getDbName(), tbl.getTableName());
+        cInfo = db.getCheckConstraints(tbl.getDbName(), tbl.getTableName());
       }
       fixDecimalColumnTypeName(cols);
       // In case the query is served by HiveServer2, don't pad it with spaces,
@@ -3634,7 +3641,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       formatter.describeTable(outStream, colPath, tableName, tbl, part,
           cols, descTbl.isFormatted(), descTbl.isExt(),
           isOutputPadded, colStats,
-          pkInfo, fkInfo, ukInfo, nnInfo, dInfo);
+          pkInfo, fkInfo, ukInfo, nnInfo, dInfo, cInfo);
 
       LOG.debug("DDLTask: written data for {}", tableName);
 
@@ -3818,10 +3825,12 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
 
     try {
+      EnvironmentContext environmentContext = alterTbl.getEnvironmentContext();
+      environmentContext.putToProperties(HiveMetaHook.ALTER_TABLE_OPERATION_TYPE, alterTbl.getOp().name());
       if (allPartitions == null) {
-        db.alterTable(alterTbl.getOldName(), tbl, alterTbl.getIsCascade(), alterTbl.getEnvironmentContext());
+        db.alterTable(alterTbl.getOldName(), tbl, alterTbl.getIsCascade(), environmentContext);
       } else {
-        db.alterPartitions(Warehouse.getQualifiedName(tbl.getTTable()), allPartitions, alterTbl.getEnvironmentContext());
+        db.alterPartitions(Warehouse.getQualifiedName(tbl.getTTable()), allPartitions, environmentContext);
       }
       // Add constraints if necessary
       addConstraints(db, alterTbl);
@@ -4215,6 +4224,8 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         }
         tbl.setNumBuckets(alterTbl.getNumberBuckets());
       }
+    } else if (alterTbl.getOp() == AlterTableTypes.UPDATECOLUMNS) {
+      updateColumns(tbl, part);
     } else {
       throw new HiveException(ErrorMsg.UNSUPPORTED_ALTER_TBL_OP, alterTbl.getOp().toString());
     }
@@ -4432,9 +4443,36 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           && !alterTbl.getDefaultConstraintCols().isEmpty()) {
         db.addDefaultConstraint(alterTbl.getDefaultConstraintCols());
       }
+      if (alterTbl.getCheckConstraintCols() != null
+          && !alterTbl.getCheckConstraintCols().isEmpty()) {
+        db.addCheckConstraint(alterTbl.getCheckConstraintCols());
+      }
     } catch (NoSuchObjectException e) {
       throw new HiveException(e);
     }
+    return 0;
+  }
+
+  private int updateColumns(Table tbl, Partition part)
+          throws HiveException {
+    String serializationLib = tbl.getSd().getSerdeInfo().getSerializationLib();
+    if (MetastoreConf.getStringCollection(conf,
+            MetastoreConf.ConfVars.SERDES_USING_METASTORE_FOR_SCHEMA).contains(serializationLib)) {
+      throw new HiveException(tbl.getTableName() + " has serde " + serializationLib + " for which schema " +
+              "is already handled by HMS.");
+    }
+    Deserializer deserializer = tbl.getDeserializer(true);
+    try {
+      LOG.info("Updating metastore columns for table: {}", tbl.getTableName());
+      final List<FieldSchema> fields = HiveMetaStoreUtils.getFieldsFromDeserializer(
+              tbl.getTableName(), deserializer);
+      StorageDescriptor sd = retrieveStorageDescriptor(tbl, part);
+      sd.setCols(fields);
+    } catch (org.apache.hadoop.hive.serde2.SerDeException | MetaException e) {
+      LOG.error("alter table update columns: {}", e);
+      throw new HiveException(e, ErrorMsg.GENERIC_ERROR);
+    }
+
     return 0;
   }
 
@@ -4755,6 +4793,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     List<SQLUniqueConstraint> uniqueConstraints = crtTbl.getUniqueConstraints();
     List<SQLNotNullConstraint> notNullConstraints = crtTbl.getNotNullConstraints();
     List<SQLDefaultConstraint> defaultConstraints = crtTbl.getDefaultConstraints();
+    List<SQLCheckConstraint> checkConstraints = crtTbl.getCheckConstraints();
     LOG.debug("creating table {} on {}",tbl.getFullyQualifiedName(),tbl.getDataLocation());
 
     if (crtTbl.getReplicationSpec().isInReplicationScope() && (!crtTbl.getReplaceMode())){
@@ -4784,9 +4823,10 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           (primaryKeys != null && primaryKeys.size() > 0) ||
           (uniqueConstraints != null && uniqueConstraints.size() > 0) ||
           (notNullConstraints != null && notNullConstraints.size() > 0) ||
+          (checkConstraints!= null && checkConstraints.size() > 0) ||
           defaultConstraints != null && defaultConstraints.size() > 0) {
         db.createTable(tbl, crtTbl.getIfNotExists(), primaryKeys, foreignKeys,
-                uniqueConstraints, notNullConstraints, defaultConstraints);
+                uniqueConstraints, notNullConstraints, defaultConstraints, checkConstraints);
       } else {
         db.createTable(tbl, crtTbl.getIfNotExists());
       }
@@ -5015,8 +5055,8 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       // We set the signature for the view if it is a materialized view
       if (tbl.isMaterializedView()) {
         CreationMetadata cm =
-            new CreationMetadata(tbl.getDbName(), tbl.getTableName(),
-                ImmutableSet.copyOf(crtView.getTablesUsed()));
+            new CreationMetadata(MetaStoreUtils.getDefaultCatalog(conf), tbl.getDbName(),
+                tbl.getTableName(), ImmutableSet.copyOf(crtView.getTablesUsed()));
         cm.setValidTxnList(conf.get(ValidTxnList.VALID_TXNS_KEY));
         tbl.getTTable().setCreationMetadata(cm);
       }

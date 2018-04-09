@@ -34,6 +34,7 @@ import org.apache.hadoop.hive.ql.exec.repl.bootstrap.ReplLoadWork;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.parse.repl.DumpType;
 import org.apache.hadoop.hive.ql.parse.repl.ReplLogger;
 import org.apache.hadoop.hive.ql.parse.repl.dump.Utils;
 import org.apache.hadoop.hive.ql.parse.repl.load.DumpMetaData;
@@ -82,8 +83,9 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
   // of any other queries running in the session
   private HiveConf conf;
 
-  // This will be set to true only if repl-status is fired with "WITH" keyword
-  private boolean needNewdb;
+  // By default, this will be same as that of super class BaseSemanticAnalyzer. But need to obtain again
+  // if the Hive configs are received from WITH clause in REPL LOAD or REPL STATUS commands.
+  private Hive db;
 
   private static String testInjectDumpDir = null; // unit tests can overwrite this to affect default dump behaviour
   private static final String dumpSchema = "dump_dir,last_repl_id#string,string";
@@ -93,6 +95,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   ReplicationSemanticAnalyzer(QueryState queryState) throws SemanticException {
     super(queryState);
+    this.db = super.db;
     this.conf = new HiveConf(super.conf);
   }
 
@@ -226,12 +229,73 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
             for (Map.Entry<String, String> config : replConfigs.entrySet()) {
               conf.set(config.getKey(), config.getValue());
             }
+
+            // As hive conf is changed, need to get the Hive DB again with it.
+            try {
+              db = Hive.get(conf);
+            } catch (HiveException e) {
+              throw new SemanticException(e);
+            }
           }
           break;
         default:
           throw new SemanticException("Unrecognized token in REPL LOAD statement");
       }
     }
+  }
+
+  private boolean shouldReplayEvent(FileStatus dir, DumpType dumpType) throws SemanticException {
+    // This functions filters out all the events which are already replayed. This can be done only
+    // for transaction related events as for other kind of events we can not gurantee that the last
+    // repl id stored in the database/table is valid.
+    if ((dumpType != DumpType.EVENT_ABORT_TXN) &&
+            (dumpType != DumpType.EVENT_OPEN_TXN) &&
+            (dumpType != DumpType.EVENT_COMMIT_TXN)) {
+      return true;
+    }
+
+    // if database itself is null then we can not filter out anything.
+    if (dbNameOrPattern == null || dbNameOrPattern.isEmpty()) {
+      return true;
+    } else if ((tblNameOrPattern == null) || (tblNameOrPattern.isEmpty())) {
+      Database database;
+      try {
+        database = Hive.get().getDatabase(dbNameOrPattern);
+      } catch (HiveException e) {
+        LOG.error("failed to get the database " + dbNameOrPattern);
+        throw new SemanticException(e);
+      }
+      String replLastId;
+      Map<String, String> params = database.getParameters();
+      if (params != null && (params.containsKey(ReplicationSpec.KEY.CURR_STATE_ID.toString()))) {
+        replLastId = params.get(ReplicationSpec.KEY.CURR_STATE_ID.toString());
+        if (Long.parseLong(replLastId) >= Long.parseLong(dir.getPath().getName())) {
+          LOG.debug("Event " + dumpType + " with replId " + Long.parseLong(dir.getPath().getName())
+                  + " is already replayed. LastReplId - " +  Long.parseLong(replLastId));
+          return false;
+        }
+      }
+    } else {
+      Table tbl;
+      try {
+        tbl = Hive.get().getTable(dbNameOrPattern, tblNameOrPattern);
+      } catch (HiveException e) {
+        LOG.error("failed to get the table " + dbNameOrPattern + "." + tblNameOrPattern);
+        throw new SemanticException(e);
+      }
+      if (tbl != null) {
+        Map<String, String> params = tbl.getParameters();
+        if (params != null && (params.containsKey(ReplicationSpec.KEY.CURR_STATE_ID.toString()))) {
+          String replLastId = params.get(ReplicationSpec.KEY.CURR_STATE_ID.toString());
+          if (Long.parseLong(replLastId) >= Long.parseLong(dir.getPath().getName())) {
+            LOG.debug("Event " + dumpType + " with replId " + Long.parseLong(dir.getPath().getName())
+                    + " is already replayed. LastReplId - " +  Long.parseLong(replLastId));
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   /*
@@ -371,6 +435,13 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
                 loadPath.toString(), dirsInLoadPath.length);
 
         for (FileStatus dir : dirsInLoadPath){
+          String locn = dir.getPath().toUri().toString();
+          DumpMetaData eventDmd = new DumpMetaData(new Path(locn), conf);
+
+          if (!shouldReplayEvent(dir, eventDmd.getDumpType())) {
+            continue;
+          }
+
           LOG.debug("Loading event from {} to {}.{}", dir.getPath().toUri(), dbNameOrPattern, tblNameOrPattern);
 
           // event loads will behave similar to table loads, with one crucial difference
@@ -392,8 +463,6 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
           // Once this entire chain is generated, we add evTaskRoot to rootTasks, so as to execute the
           // entire chain
 
-          String locn = dir.getPath().toUri().toString();
-          DumpMetaData eventDmd = new DumpMetaData(new Path(locn), conf);
           MessageHandler.Context context = new MessageHandler.Context(dbNameOrPattern,
                                                           tblNameOrPattern, locn, taskChainTail,
                                                           eventDmd, conf, db, ctx, LOG);
@@ -420,7 +489,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
           Map<String, String> dbProps = new HashMap<>();
           dbProps.put(ReplicationSpec.KEY.CURR_STATE_ID.toString(), String.valueOf(dmd.getEventTo()));
           ReplStateLogWork replStateLogWork = new ReplStateLogWork(replLogger, dbProps);
-          Task<? extends Serializable> barrierTask = TaskFactory.get(replStateLogWork);
+          Task<? extends Serializable> barrierTask = TaskFactory.get(replStateLogWork, conf);
           taskChainTail.addDependentTask(barrierTask);
           LOG.debug("Added {}:{} as a precursor of barrier task {}:{}",
                   taskChainTail.getClass(), taskChainTail.getId(),
@@ -560,7 +629,6 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
 
   // REPL STATUS
   private void initReplStatus(ASTNode ast) throws SemanticException{
-    needNewdb = false;
     dbNameOrPattern = PlanUtils.stripQuotes(ast.getChild(0).getText());
     int numChildren = ast.getChildCount();
     for (int i = 1; i < numChildren; i++) {
@@ -576,8 +644,14 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
           for (Map.Entry<String, String> config : replConfigs.entrySet()) {
             conf.set(config.getKey(), config.getValue());
           }
+
+          // As hive conf is changed, need to get the Hive DB again with it.
+          try {
+            db = Hive.get(conf);
+          } catch (HiveException e) {
+            throw new SemanticException(e);
+          }
         }
-        needNewdb = true;
         break;
       default:
         throw new SemanticException("Unrecognized token in REPL STATUS statement");
@@ -592,16 +666,9 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
     String replLastId = null;
 
     try {
-      Hive newDb;
-      if (needNewdb) {
-        newDb = Hive.get(conf, false);
-      } else {
-        newDb = db;
-      }
-
       if (tblNameOrPattern != null) {
         // Checking for status of table
-        Table tbl = newDb.getTable(dbNameOrPattern, tblNameOrPattern);
+        Table tbl = db.getTable(dbNameOrPattern, tblNameOrPattern);
         if (tbl != null) {
           inputs.add(new ReadEntity(tbl));
           Map<String, String> params = tbl.getParameters();
@@ -611,8 +678,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
         }
       } else {
         // Checking for status of a db
-
-        Database database = newDb.getDatabase(dbNameOrPattern);
+        Database database = db.getDatabase(dbNameOrPattern);
         if (database != null) {
           inputs.add(new ReadEntity(database));
           Map<String, String> params = database.getParameters();

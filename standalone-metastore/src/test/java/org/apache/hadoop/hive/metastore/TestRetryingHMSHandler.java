@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.annotation.MetastoreCheckinTest;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.client.builder.DatabaseBuilder;
 import org.apache.hadoop.hive.metastore.client.builder.TableBuilder;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf.ConfVars;
@@ -48,12 +49,11 @@ public class TestRetryingHMSHandler {
         AlternateFailurePreListener.class.getName());
     conf = MetastoreConf.newMetastoreConf();
     MetastoreConf.setLongVar(conf, ConfVars.THRIFT_CONNECTION_RETRIES, 3);
-    MetastoreConf.setLongVar(conf, ConfVars.HMSHANDLERATTEMPTS, 2);
-    MetastoreConf.setTimeVar(conf, ConfVars.HMSHANDLERINTERVAL, 0, TimeUnit.MILLISECONDS);
-    MetastoreConf.setBoolVar(conf, ConfVars.HMSHANDLERFORCERELOADCONF, false);
+    MetastoreConf.setLongVar(conf, ConfVars.HMS_HANDLER_ATTEMPTS, 2);
+    MetastoreConf.setTimeVar(conf, ConfVars.HMS_HANDLER_INTERVAL, 0, TimeUnit.MILLISECONDS);
+    MetastoreConf.setBoolVar(conf, ConfVars.HMS_HANDLER_FORCE_RELOAD_CONF, false);
     MetaStoreTestUtils.setConfForStandloneMode(conf);
-    int port = MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
-    MetastoreConf.setVar(conf, ConfVars.THRIFT_URIS, "thrift://localhost:" + port);
+    MetaStoreTestUtils.startMetaStoreWithRetry(HadoopThriftAuthBridge.getBridge(), conf);
     msc = new HiveMetaStoreClient(conf);
   }
 
@@ -64,19 +64,17 @@ public class TestRetryingHMSHandler {
     String dbName = "hive4159";
     String tblName = "tmptbl";
 
-    Database db = new Database();
-    db.setName(dbName);
-    msc.createDatabase(db);
+    new DatabaseBuilder()
+        .setName(dbName)
+        .create(msc, conf);
 
     Assert.assertEquals(2, AlternateFailurePreListener.getCallCount());
 
-    Table tbl = new TableBuilder()
+    new TableBuilder()
         .setDbName(dbName)
         .setTableName(tblName)
         .addCol("c1", ColumnType.STRING_TYPE_NAME)
-        .build();
-
-    msc.createTable(tbl);
+        .create(msc, conf);
 
     Assert.assertEquals(4, AlternateFailurePreListener.getCallCount());
   }

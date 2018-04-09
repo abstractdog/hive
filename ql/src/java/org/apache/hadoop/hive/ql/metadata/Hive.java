@@ -25,7 +25,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import static org.apache.hadoop.hive.conf.Constants.MATERIALIZED_VIEW_REWRITING_TIME_WINDOW;
+
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_STORAGE;
+import static org.apache.hadoop.hive.metastore.utils.MetaStoreUtils.getDefaultCatalog;
 import static org.apache.hadoop.hive.serde.serdeConstants.SERIALIZATION_FORMAT;
 import static org.apache.hadoop.hive.serde.serdeConstants.STRING_TYPE_NAME;
 
@@ -58,6 +60,8 @@ import java.util.stream.Collectors;
 import javax.jdo.JDODataStoreException;
 
 import org.apache.calcite.plan.RelOptMaterialization;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Project;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
@@ -94,6 +98,7 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.AggrStats;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
+import org.apache.hadoop.hive.metastore.api.CheckConstraintsRequest;
 import org.apache.hadoop.hive.metastore.api.CmRecycleRequest;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.CompactionResponse;
@@ -126,6 +131,7 @@ import org.apache.hadoop.hive.metastore.api.PrincipalType;
 import org.apache.hadoop.hive.metastore.api.PrivilegeBag;
 import org.apache.hadoop.hive.metastore.api.Role;
 import org.apache.hadoop.hive.metastore.api.RolePrincipalGrant;
+import org.apache.hadoop.hive.metastore.api.SQLCheckConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLDefaultConstraint;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLNotNullConstraint;
@@ -327,7 +333,7 @@ public class Hive {
       boolean doRegisterAllFns) throws HiveException {
     Hive db = hiveDB.get();
     if (db == null || !db.isCurrentUserOwner() || needsRefresh
-        || (c != null && db.metaStoreClient != null && !isCompatible(db, c, isFastCheck))) {
+        || (c != null && !isCompatible(db, c, isFastCheck))) {
       db = create(c, false, db, doRegisterAllFns);
     }
     if (c != null) {
@@ -360,10 +366,14 @@ public class Hive {
   }
 
   private static boolean isCompatible(Hive db, HiveConf c, boolean isFastCheck) {
-    return isFastCheck
-        ? db.metaStoreClient.isSameConfObj(c) : db.metaStoreClient.isCompatibleWith(c);
+    if (isFastCheck) {
+      return (db.metaStoreClient == null || db.metaStoreClient.isSameConfObj(c))
+          && (db.syncMetaStoreClient == null || db.syncMetaStoreClient.isSameConfObj(c));
+    } else {
+      return (db.metaStoreClient == null || db.metaStoreClient.isCompatibleWith(c))
+          && (db.syncMetaStoreClient == null || db.syncMetaStoreClient.isCompatibleWith(c));
+    }
   }
-
 
   public static Hive get() throws HiveException {
     return get(true);
@@ -851,6 +861,8 @@ public class Hive {
    *          NOT NULL constraints associated with the table
    * @param defaultConstraints
    *          DEFAULT constraints associated with the table
+   * @param checkConstraints
+   *          CHECK constraints associated with the table
    * @throws HiveException
    */
   public void createTable(Table tbl, boolean ifNotExists,
@@ -858,7 +870,8 @@ public class Hive {
     List<SQLForeignKey> foreignKeys,
     List<SQLUniqueConstraint> uniqueConstraints,
     List<SQLNotNullConstraint> notNullConstraints,
-    List<SQLDefaultConstraint> defaultConstraints)
+    List<SQLDefaultConstraint> defaultConstraints,
+    List<SQLCheckConstraint> checkConstraints)
             throws HiveException {
     try {
       if (tbl.getDbName() == null || "".equals(tbl.getDbName().trim())) {
@@ -885,11 +898,12 @@ public class Hive {
         }
       }
       if (primaryKeys == null && foreignKeys == null
-              && uniqueConstraints == null && notNullConstraints == null && defaultConstraints == null) {
+              && uniqueConstraints == null && notNullConstraints == null && defaultConstraints == null
+          && checkConstraints == null) {
         getMSC().createTable(tTbl);
       } else {
         getMSC().createTableWithConstraints(tTbl, primaryKeys, foreignKeys,
-            uniqueConstraints, notNullConstraints, defaultConstraints);
+            uniqueConstraints, notNullConstraints, defaultConstraints, checkConstraints);
       }
 
     } catch (AlreadyExistsException e) {
@@ -902,7 +916,8 @@ public class Hive {
   }
 
   public void createTable(Table tbl, boolean ifNotExists) throws HiveException {
-   createTable(tbl, ifNotExists, null, null, null, null, null);
+   createTable(tbl, ifNotExists, null, null, null, null,
+               null, null);
  }
 
   public static List<FieldSchema> getFieldsFromDeserializerForMsStorage(
@@ -1358,8 +1373,14 @@ public class Hive {
               HiveMaterializedViewsRegistry.get().getRewritingMaterializedView(
                   dbName, materializedViewTable.getTableName());
           if (materialization != null) {
-            RelOptHiveTable cachedMaterializedViewTable =
-                (RelOptHiveTable) materialization.tableRel.getTable();
+            RelNode viewScan = materialization.tableRel;
+            RelOptHiveTable cachedMaterializedViewTable;
+            if (viewScan instanceof Project) {
+              // There is a Project on top (due to nullability)
+              cachedMaterializedViewTable = (RelOptHiveTable) viewScan.getInput(0).getTable();
+            } else {
+              cachedMaterializedViewTable = (RelOptHiveTable) viewScan.getTable();
+            }
             if (cachedMaterializedViewTable.getHiveTableMD().getCreateTime() ==
                 materializedViewTable.getCreateTime()) {
               // It is in the cache and up to date
@@ -4476,7 +4497,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
 
   public List<SQLUniqueConstraint> getUniqueConstraintList(String dbName, String tblName) throws HiveException, NoSuchObjectException {
     try {
-      return getMSC().getUniqueConstraints(new UniqueConstraintsRequest(dbName, tblName));
+      return getMSC().getUniqueConstraints(new UniqueConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
     } catch (NoSuchObjectException e) {
       throw e;
     } catch (Exception e) {
@@ -4486,7 +4507,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
 
   public List<SQLNotNullConstraint> getNotNullConstraintList(String dbName, String tblName) throws HiveException, NoSuchObjectException {
     try {
-      return getMSC().getNotNullConstraints(new NotNullConstraintsRequest(dbName, tblName));
+      return getMSC().getNotNullConstraints(new NotNullConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
     } catch (NoSuchObjectException e) {
       throw e;
     } catch (Exception e) {
@@ -4496,7 +4517,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
 
   public List<SQLDefaultConstraint> getDefaultConstraintList(String dbName, String tblName) throws HiveException, NoSuchObjectException {
     try {
-      return getMSC().getDefaultConstraints(new DefaultConstraintsRequest(dbName, tblName));
+      return getMSC().getDefaultConstraints(new DefaultConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
     } catch (NoSuchObjectException e) {
       throw e;
     } catch (Exception e) {
@@ -4504,7 +4525,16 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
-  /**
+  public List<SQLCheckConstraint> getCheckConstraintList(String dbName, String tblName) throws HiveException, NoSuchObjectException {
+    try {
+      return getMSC().getCheckConstraints(new CheckConstraintsRequest(getDefaultCatalog(conf),
+          dbName, tblName));
+    } catch (NoSuchObjectException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
 
   /**
    * Get all primary key columns associated with the table.
@@ -4612,7 +4642,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       throws HiveException {
     try {
       List<SQLUniqueConstraint> uniqueConstraints = getMSC().getUniqueConstraints(
-              new UniqueConstraintsRequest(dbName, tblName));
+              new UniqueConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
       if (onlyReliable && uniqueConstraints != null && !uniqueConstraints.isEmpty()) {
         uniqueConstraints = uniqueConstraints.stream()
           .filter(uk -> uk.isRely_cstr())
@@ -4660,7 +4690,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       throws HiveException {
     try {
       List<SQLNotNullConstraint> notNullConstraints = getMSC().getNotNullConstraints(
-              new NotNullConstraintsRequest(dbName, tblName));
+              new NotNullConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
       if (notNullConstraints != null && !notNullConstraints.isEmpty()) {
         notNullConstraints = notNullConstraints.stream()
           .filter(nnc -> nnc.isEnable_cstr())
@@ -4673,6 +4703,29 @@ private void constructOneLBLocationMap(FileStatus fSta,
   }
 
   /**
+   * Get CHECK constraints associated with the table that are enabled
+   *
+   * @param dbName Database Name
+   * @param tblName Table Name
+   * @return CHECK constraints associated with the table.
+   * @throws HiveException
+   */
+  public CheckConstraint getEnabledCheckConstraints(String dbName, String tblName)
+      throws HiveException {
+    try {
+      List<SQLCheckConstraint> checkConstraints = getMSC().getCheckConstraints(
+          new CheckConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
+      if (checkConstraints != null && !checkConstraints.isEmpty()) {
+        checkConstraints = checkConstraints.stream()
+            .filter(nnc -> nnc.isEnable_cstr())
+            .collect(Collectors.toList());
+      }
+      return new CheckConstraint(checkConstraints);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+  /**
    * Get Default constraints associated with the table that are enabled
    *
    * @param dbName Database Name
@@ -4684,7 +4737,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       throws HiveException {
     try {
       List<SQLDefaultConstraint> defaultConstraints = getMSC().getDefaultConstraints(
-          new DefaultConstraintsRequest(dbName, tblName));
+          new DefaultConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
       if (defaultConstraints != null && !defaultConstraints.isEmpty()) {
         defaultConstraints = defaultConstraints.stream()
             .filter(nnc -> nnc.isEnable_cstr())
@@ -4700,7 +4753,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       throws HiveException {
     try {
       List<SQLNotNullConstraint> notNullConstraints = getMSC().getNotNullConstraints(
-              new NotNullConstraintsRequest(dbName, tblName));
+              new NotNullConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
       if (onlyReliable && notNullConstraints != null && !notNullConstraints.isEmpty()) {
         notNullConstraints = notNullConstraints.stream()
           .filter(nnc -> nnc.isRely_cstr())
@@ -4716,12 +4769,27 @@ private void constructOneLBLocationMap(FileStatus fSta,
       throws HiveException {
     try {
       List<SQLDefaultConstraint> defaultConstraints = getMSC().getDefaultConstraints(
-          new DefaultConstraintsRequest(dbName, tblName));
+          new DefaultConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
       if (defaultConstraints != null && !defaultConstraints.isEmpty()) {
         defaultConstraints = defaultConstraints.stream()
             .collect(Collectors.toList());
       }
       return new DefaultConstraint(defaultConstraints, tblName, dbName);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public CheckConstraint getCheckConstraints(String dbName, String tblName)
+      throws HiveException {
+    try {
+      List<SQLCheckConstraint> checkConstraints = getMSC().getCheckConstraints(
+          new CheckConstraintsRequest(getDefaultCatalog(conf), dbName, tblName));
+      if (checkConstraints != null && !checkConstraints.isEmpty()) {
+        checkConstraints = checkConstraints.stream()
+            .collect(Collectors.toList());
+      }
+      return new CheckConstraint(checkConstraints);
     } catch (Exception e) {
       throw new HiveException(e);
     }
@@ -4767,6 +4835,15 @@ private void constructOneLBLocationMap(FileStatus fSta,
       throws HiveException, NoSuchObjectException {
     try {
       getMSC().addDefaultConstraint(defaultConstraints);
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
+  }
+
+  public void addCheckConstraint(List<SQLCheckConstraint> checkConstraints)
+      throws HiveException, NoSuchObjectException {
+    try {
+      getMSC().addCheckConstraint(checkConstraints);
     } catch (Exception e) {
       throw new HiveException(e);
     }

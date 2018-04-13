@@ -33,7 +33,9 @@ import org.junit.experimental.categories.Category;
 @Category(MetastoreUnitTest.class)
 public class DecimalColumnStatsMergerTest {
 
-  private static final Decimal DECIMAL_VALUE = getDecimal(1, 0);
+  private static final Decimal DECIMAL_3 = getDecimal(3, 0);
+  private static final Decimal DECIMAL_5 = getDecimal(5, 0);
+  private static final Decimal DECIMAL_20 = getDecimal(2, 1);
 
   private DecimalColumnStatsMerger merger = new DecimalColumnStatsMerger();
 
@@ -54,26 +56,26 @@ public class DecimalColumnStatsMergerTest {
     createData(oldObj, null, null);
 
     ColumnStatisticsObj newObj = new ColumnStatisticsObj();
-    createData(newObj, DECIMAL_VALUE, null);
+    createData(newObj, DECIMAL_3, null);
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(getInt(DECIMAL_VALUE),
-        getInt(oldObj.getStatsData().getDecimalStats().getLowValue()));
+    Assert.assertEquals(DECIMAL_3,
+        oldObj.getStatsData().getDecimalStats().getLowValue());
   }
 
   @Test
   public void testMergeNonNullAndNullLowerValuesNewIsNull() {
     ColumnStatisticsObj oldObj = new ColumnStatisticsObj();
-    createData(oldObj, DECIMAL_VALUE, null);
+    createData(oldObj, DECIMAL_3, null);
 
     ColumnStatisticsObj newObj = new ColumnStatisticsObj();
     createData(newObj, null, null);
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(getInt(DECIMAL_VALUE),
-        getInt(oldObj.getStatsData().getDecimalStats().getLowValue()));
+    Assert.assertEquals(DECIMAL_3,
+        oldObj.getStatsData().getDecimalStats().getLowValue());
   }
 
   @Test
@@ -82,30 +84,135 @@ public class DecimalColumnStatsMergerTest {
     createData(oldObj, null, null);
 
     ColumnStatisticsObj newObj = new ColumnStatisticsObj();
-    createData(newObj, null, DECIMAL_VALUE);
+    createData(newObj, null, DECIMAL_3);
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(getInt(DECIMAL_VALUE),
-        getInt(oldObj.getStatsData().getDecimalStats().getHighValue()));
+    Assert.assertEquals(DECIMAL_3,
+        oldObj.getStatsData().getDecimalStats().getHighValue());
   }
 
   @Test
   public void testMergeNonNullAndNullHigherValuesNewIsNull() {
     ColumnStatisticsObj oldObj = new ColumnStatisticsObj();
-    createData(oldObj, null, DECIMAL_VALUE);
+    createData(oldObj, null, DECIMAL_3);
 
     ColumnStatisticsObj newObj = new ColumnStatisticsObj();
     createData(newObj, null, null);
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(getInt(DECIMAL_VALUE),
-        getInt(oldObj.getStatsData().getDecimalStats().getHighValue()));
+    Assert.assertEquals(DECIMAL_3,
+        oldObj.getStatsData().getDecimalStats().getHighValue());
   }
 
-  private int getInt(Decimal decimal) {
-    return ByteBuffer.wrap(decimal.getUnscaled()).getInt();
+  @Test
+  public void testMergeLowValuesFirstWins() {
+    ColumnStatisticsObj oldObj = new ColumnStatisticsObj();
+    createData(oldObj, DECIMAL_3, null);
+
+    ColumnStatisticsObj newObj = new ColumnStatisticsObj();
+    createData(newObj, DECIMAL_5, null);
+
+    merger.merge(oldObj, newObj);
+
+    Assert.assertEquals(DECIMAL_3,
+        oldObj.getStatsData().getDecimalStats().getLowValue());
+  }
+
+  @Test
+  public void testMergeLowValuesSecondWins() {
+    ColumnStatisticsObj oldObj = new ColumnStatisticsObj();
+    createData(oldObj, DECIMAL_5, null);
+
+    ColumnStatisticsObj newObj = new ColumnStatisticsObj();
+    createData(newObj, DECIMAL_3, null);
+
+    merger.merge(oldObj, newObj);
+
+    Assert.assertEquals(DECIMAL_3,
+        oldObj.getStatsData().getDecimalStats().getLowValue());
+  }
+
+  @Test
+  public void testMergeHighValuesFirstWins() {
+    ColumnStatisticsObj oldObj = new ColumnStatisticsObj();
+    createData(oldObj, null, DECIMAL_5);
+
+    ColumnStatisticsObj newObj = new ColumnStatisticsObj();
+    createData(newObj, null, DECIMAL_3);
+
+    merger.merge(oldObj, newObj);
+
+    Assert.assertEquals(DECIMAL_5,
+        oldObj.getStatsData().getDecimalStats().getHighValue());
+  }
+
+  @Test
+  public void testMergeHighValuesSecondWins() {
+    ColumnStatisticsObj oldObj = new ColumnStatisticsObj();
+    createData(oldObj, null, DECIMAL_3);
+
+    ColumnStatisticsObj newObj = new ColumnStatisticsObj();
+    createData(newObj, null, DECIMAL_5);
+
+    merger.merge(oldObj, newObj);
+
+    Assert.assertEquals(DECIMAL_5,
+        oldObj.getStatsData().getDecimalStats().getHighValue());
+  }
+
+  @Test
+  public void testDecimalCompareEqual() {
+    Assert.assertTrue(DECIMAL_3.equals(DECIMAL_3));
+  }
+
+  @Test
+  public void testDecimalCompareDoesntEqual() {
+    Assert.assertTrue(!DECIMAL_3.equals(DECIMAL_5));
+  }
+
+  @Test
+  public void testCompareSimple() {
+    Assert.assertEquals(DECIMAL_5, merger.compareValues(DECIMAL_3, DECIMAL_5));
+  }
+
+  @Test
+  public void testCompareSimpleFlipped() {
+    Assert.assertEquals(DECIMAL_5, merger.compareValues(DECIMAL_5, DECIMAL_3));
+  }
+
+  @Test
+  public void testCompareSimpleReversed() {
+    Assert.assertEquals(DECIMAL_3, merger.compareValues(DECIMAL_3, DECIMAL_5, false));
+  }
+
+  @Test
+  public void testCompareSimpleFlippedReversed() {
+    Assert.assertEquals(DECIMAL_3, merger.compareValues(DECIMAL_5, DECIMAL_3, false));
+  }
+
+  /*
+   * it should pass, but fails because of HIVE-19131, get back to this later!
+  @Test
+  public void testCompareUnscaledValue() {
+    Assert.assertEquals(DECIMAL_20, merger.compareValues(DECIMAL_3, DECIMAL_20));
+  }
+  */
+
+  @Test
+  public void testCompareNulls() {
+    Assert.assertNull(merger.compareValues(null, null));
+  }
+
+  @Test
+  public void testCompareFirstNull() {
+    Assert.assertEquals(DECIMAL_3, merger.compareValues(DECIMAL_3, null));
+  }
+
+  @Test
+  public void testCompareSecondNull() {
+    Assert.assertEquals(DECIMAL_3, merger.compareValues(null, DECIMAL_3));
   }
 
   private static Decimal getDecimal(int number, int scale) {

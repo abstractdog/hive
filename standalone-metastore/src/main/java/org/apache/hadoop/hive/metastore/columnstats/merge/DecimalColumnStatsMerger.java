@@ -32,10 +32,10 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
     DecimalColumnStatsDataInspector newData =
         (DecimalColumnStatsDataInspector) newColStats.getStatsData().getDecimalStats();
 
-    Decimal lowValue = compareValues(aggregateData.getLowValue(), newData.getLowValue());
+    Decimal lowValue = compareValues(aggregateData.getLowValue(), newData.getLowValue(), false);
     aggregateData.setLowValue(lowValue);
 
-    Decimal highValue = compareValues(aggregateData.getHighValue(), newData.getHighValue());
+    Decimal highValue = compareValues(aggregateData.getHighValue(), newData.getHighValue(), true);
     aggregateData.setHighValue(highValue);
    
     aggregateData.setNumNulls(aggregateData.getNumNulls() + newData.getNumNulls());
@@ -58,16 +58,21 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
       aggregateData.setNumDVs(ndv);
     }
   }
-  
-  protected Decimal compareValues(Decimal oldValue, Decimal newValue){
-    if (oldValue == null && newValue == null){
+
+  Decimal compareValues(Decimal firstValue, Decimal secondValue){
+    return compareValues(firstValue, secondValue, true);
+  }
+
+  Decimal compareValues(Decimal firstValue, Decimal secondValue, boolean isNaturalOrder){
+    if (firstValue == null && secondValue == null){
       return null;
     }
     
-    if (oldValue != null && newValue != null) {
-      return oldValue.compareTo(newValue) > 0 ? oldValue : newValue;
+    if (firstValue != null && secondValue != null) {
+      return firstValue.compareTo(secondValue) > 0 ? (isNaturalOrder ? firstValue : secondValue)
+        : (isNaturalOrder ? secondValue : firstValue);
     }
     
-    return oldValue == null ? newValue : oldValue;
+    return firstValue == null ? secondValue : firstValue;
   }
 }

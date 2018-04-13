@@ -32,14 +32,14 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
     DecimalColumnStatsDataInspector newData =
         (DecimalColumnStatsDataInspector) newColStats.getStatsData().getDecimalStats();
 
-    Decimal lowValue = compareValues(aggregateData.getLowValue(), newData.getLowValue(), false);
+    Decimal lowValue = getMin(aggregateData.getLowValue(), newData.getLowValue());
     aggregateData.setLowValue(lowValue);
 
-    Decimal highValue = compareValues(aggregateData.getHighValue(), newData.getHighValue(), true);
+    Decimal highValue = getMax(aggregateData.getHighValue(), newData.getHighValue());
     aggregateData.setHighValue(highValue);
-   
+
     aggregateData.setNumNulls(aggregateData.getNumNulls() + newData.getNumNulls());
-    
+
     if (aggregateData.getNdvEstimator() == null || newData.getNdvEstimator() == null) {
       aggregateData.setNumDVs(Math.max(aggregateData.getNumDVs(), newData.getNumDVs()));
     } else {
@@ -59,20 +59,27 @@ public class DecimalColumnStatsMerger extends ColumnStatsMerger {
     }
   }
 
-  Decimal compareValues(Decimal firstValue, Decimal secondValue){
-    return compareValues(firstValue, secondValue, true);
-  }
-
-  Decimal compareValues(Decimal firstValue, Decimal secondValue, boolean isNaturalOrder){
-    if (firstValue == null && secondValue == null){
+  Decimal getMax(Decimal firstValue, Decimal secondValue) {
+    if (firstValue == null && secondValue == null) {
       return null;
     }
-    
+
     if (firstValue != null && secondValue != null) {
-      return firstValue.compareTo(secondValue) > 0 ? (isNaturalOrder ? firstValue : secondValue)
-        : (isNaturalOrder ? secondValue : firstValue);
+      return firstValue.compareTo(secondValue) > 0 ? firstValue : secondValue;
     }
-    
+
+    return firstValue == null ? secondValue : firstValue;
+  }
+
+  Decimal getMin(Decimal firstValue, Decimal secondValue) {
+    if (firstValue == null && secondValue == null) {
+      return null;
+    }
+
+    if (firstValue != null && secondValue != null) {
+      return firstValue.compareTo(secondValue) > 0 ? secondValue : firstValue;
+    }
+
     return firstValue == null ? secondValue : firstValue;
   }
 }

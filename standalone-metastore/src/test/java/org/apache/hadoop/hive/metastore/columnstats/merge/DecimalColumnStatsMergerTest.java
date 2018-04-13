@@ -60,8 +60,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_3,
-        oldObj.getStatsData().getDecimalStats().getLowValue());
+    Assert.assertEquals(DECIMAL_3, oldObj.getStatsData().getDecimalStats().getLowValue());
   }
 
   @Test
@@ -74,8 +73,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_3,
-        oldObj.getStatsData().getDecimalStats().getLowValue());
+    Assert.assertEquals(DECIMAL_3, oldObj.getStatsData().getDecimalStats().getLowValue());
   }
 
   @Test
@@ -88,8 +86,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_3,
-        oldObj.getStatsData().getDecimalStats().getHighValue());
+    Assert.assertEquals(DECIMAL_3, oldObj.getStatsData().getDecimalStats().getHighValue());
   }
 
   @Test
@@ -102,8 +99,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_3,
-        oldObj.getStatsData().getDecimalStats().getHighValue());
+    Assert.assertEquals(DECIMAL_3, oldObj.getStatsData().getDecimalStats().getHighValue());
   }
 
   @Test
@@ -116,8 +112,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_3,
-        oldObj.getStatsData().getDecimalStats().getLowValue());
+    Assert.assertEquals(DECIMAL_3, oldObj.getStatsData().getDecimalStats().getLowValue());
   }
 
   @Test
@@ -130,8 +125,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_3,
-        oldObj.getStatsData().getDecimalStats().getLowValue());
+    Assert.assertEquals(DECIMAL_3, oldObj.getStatsData().getDecimalStats().getLowValue());
   }
 
   @Test
@@ -144,8 +138,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_5,
-        oldObj.getStatsData().getDecimalStats().getHighValue());
+    Assert.assertEquals(DECIMAL_5, oldObj.getStatsData().getDecimalStats().getHighValue());
   }
 
   @Test
@@ -158,8 +151,7 @@ public class DecimalColumnStatsMergerTest {
 
     merger.merge(oldObj, newObj);
 
-    Assert.assertEquals(DECIMAL_5,
-        oldObj.getStatsData().getDecimalStats().getHighValue());
+    Assert.assertEquals(DECIMAL_5, oldObj.getStatsData().getDecimalStats().getHighValue());
   }
 
   @Test
@@ -174,45 +166,59 @@ public class DecimalColumnStatsMergerTest {
 
   @Test
   public void testCompareSimple() {
-    Assert.assertEquals(DECIMAL_5, merger.compareValues(DECIMAL_3, DECIMAL_5));
+    Assert.assertEquals(DECIMAL_5, merger.getMax(DECIMAL_3, DECIMAL_5));
   }
 
   @Test
   public void testCompareSimpleFlipped() {
-    Assert.assertEquals(DECIMAL_5, merger.compareValues(DECIMAL_5, DECIMAL_3));
+    Assert.assertEquals(DECIMAL_5, merger.getMax(DECIMAL_5, DECIMAL_3));
   }
 
   @Test
   public void testCompareSimpleReversed() {
-    Assert.assertEquals(DECIMAL_3, merger.compareValues(DECIMAL_3, DECIMAL_5, false));
+    Assert.assertEquals(DECIMAL_3, merger.getMin(DECIMAL_3, DECIMAL_5));
   }
 
   @Test
   public void testCompareSimpleFlippedReversed() {
-    Assert.assertEquals(DECIMAL_3, merger.compareValues(DECIMAL_5, DECIMAL_3, false));
+    Assert.assertEquals(DECIMAL_3, merger.getMin(DECIMAL_5, DECIMAL_3));
   }
 
   /*
    * it should pass, but fails because of HIVE-19131, get back to this later!
-  @Test
-  public void testCompareUnscaledValue() {
-    Assert.assertEquals(DECIMAL_20, merger.compareValues(DECIMAL_3, DECIMAL_20));
-  }
-  */
+   * 
+   * @Test public void testCompareUnscaledValue() { Assert.assertEquals(DECIMAL_20,
+   * merger.compareValues(DECIMAL_3, DECIMAL_20)); }
+   */
 
   @Test
-  public void testCompareNulls() {
-    Assert.assertNull(merger.compareValues(null, null));
-  }
-
-  @Test
-  public void testCompareFirstNull() {
-    Assert.assertEquals(DECIMAL_3, merger.compareValues(DECIMAL_3, null));
+  public void testCompareNullsMin() {
+    Assert.assertNull(merger.getMin(null, null));
   }
 
   @Test
-  public void testCompareSecondNull() {
-    Assert.assertEquals(DECIMAL_3, merger.compareValues(null, DECIMAL_3));
+  public void testCompareNullsMax() {
+    Assert.assertNull(merger.getMax(null, null));
+  }
+
+  @Test
+  public void testCompareFirstNullMin() {
+    Assert.assertEquals(DECIMAL_3, merger.getMin(null, DECIMAL_3));
+  }
+
+  @Test
+  public void testCompareSecondNullMin() {
+    Assert.assertEquals(DECIMAL_3, merger.getMin(DECIMAL_3, null));
+  }
+
+  @Test
+  public void testCompareFirstNullMax() {
+    Assert.assertEquals(DECIMAL_3, merger.getMax(null, DECIMAL_3));
+  }
+
+  @Test
+  public void testCompareSecondNullMax() {
+    Assert.assertEquals(DECIMAL_3, merger.getMax(DECIMAL_3, null));
   }
 
   private static Decimal getDecimal(int number, int scale) {

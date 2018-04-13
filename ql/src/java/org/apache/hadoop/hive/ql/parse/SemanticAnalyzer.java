@@ -346,7 +346,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   protected boolean noscan;
 
   // whether this is a mv rebuild rewritten expression
-  protected boolean rewrittenRebuild = false;
+  protected MaterializationRebuildMode mvRebuildMode = MaterializationRebuildMode.NONE;
+  protected String mvRebuildDbName; // Db name for materialization to rebuild
+  protected String mvRebuildName; // Name for materialization to rebuild
 
   protected volatile boolean disableJoinMerge = false;
   protected final boolean defaultJoinMerge;
@@ -665,13 +667,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
   /**
    * This method creates a list of default constraints which corresponds to
-   *  given schema (taretSchema) or target table's column schema (if targetSchema is null)
+   *  given schema (targetSchema) or target table's column schema (if targetSchema is null)
    * @param tbl
    * @param targetSchema
    * @return List of default constraints (including NULL if there is no default)
    * @throws SemanticException
    */
-  private List<String> getDefaultConstraints(Table tbl, List<String> targetSchema) throws SemanticException{
+  private static List<String> getDefaultConstraints(Table tbl, List<String> targetSchema) throws SemanticException{
     Map<String, String> colNameToDefaultVal =  null;
     try {
       DefaultConstraint dc = Hive.get().getEnabledDefaultConstraints(tbl.getDbName(), tbl.getTableName());
@@ -716,6 +718,28 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
     return newNode;
+  }
+
+  public static String replaceDefaultKeywordForMerge(String valueClause,Table targetTable)
+      throws SemanticException {
+    List<String> defaultConstraints = null;
+    String[] values = valueClause.trim().split(",");
+    StringBuilder newValueClause = new StringBuilder();
+    for (int i = 0; i < values.length; i++) {
+      if (values[i].trim().toLowerCase().equals("`default`")) {
+        if (defaultConstraints == null) {
+          defaultConstraints = getDefaultConstraints(targetTable, null);
+        }
+        newValueClause.append(defaultConstraints.get(i));
+      }
+      else {
+        newValueClause.append(values[i]);
+      }
+      if(i != values.length-1) {
+        newValueClause.append(",");
+      }
+    }
+    return newValueClause.toString();
   }
 
   /**
@@ -2188,7 +2212,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       case HiveParser.TOK_TAB: {
         TableSpec ts = new TableSpec(db, conf, ast);
         if (ts.tableHandle.isView() ||
-            (!rewrittenRebuild && ts.tableHandle.isMaterializedView())) {
+            (mvRebuildMode == MaterializationRebuildMode.NONE && ts.tableHandle.isMaterializedView())) {
           throw new SemanticException(ErrorMsg.DML_AGAINST_VIEW.getMsg());
         }
 
@@ -12187,7 +12211,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       fetchTask = pCtx.getFetchTask();
     }
     //find all Acid FileSinkOperatorS
-    QueryPlanPostProcessor qp = new QueryPlanPostProcessor((List<Task<?>>)rootTasks, acidFileSinks, ctx.getExecutionId());
+    QueryPlanPostProcessor qp = new QueryPlanPostProcessor(rootTasks, acidFileSinks, ctx.getExecutionId());
     LOG.info("Completed plan generation");
 
     // 10. put accessed columns to readEntity
@@ -14616,39 +14640,43 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
     // Don't increment the reader count for explain queries.
     boolean isExplainQuery = (ctx.getExplainConfig() != null);
-    QueryResultsCache.CacheEntry cacheEntry = QueryResultsCache.getInstance().lookup(lookupInfo);
-    if (cacheEntry != null) {
-      // Potentially wait on the cache entry if entry is in PENDING status
-      // Blocking here can potentially be dangerous - for example if the global compile lock
-      // is used this will block all subsequent queries that try to acquire the compile lock,
-      // so it should not be done unless parallel compilation is enabled.
-      // We might not want to block for explain queries as well.
-      if (cacheEntry.getStatus() == QueryResultsCache.CacheEntryStatus.PENDING) {
-        if (!isExplainQuery &&
-            conf.getBoolVar(HiveConf.ConfVars.HIVE_QUERY_RESULTS_CACHE_WAIT_FOR_PENDING_RESULTS) &&
-            conf.getBoolVar(HiveConf.ConfVars.HIVE_SERVER2_PARALLEL_COMPILATION)) {
-          if (!cacheEntry.waitForValidStatus()) {
-            LOG.info("Waiting on pending cacheEntry, but it failed to become valid");
+    do {
+      QueryResultsCache.CacheEntry cacheEntry = QueryResultsCache.getInstance().lookup(lookupInfo);
+      if (cacheEntry != null) {
+        // Potentially wait on the cache entry if entry is in PENDING status
+        // Blocking here can potentially be dangerous - for example if the global compile lock
+        // is used this will block all subsequent queries that try to acquire the compile lock,
+        // so it should not be done unless parallel compilation is enabled.
+        // We might not want to block for explain queries as well.
+        if (cacheEntry.getStatus() == QueryResultsCache.CacheEntryStatus.PENDING) {
+          if (!isExplainQuery &&
+              conf.getBoolVar(HiveConf.ConfVars.HIVE_QUERY_RESULTS_CACHE_WAIT_FOR_PENDING_RESULTS) &&
+              conf.getBoolVar(HiveConf.ConfVars.HIVE_SERVER2_PARALLEL_COMPILATION)) {
+            if (!cacheEntry.waitForValidStatus()) {
+              LOG.info("Waiting on pending cacheEntry, but it failed to become valid");
+              // The pending query we were waiting on failed, but there might still be another
+              // pending or completed entry in the cache that can satisfy this query. Lookup again.
+              continue;
+            }
+          } else {
+            LOG.info("Not waiting for pending cacheEntry");
             return false;
           }
-        } else {
-          LOG.info("Not waiting for pending cacheEntry");
-          return false;
         }
-      }
 
-      if (cacheEntry.getStatus() == QueryResultsCache.CacheEntryStatus.VALID) {
-        if (!isExplainQuery) {
-          if (!cacheEntry.addReader()) {
-            return false;
+        if (cacheEntry.getStatus() == QueryResultsCache.CacheEntryStatus.VALID) {
+          if (!isExplainQuery) {
+            if (!cacheEntry.addReader()) {
+              return false;
+            }
           }
+          // Use the cache rather than full query execution.
+          // At this point the caller should return from semantic analysis.
+          useCachedResult(cacheEntry);
+          return true;
         }
-        // Use the cache rather than full query execution.
-        // At this point the caller should return from semantic analysis.
-        useCachedResult(cacheEntry);
-        return true;
       }
-    }
+    } while (false);
     return false;
   }
 
@@ -14672,5 +14700,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
   public boolean isValidQueryMaterialization() {
     return (invalidQueryMaterializationReason == null);
+  }
+
+  protected enum MaterializationRebuildMode {
+    NONE,
+    INSERT_OVERWRITE_REBUILD,
+    AGGREGATE_REBUILD,
+    NO_AGGREGATE_REBUILD
   }
 }

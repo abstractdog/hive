@@ -25,14 +25,19 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.udf.UDFType;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
+import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hive.ql.udf.generic.UDFUtils;
 
 // This function is not a deterministic function, but a runtime constant.
 // The return value is constant within a query but can be different between queries.
 @UDFType(deterministic = false, runtimeConstant = true)
-@Description(name = "current_database",
-    value = "_FUNC_() - returns currently using database name")
+@Description(name = "current_catalog",
+    value = "_FUNC_() - returns currently using catalog(database) name")
 @NDV(maxNdv = 1)
-public class UDFCurrentDB extends GenericUDF {
+public class GenericUDFCurrentCatalog extends GenericUDF {
 
   private MapredContext context;
 
@@ -53,6 +58,6 @@ public class UDFCurrentDB extends GenericUDF {
 
   @Override
   public String getDisplayString(String[] children) {
-    return "current_database()";
+    return "current_catalog()";
   }
 }

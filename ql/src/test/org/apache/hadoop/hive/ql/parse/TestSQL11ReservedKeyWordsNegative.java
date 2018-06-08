@@ -279,6 +279,30 @@ public class TestSQL11ReservedKeyWordsNegative {
 		}
 	}
 
+  @Test
+  public void testSQL11ReservedKeyWords_CURRENT_CATALOG() {
+    try {
+      parse("CREATE TABLE CURRENT_CATALOG (col STRING)");
+      Assert.assertFalse("Expected ParseException", true);
+    } catch (ParseException ex) {
+      Assert.assertEquals("Failure didn't match.",
+          "line 1:13 cannot recognize input near 'CURRENT_CATALOG' '(' 'col' in table name",
+          ex.getMessage());
+    }
+  }
+
+  @Test
+  public void testSQL11ReservedKeyWords_CURRENT_SCHEMA() {
+    try {
+      parse("CREATE TABLE CURRENT_DATABASE (col STRING)");
+      Assert.assertFalse("Expected ParseException", true);
+    } catch (ParseException ex) {
+      Assert.assertEquals("Failure didn't match.",
+          "line 1:13 cannot recognize input near 'CURRENT_SCHEMA' '(' 'col' in table name",
+          ex.getMessage());
+    }
+  }
+
 	@Test
 	public void testSQL11ReservedKeyWords_CURSOR() {
 		try {

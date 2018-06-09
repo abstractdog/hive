@@ -294,7 +294,7 @@ public class TestSQL11ReservedKeyWordsNegative {
   @Test
   public void testSQL11ReservedKeyWords_CURRENT_SCHEMA() {
     try {
-      parse("CREATE TABLE CURRENT_DATABASE (col STRING)");
+      parse("CREATE TABLE CURRENT_SCHEMA (col STRING)");
       Assert.assertFalse("Expected ParseException", true);
     } catch (ParseException ex) {
       Assert.assertEquals("Failure didn't match.",

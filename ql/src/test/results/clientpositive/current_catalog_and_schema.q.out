@@ -12,7 +12,7 @@ POSTHOOK: query: select current_catalog()
 POSTHOOK: type: QUERY
 POSTHOOK: Input: _dummy_database@_dummy_table
 #### A masked pattern was here ####
-default
+hive
 PREHOOK: query: select current_schema()
 PREHOOK: type: QUERY
 PREHOOK: Input: _dummy_database@_dummy_table
@@ -30,7 +30,7 @@ POSTHOOK: query: select current_catalog
 POSTHOOK: type: QUERY
 POSTHOOK: Input: _dummy_database@_dummy_table
 #### A masked pattern was here ####
-default
+hive
 PREHOOK: query: select current_schema
 PREHOOK: type: QUERY
 PREHOOK: Input: _dummy_database@_dummy_table
@@ -60,7 +60,7 @@ POSTHOOK: query: select current_catalog()
 POSTHOOK: type: QUERY
 POSTHOOK: Input: _dummy_database@_dummy_table
 #### A masked pattern was here ####
-test_current_database
+hive
 PREHOOK: query: select current_schema()
 PREHOOK: type: QUERY
 PREHOOK: Input: _dummy_database@_dummy_table
@@ -78,7 +78,7 @@ POSTHOOK: query: select current_catalog
 POSTHOOK: type: QUERY
 POSTHOOK: Input: _dummy_database@_dummy_table
 #### A masked pattern was here ####
-test_current_database
+hive
 PREHOOK: query: select current_schema
 PREHOOK: type: QUERY
 PREHOOK: Input: _dummy_database@_dummy_table

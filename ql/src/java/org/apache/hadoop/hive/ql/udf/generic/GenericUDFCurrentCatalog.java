@@ -19,7 +19,6 @@
 package org.apache.hadoop.hive.ql.udf.generic;
 
 import org.apache.hadoop.hive.ql.exec.Description;
-import org.apache.hadoop.hive.ql.exec.MapredContext;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentException;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.session.SessionState;
@@ -29,31 +28,24 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.io.Text;
 
-import org.apache.hadoop.hive.ql.udf.generic.UDFUtils;
-
 // This function is not a deterministic function, but a runtime constant.
 // The return value is constant within a query but can be different between queries.
 @UDFType(deterministic = false, runtimeConstant = true)
-@Description(name = "current_catalog",
-    value = "_FUNC_() - returns currently using catalog(database) name")
+@Description(name = "current_catalog", value = "_FUNC_() - returns currently used catalog name")
 @NDV(maxNdv = 1)
 public class GenericUDFCurrentCatalog extends GenericUDF {
 
-  private MapredContext context;
-
-  @Override
-  public void configure(MapredContext context) {
-    this.context = context;
-  }
-
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
-    return UDFUtils.getCurrentDatabaseInspector(context);
+    String catalog = SessionState.get().getCurrentCatalog();
+
+    return PrimitiveObjectInspectorFactory.getPrimitiveWritableConstantObjectInspector(TypeInfoFactory.stringTypeInfo,
+        new Text(catalog));
   }
 
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
-    return SessionState.get().getCurrentDatabase();
+    return SessionState.get().getCurrentCatalog();
   }
 
   @Override

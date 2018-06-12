@@ -38,7 +38,7 @@ public class UDFUtils {
     } else {
       database = SessionState.get().getCurrentDatabase();
     }
-    return PrimitiveObjectInspectorFactory.getPrimitiveWritableConstantObjectInspector(
-        TypeInfoFactory.stringTypeInfo, new Text(database));
+    return PrimitiveObjectInspectorFactory.getPrimitiveWritableConstantObjectInspector(TypeInfoFactory.stringTypeInfo,
+        new Text(database));
   }
 }

@@ -30,14 +30,26 @@ import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFAverage.AbstractGenericUDAFAverageEvaluator;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFCorrelation.GenericUDAFCorrelationEvaluator.StdAgg;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.AbstractAggregationBuffer;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.Mode;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
+import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.shims.ShimLoader;
+import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.ObjectWritable;
 
 @Description(name = "percentile_cont", value = "_FUNC_(pc) - Returns the percentile of expr at pc (range: [0,1]).")
 public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
@@ -85,15 +97,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
           "Only numeric arguments are accepted but " + parameters[0].getTypeName() + " is passed.");
     }
   }
-
-  /**
-   * A state class to store intermediate aggregation results.
-   */
-  public static class PercentileAgg extends AbstractAggregationBuffer {
-    Map<LongWritable, LongWritable> counts;
-    List<DoubleWritable> percentiles;
-  }
-
+  
   /**
    * A comparator to sort the entries in order.
    */
@@ -109,8 +113,52 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    * The evaluator for percentile computation based on long.
    */
   public static class PercentileContLongEvaluator extends GenericUDAFEvaluator {
+    /**
+     * A state class to store intermediate aggregation results.
+     */
+    public static class PercentileAgg extends AbstractAggregationBuffer {
+      Map<LongWritable, LongWritable> counts;
+      List<DoubleWritable> percentiles;
+    }
+    
+    // For PARTIAL1 and COMPLETE
+    protected PrimitiveObjectInspector inputOI;
+    
+    // For PARTIAL1 and PARTIAL2
+    protected transient Object[] partialResult;
+    private transient StructObjectInspector soi;
+    
+    // For FINAL and COMPLETE
     DoubleWritable result;
+    
+    public ObjectInspector init(Mode m, ObjectInspector[] parameters) throws HiveException {
+      super.init(m, parameters);
+      
+      
+      inputOI = (PrimitiveObjectInspector) parameters[0];
 
+      // init output
+      if (mode == Mode.PARTIAL1 || mode == Mode.PARTIAL2) {
+        partialResult = new ObjectWritable[2];
+        partialResult[0] = new MapWritable();
+        partialResult[1] = new ArrayWritable(DoubleWritable.class);
+       
+
+        ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
+        foi.add(PrimitiveObjectInspectorFactory.writableLongObjectInspector);
+        foi.add(PrimitiveObjectInspectorFactory.writableDoubleObjectInspector);
+
+        ArrayList<String> fname = new ArrayList<String>();
+        fname.add("counts");
+        fname.add("percentiles");
+
+        return ObjectInspectorFactory.getStandardStructObjectInspector(fname, foi);
+      } else {
+        result = new DoubleWritable(0);
+        return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
+      }
+    }
+    
     @Override
     public AggregationBuffer getNewAggregationBuffer() throws HiveException {
       PercentileAgg agg = new PercentileAgg();
@@ -121,12 +169,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     public void reset(AggregationBuffer agg) throws HiveException {
       PercentileAgg percAgg = (PercentileAgg) agg;
       if (percAgg.counts != null) {
-        // We reuse the same hashmap to reduce new object allocation.
-        // This means counts can be empty when there is no input data.
         percAgg.counts.clear();
-      }
-      if (percAgg.percentiles != null) {
-        percAgg.percentiles.clear();
       }
     }
 
@@ -134,44 +177,54 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     public void iterate(AggregationBuffer agg, Object[] parameters) throws HiveException {
       PercentileAgg percAgg = (PercentileAgg) agg;
 
-      LongWritable o = (LongWritable) parameters[0];
-      Double percentile = (Double) parameters[1];
-      if (o == null && percentile == null) {
-        return;
-      }
+      Long input = PrimitiveObjectInspectorUtils.getLong(parameters[0], inputOI);
+      
+      HiveDecimalWritable percentile = (HiveDecimalWritable) parameters[1];
+      Double dblPercentile = percentile.getHiveDecimal().doubleValue();
+
       if (percAgg.percentiles == null) {
-        if (percentile < 0.0 || percentile > 1.0) {
+        if (dblPercentile < 0.0 || dblPercentile > 1.0) {
           throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
         }
         percAgg.percentiles = new ArrayList<DoubleWritable>(1);
-        percAgg.percentiles.add(new DoubleWritable(percentile.doubleValue()));
+        percAgg.percentiles.add(new DoubleWritable(dblPercentile));
       }
-      if (o != null) {
-        increment(percAgg, o, 1);
+      if (input != null) {
+        increment(percAgg, new LongWritable(input), 1);
       }
     }
 
     @Override
     public Object terminatePartial(AggregationBuffer agg) throws HiveException {
-      return terminate(agg);
+      PercentileAgg percAgg = (PercentileAgg) agg;
+      ((ObjectWritable) partialResult[0]).set(percAgg.counts);
+      ((ObjectWritable) partialResult[1]).set(percAgg.percentiles);
+      
+      return partialResult;
     }
 
     @Override
     public void merge(AggregationBuffer agg, Object partial) throws HiveException {
       PercentileAgg percAgg = (PercentileAgg) agg;
-      PercentileAgg percOther = (PercentileAgg) partial;
-
-      if (percOther == null || percOther.counts == null || percOther.percentiles == null) {
+      
+      if (partial == null){
         return;
       }
+      
+      Object counts = soi.getStructFieldData(partial, countField);
+      Object percentiles = soi.getStructFieldData(partial, xavgField);
 
-      if (percOther.percentiles == null) {
-        percAgg.percentiles = new ArrayList<DoubleWritable>(percOther.percentiles);
-      }
-
-      for (Map.Entry<LongWritable, LongWritable> e : percOther.counts.entrySet()) {
-        increment(percAgg, e.getKey(), e.getValue().get());
-      }
+//      if (percOther == null || percOther.counts == null || percOther.percentiles == null) {
+//        return;
+//      }
+//
+//      if (percOther.percentiles == null) {
+//        percAgg.percentiles = new ArrayList<DoubleWritable>(percOther.percentiles);
+//      }
+//
+//      for (Map.Entry<LongWritable, LongWritable> e : percOther.counts.entrySet()) {
+//        increment(percAgg, e.getKey(), e.getValue().get());
+//      }
     }
 
     @Override
@@ -213,16 +266,15 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     /**
      * Increment the State object with o as the key, and i as the count.
      */
-    private void increment(PercentileAgg s, LongWritable o, long i) {
+    private void increment(PercentileAgg s, LongWritable input, long i) {
       if (s.counts == null) {
         s.counts = new HashMap<LongWritable, LongWritable>();
       }
-      LongWritable count = s.counts.get(o);
+      LongWritable count = s.counts.get(input);
       if (count == null) {
         // We have to create a new object, because the object o belongs
         // to the code that creates it and may get its value changed.
-        LongWritable key = new LongWritable();
-        key.set(o.get());
+        LongWritable key = new LongWritable(input.get());
         s.counts.put(key, new LongWritable(i));
       } else {
         count.set(count.get() + i);

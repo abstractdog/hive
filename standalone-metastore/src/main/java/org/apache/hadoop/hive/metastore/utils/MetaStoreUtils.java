@@ -96,6 +96,7 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.StringJoiner;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -114,6 +115,7 @@ public class MetaStoreUtils {
     protected DateFormat initialValue() {
       DateFormat val = new SimpleDateFormat("yyyy-MM-dd");
       val.setLenient(false); // Without this, 2020-20-20 becomes 2021-08-20.
+      val.setTimeZone(TimeZone.getTimeZone("UTC"));
       return val;
     }
   };
@@ -144,6 +146,8 @@ public class MetaStoreUtils {
    * Mark a database as being empty (as distinct from null).
    */
   public static final String DB_EMPTY_MARKER = "!";
+
+  public static final String EXTERNAL_TABLE_PURGE = "external.table.purge";
 
   // Right now we only support one special character '/'.
   // More special characters can be added accordingly in the future.
@@ -565,7 +569,11 @@ public class MetaStoreUtils {
   }
 
   public static boolean isExternal(Map<String, String> tableParams){
-    return "TRUE".equalsIgnoreCase(tableParams.get("EXTERNAL"));
+    return isPropertyTrue(tableParams, "EXTERNAL");
+  }
+
+  public static boolean isPropertyTrue(Map<String, String> tableParams, String prop) {
+    return "TRUE".equalsIgnoreCase(tableParams.get(prop));
   }
 
   // check if stats need to be (re)calculated

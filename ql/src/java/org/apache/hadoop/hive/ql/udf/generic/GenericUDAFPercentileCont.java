@@ -56,27 +56,21 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
   }
 
   @Override
-  public GenericUDAFEvaluator getEvaluator(GenericUDAFParameterInfo paramInfo)
-      throws SemanticException {
-    GenericUDAFEvaluator eval = getEvaluator(paramInfo.getParameters());
-    return eval;
-  }
-
-  @Override
   public GenericUDAFEvaluator getEvaluator(TypeInfo[] parameters) throws SemanticException {
     if (parameters.length != 2) {
       throw new UDFArgumentTypeException(parameters.length - 1, "Exactly 2 argument is expected.");
     }
 
     if (parameters[0].getCategory() != ObjectInspector.Category.PRIMITIVE) {
-      throw new UDFArgumentTypeException(0, "Only primitive type arguments are accepted but "
-          + parameters[0].getTypeName() + " is passed.");
+      throw new UDFArgumentTypeException(0,
+          "Only primitive type arguments are accepted but " + parameters[0].getTypeName() + " is passed.");
     }
     switch (((PrimitiveTypeInfo) parameters[0]).getPrimitiveCategory()) {
     case BYTE:
     case SHORT:
     case INT:
     case LONG:
+    case VOID:
       return new PercentileContLongEvaluator();
     case TIMESTAMP:
     case FLOAT:
@@ -98,8 +92,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    */
   public static class MyComparator implements Comparator<Map.Entry<LongWritable, LongWritable>> {
     @Override
-    public int compare(Map.Entry<LongWritable, LongWritable> o1,
-        Map.Entry<LongWritable, LongWritable> o2) {
+    public int compare(Map.Entry<LongWritable, LongWritable> o1, Map.Entry<LongWritable, LongWritable> o2) {
       return COMPARATOR.compare(o1.getKey(), o2.getKey());
     }
   }
@@ -108,6 +101,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    * The evaluator for percentile computation based on long.
    */
   public static class PercentileContLongEvaluator extends GenericUDAFEvaluator {
+    PercentileCalculator calc = new PercentileContCalculator();
+
     /**
      * A state class to store intermediate aggregation results.
      */
@@ -120,7 +115,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     protected PrimitiveObjectInspector inputOI;
     MapObjectInspector countsOI;
     ListObjectInspector percentilesOI;
-    
+
     // For PARTIAL1 and PARTIAL2
     protected transient Object[] partialResult;
 
@@ -157,8 +152,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         foi.add(ObjectInspectorFactory.getStandardMapObjectInspector(
             PrimitiveObjectInspectorFactory.writableLongObjectInspector,
             PrimitiveObjectInspectorFactory.writableLongObjectInspector));
-        foi.add(ObjectInspectorFactory.getStandardListObjectInspector(
-            PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
+        foi.add(ObjectInspectorFactory
+            .getStandardListObjectInspector(PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
 
         ArrayList<String> fname = new ArrayList<String>();
         fname.add("counts");
@@ -197,19 +192,28 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     @Override
     public void iterate(AggregationBuffer agg, Object[] parameters) throws HiveException {
       PercentileAgg percAgg = (PercentileAgg) agg;
-
-      Long input = PrimitiveObjectInspectorUtils.getLong(parameters[0], inputOI);
       Double percentile = ((HiveDecimalWritable) parameters[1]).getHiveDecimal().doubleValue();
 
       if (percAgg.percentiles == null) {
-        if (percentile < 0.0 || percentile > 1.0) {
-          throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
-        }
+        validatePercentile(percentile);
         percAgg.percentiles = new ArrayList<DoubleWritable>(1);
         percAgg.percentiles.add(new DoubleWritable(percentile));
       }
+
+      if (parameters[0] == null) {
+        return;
+      }
+
+      Long input = PrimitiveObjectInspectorUtils.getLong(parameters[0], inputOI);
+
       if (input != null) {
         increment(percAgg, new LongWritable(input), 1);
+      }
+    }
+
+    private void validatePercentile(Double percentile) {
+      if (percentile < 0.0 || percentile > 1.0) {
+        throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
       }
     }
 
@@ -222,10 +226,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       Object objCounts = soi.getStructFieldData(partial, countsField);
       Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
 
-      Map<LongWritable, LongWritable> counts =
-          (Map<LongWritable, LongWritable>) countsOI.getMap(objCounts);
-      List<DoubleWritable> percentiles =
-          (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
+      Map<LongWritable, LongWritable> counts = (Map<LongWritable, LongWritable>) countsOI.getMap(objCounts);
+      List<DoubleWritable> percentiles = (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
 
       if (counts == null || percentiles == null) {
         return;
@@ -273,7 +275,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       // maxPosition is the 1.0 percentile
       long maxPosition = total - 1;
       double position = maxPosition * percAgg.percentiles.get(0).get();
-      result.set(getPercentile(entriesList, position));
+      result.set(calc.getPercentile(entriesList, position));
 
       return result;
     }
@@ -297,40 +299,45 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
   }
 
-  /**
-   * Get the percentile value.
-   */
-  private static double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList,
-      double position) {
-    // We may need to do linear interpolation to get the exact percentile
-    long lower = (long) Math.floor(position);
-    long higher = (long) Math.ceil(position);
+  public static interface PercentileCalculator {
+    double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList, double position);
+  }
 
-    // Linear search since this won't take much time from the total execution anyway
-    // lower has the range of [0 .. total-1]
-    // The first entry with accumulated count (lower+1) corresponds to the lower position.
-    int i = 0;
-    while (entriesList.get(i).getValue().get() < lower + 1) {
-      i++;
+  public static class PercentileContCalculator implements PercentileCalculator {
+    /**
+     * Get the percentile value.
+     */
+    public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList, double position) {
+      // We may need to do linear interpolation to get the exact percentile
+      long lower = (long) Math.floor(position);
+      long higher = (long) Math.ceil(position);
+
+      // Linear search since this won't take much time from the total execution anyway
+      // lower has the range of [0 .. total-1]
+      // The first entry with accumulated count (lower+1) corresponds to the lower position.
+      int i = 0;
+      while (entriesList.get(i).getValue().get() < lower + 1) {
+        i++;
+      }
+
+      long lowerKey = entriesList.get(i).getKey().get();
+      if (higher == lower) {
+        // no interpolation needed because position does not have a fraction
+        return lowerKey;
+      }
+
+      if (entriesList.get(i).getValue().get() < higher + 1) {
+        i++;
+      }
+      long higherKey = entriesList.get(i).getKey().get();
+
+      if (higherKey == lowerKey) {
+        // no interpolation needed because lower position and higher position has the same key
+        return lowerKey;
+      }
+
+      // Linear interpolation to get the exact percentile
+      return (higher - position) * lowerKey + (position - lower) * higherKey;
     }
-
-    long lowerKey = entriesList.get(i).getKey().get();
-    if (higher == lower) {
-      // no interpolation needed because position does not have a fraction
-      return lowerKey;
-    }
-
-    if (entriesList.get(i).getValue().get() < higher + 1) {
-      i++;
-    }
-    long higherKey = entriesList.get(i).getKey().get();
-
-    if (higherKey == lowerKey) {
-      // no interpolation needed because lower position and higher position has the same key
-      return lowerKey;
-    }
-
-    // Linear interpolation to get the exact percentile
-    return (higher - position) * lowerKey + (position - lower) * higherKey;
   }
 }

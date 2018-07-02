@@ -67,7 +67,6 @@ import org.apache.hadoop.hive.ql.udf.UDFFromUnixTime;
 import org.apache.hadoop.hive.ql.udf.UDFHex;
 import org.apache.hadoop.hive.ql.udf.UDFHour;
 import org.apache.hadoop.hive.ql.udf.UDFJson;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDFLength;
 import org.apache.hadoop.hive.ql.udf.UDFLike;
 import org.apache.hadoop.hive.ql.udf.UDFLn;
 import org.apache.hadoop.hive.ql.udf.UDFLog;
@@ -464,6 +463,7 @@ public final class FunctionRegistry {
     system.registerGenericUDAF("bloom_filter", new GenericUDAFBloomFilter());
     system.registerUDAF("percentile", UDAFPercentile.class);
     system.registerGenericUDAF("percentile_cont", new GenericUDAFPercentileCont());
+    system.registerGenericUDAF("percentile_disc", new GenericUDAFPercentileDisc());
 
 
     // Generic UDFs

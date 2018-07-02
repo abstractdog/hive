@@ -3,17 +3,16 @@ package org.apache.hadoop.hive.ql.udf.generic;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileCalculator;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContCalculator;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongEvaluator;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.LongWritable;
 
-public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont{
+@Description(name = "percentile_disc", value = "_FUNC_(input, pc) - Returns the percentile of expr at pc (range: [0,1]) without interpolation.")
+public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
 
   @Override
   public GenericUDAFEvaluator getEvaluator(TypeInfo[] parameters) throws SemanticException {
@@ -22,8 +21,8 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont{
     }
 
     if (parameters[0].getCategory() != ObjectInspector.Category.PRIMITIVE) {
-      throw new UDFArgumentTypeException(0,
-          "Only primitive type arguments are accepted but " + parameters[0].getTypeName() + " is passed.");
+      throw new UDFArgumentTypeException(0, "Only primitive type arguments are accepted but "
+          + parameters[0].getTypeName() + " is passed.");
     }
     switch (((PrimitiveTypeInfo) parameters[0]).getPrimitiveCategory()) {
     case BYTE:
@@ -46,19 +45,20 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont{
           "Only numeric arguments are accepted but " + parameters[0].getTypeName() + " is passed.");
     }
   }
-  
+
   /**
    * The evaluator for percentile computation based on long.
    */
   public static class PercentileDiscLongEvaluator extends PercentileContLongEvaluator {
     PercentileCalculator calc = new PercentileDiscCalculator();
   }
-  
+
   public static class PercentileDiscCalculator implements PercentileCalculator {
     /**
      * Get the percentile value.
      */
-    public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList, double position) {
+    public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList,
+        double position) {
       // We may need to do linear interpolation to get the exact percentile
       long lower = (long) Math.floor(position);
 

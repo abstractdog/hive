@@ -18,9 +18,41 @@
 
 package org.apache.hadoop.hive.ql.udf.generic;
 
-public class TestGenericUDAFPercentileCont {
+import java.util.ArrayList;
 
-  public void testCont(){
-    throw new RuntimeException();
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileCalculator;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContCalculator;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongEvaluator;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongEvaluator.PercentileAgg;
+import org.apache.hadoop.hive.serde2.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class TestGenericUDAFPercentileCont {
+  PercentileCalculator calc = new PercentileContCalculator();
+
+  @Test
+  public void testCont() throws Exception {
+    Long[] items = new Long[] { 1L, 2L, 3L };
+    checkPercentile(items, 0.6, 2L);
+  }
+
+  private void checkPercentile(Long[] items, double percentile, long expected) throws Exception {
+    PercentileContLongEvaluator eval = new GenericUDAFPercentileCont.PercentileContLongEvaluator();
+
+    PercentileAgg agg = new PercentileAgg();
+
+    agg.percentiles = new ArrayList<DoubleWritable>();
+    agg.percentiles.add(new DoubleWritable(percentile));
+
+    for (int i = 0; i < items.length; i++) {
+      eval.increment(agg, new LongWritable(items[i]), 1);
+    }
+
+    double result = (double) eval.terminate(agg);
+
+    Assert.assertEquals(expected, result, 0.01);
+    eval.close();
   }
 }

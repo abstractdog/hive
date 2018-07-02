@@ -260,12 +260,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       Collections.sort(entriesList, new MyComparator());
 
       // Accumulate the counts.
-      long total = 0;
-      for (int i = 0; i < entriesList.size(); i++) {
-        LongWritable count = entriesList.get(i).getValue();
-        total += count.get();
-        count.set(total);
-      }
+      long total = getTotal(entriesList);
 
       // Initialize the result.
       if (result == null) {
@@ -280,10 +275,20 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       return result;
     }
 
+    public static long getTotal(List<Map.Entry<LongWritable, LongWritable>> entriesList) {
+      long total = 0;
+      for (int i = 0; i < entriesList.size(); i++) {
+        LongWritable count = entriesList.get(i).getValue();
+        total += count.get();
+        count.set(total);
+      }
+      return total;
+    }
+
     /**
      * Increment the State object with o as the key, and i as the count.
      */
-    private void increment(PercentileAgg s, LongWritable input, long i) {
+    void increment(PercentileAgg s, LongWritable input, long i) {
       if (s.counts == null) {
         s.counts = new HashMap<LongWritable, LongWritable>();
       }

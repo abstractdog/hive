@@ -297,7 +297,7 @@ public final class QueryResultsCache {
      *         false if the status changes from PENDING to INVALID
      */
     public boolean waitForValidStatus() {
-      LOG.info("Waiting on pending cacheEntry");
+      LOG.info("Waiting on pending cacheEntry: {}", this);
       long timeout = 1000;
 
       long startTime = System.nanoTime();

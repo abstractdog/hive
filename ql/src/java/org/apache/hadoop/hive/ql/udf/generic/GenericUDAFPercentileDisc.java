@@ -6,6 +6,7 @@ import java.util.Map;
 import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongEvaluator.PercentileAgg;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
@@ -51,6 +52,15 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
    */
   public static class PercentileDiscLongEvaluator extends PercentileContLongEvaluator {
     PercentileCalculator calc = new PercentileDiscCalculator();
+
+    @Override
+    protected void calculatePercentile(PercentileAgg percAgg,
+        List<Map.Entry<LongWritable, LongWritable>> entriesList, long total) {
+      // maxPosition is the 1.0 percentile
+      long maxPosition = total - 1;
+      double position = maxPosition * percAgg.percentiles.get(0).get();
+      result.set(calc.getPercentile(entriesList, position));
+    }
   }
 
   public static class PercentileDiscCalculator implements PercentileCalculator {

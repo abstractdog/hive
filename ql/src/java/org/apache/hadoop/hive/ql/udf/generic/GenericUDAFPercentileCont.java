@@ -267,12 +267,17 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         result = new DoubleWritable();
       }
 
+      calculatePercentile(percAgg, entriesList, total);
+
+      return result;
+    }
+
+    protected void calculatePercentile(PercentileAgg percAgg,
+        List<Map.Entry<LongWritable, LongWritable>> entriesList, long total) {
       // maxPosition is the 1.0 percentile
       long maxPosition = total - 1;
       double position = maxPosition * percAgg.percentiles.get(0).get();
       result.set(calc.getPercentile(entriesList, position));
-
-      return result;
     }
 
     public static long getTotal(List<Map.Entry<LongWritable, LongWritable>> entriesList) {

@@ -33,12 +33,36 @@ public class TestGenericUDAFPercentileCont {
   PercentileCalculator calc = new PercentileContCalculator();
 
   @Test
-  public void testCont() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L };
-    checkPercentile(items, 0.6, 2L);
+  public void testNoInterpolation() throws Exception {
+    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    checkPercentile(items, 0.5, 3);
   }
 
-  private void checkPercentile(Long[] items, double percentile, long expected) throws Exception {
+  @Test
+  public void testInterpolateLower() throws Exception {
+    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    checkPercentile(items, 0.49, 2.96);
+  }
+
+  @Test
+  public void testInterpolateHigher() throws Exception {
+    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    checkPercentile(items, 0.51, 3.04);
+  }
+
+  @Test
+  public void testSingleItem50() throws Exception {
+    Long[] items = new Long[] { 1L };
+    checkPercentile(items, 0.5, 1);
+  }
+
+  @Test
+  public void testSingleItem100() throws Exception {
+    Long[] items = new Long[] { 1L };
+    checkPercentile(items, 1, 1);
+  }
+
+  private void checkPercentile(Long[] items, double percentile, double expected) throws Exception {
     PercentileContLongEvaluator eval = new GenericUDAFPercentileCont.PercentileContLongEvaluator();
 
     PercentileAgg agg = new PercentileAgg();
@@ -50,9 +74,9 @@ public class TestGenericUDAFPercentileCont {
       eval.increment(agg, new LongWritable(items[i]), 1);
     }
 
-    double result = (double) eval.terminate(agg);
+    DoubleWritable result = (DoubleWritable) eval.terminate(agg);
 
-    Assert.assertEquals(expected, result, 0.01);
+    Assert.assertEquals(expected, result.get(), 0.01);
     eval.close();
   }
 }

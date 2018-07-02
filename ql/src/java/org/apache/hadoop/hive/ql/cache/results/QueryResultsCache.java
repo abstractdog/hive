@@ -213,9 +213,9 @@ public final class QueryResultsCache {
     }
 
     public String toString() {
-      return "CacheEntry query: [" + getQueryInfo().getLookupInfo().getQueryText()
-          + "], status: " + status + ", location: " + cachedResultsPath
-          + ", size: " + size;
+      return String.format("CacheEntry#%s query: [ %s ], status: %s, location: %s, size: %d",
+          System.identityHashCode(this), getQueryInfo().getLookupInfo().getQueryText(), status,
+          cachedResultsPath, size);
     }
 
     public boolean addReader() {

@@ -701,7 +701,8 @@ public class SessionState {
    * @param userName
    * @throws IOException
    */
-  private void createSessionDirs(String userName) throws IOException {
+  @VisibleForTesting
+  void createSessionDirs(String userName) throws IOException {
     HiveConf conf = getConf();
     Path rootHDFSDirPath = createRootHDFSDir(conf);
     // Now create session specific dirs

@@ -179,6 +179,7 @@
     <jodd.version>3.5.2</jodd.version>
     <json.version>1.8</json.version>
     <junit.version>4.11</junit.version>
+    <concurrentunit.version>0.4.3</concurrentunit.version>
     <kryo.version>3.0.3</kryo.version>
     <libfb303.version>0.9.3</libfb303.version>
     <libthrift.version>0.9.3</libthrift.version>

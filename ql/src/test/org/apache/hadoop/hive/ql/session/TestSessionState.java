@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,6 +47,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
+
+import static org.mockito.Mockito.*;
+import net.jodah.concurrentunit.Waiter;
 
 import com.google.common.io.Files;
 
@@ -309,5 +314,33 @@ public class TestSessionState {
     } catch (IOException e) {
       assertTrue(e.getMessage().contains("Failed to create directory noPermissions/child"));
     }
+  }
+
+  /**
+   * Unit test for SessionState.start concurrency
+   */
+  @Test
+  public void testConcurrentStart() throws Exception {
+    SessionState state = spy(new SessionState(new HiveConf()));
+
+    final Waiter waiter = new Waiter();
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    for (int i = 0; i < 5; ++i) {
+      Runnable runner = new Runnable() {
+        public void run() {
+          try {
+            latch.await();
+            SessionState.start(state);
+            verify(state, times(1)).createSessionDirs(anyString());
+          } catch (InterruptedException | IOException ie) {
+            // don't care
+          }
+        }
+      };
+      new Thread(runner, "TestThread" + i).start();
+    }
+    latch.countDown(); // release the latch
+    waiter.await(10000, 5);
   }
 }

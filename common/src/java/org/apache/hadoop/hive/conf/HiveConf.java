@@ -1719,8 +1719,6 @@ public class HiveConf extends Configuration {
         "This parameter decides if Hive should add an additional map-reduce job. If the grouping set\n" +
         "cardinality (4 in the example above), is more than this value, a new MR job is added under the\n" +
         "assumption that the original group by will reduce the data size."),
-    HIVE_GROUPBY_LIMIT_EXTRASTEP("hive.groupby.limit.extrastep", true, "This parameter decides if Hive should \n" +
-        "create new MR job for sorting final output"),
 
     // Max file num and size used to do a single copy (after that, distcp is used)
     HIVE_EXEC_COPYFILE_MAXNUMFILES("hive.exec.copyfile.maxnumfiles", 1L,

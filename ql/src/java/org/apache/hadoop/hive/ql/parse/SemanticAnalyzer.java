@@ -8238,27 +8238,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return udtf;
   }
 
-  @SuppressWarnings("nls")
-  private Operator genLimitMapRedPlan(String dest, QB qb, Operator input,
-                                      int offset, int limit, boolean extraMRStep) throws SemanticException {
-    // A map-only job can be optimized - instead of converting it to a
-    // map-reduce job, we can have another map
-    // job to do the same to avoid the cost of sorting in the map-reduce phase.
-    // A better approach would be to
-    // write into a local file and then have a map-only job.
-    // Add the limit operator to get the value fields
-    Operator curr = genLimitPlan(dest, qb, input, offset, limit);
-
-    // the client requested that an extra map-reduce step be performed
-    if (!extraMRStep  || !HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_GROUPBY_LIMIT_EXTRASTEP)){
-      return curr;
-    }
-
-    // Create a reduceSink operator followed by another limit
-    curr = genReduceSinkPlan(dest, qb, curr, 1, false);
-    return genLimitPlan(dest, qb, curr, offset, limit);
-  }
-
   private ArrayList<ExprNodeDesc> getPartitionColsFromBucketCols(String dest, QB qb, Table tab,
                                                                  TableDesc table_desc, Operator input, boolean convert)
       throws SemanticException {
@@ -10611,22 +10590,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       if (limit != null) {
         // In case of order by, only 1 reducer is used, so no need of
         // another shuffle
-        curr = genLimitMapRedPlan(dest, qb, curr, offset.intValue(),
-            limit.intValue(), !hasOrderBy);
+        curr = genLimitPlan(dest, qb, curr, offset, limit);
       }
     } else {
       // exact limit can be taken care of by the fetch operator
       if (limit != null) {
-        boolean extraMRStep = true;
-
-        if (hasOrderBy ||
-            qb.getIsQuery() && qbp.getClusterByForClause(dest) == null &&
-                qbp.getSortByForClause(dest) == null) {
-          extraMRStep = false;
-        }
-
-        curr = genLimitMapRedPlan(dest, qb, curr, offset.intValue(),
-            limit.intValue(), extraMRStep);
+        curr = genLimitPlan(dest, qb, curr, offset, limit);
         qb.getParseInfo().setOuterQueryLimit(limit.intValue());
       }
       if (!queryState.getHiveOperation().equals(HiveOperation.CREATEVIEW)) {

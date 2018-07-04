@@ -85,7 +85,6 @@ public class ImportTableDesc {
                 null,
             null,
             null);
-        this.createTblDesc.setStoredAsSubDirectories(table.getSd().isStoredAsSubDirectories());
         break;
       case VIEW:
         String[] qualViewName = { dbName, table.getTableName() };

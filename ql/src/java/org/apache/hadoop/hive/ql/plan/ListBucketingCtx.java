@@ -41,14 +41,11 @@ public class ListBucketingCtx implements Serializable {
   private List<List<String>> skewedColValues;
   private Map<List<String>, String> lbLocationMap;
   private List<SkewedColumnPositionPair> rowSkewedIndex;
-  private boolean isStoredAsSubDirectories;
   private String defaultKey;
   private String defaultDirName;
-  private List<String> skewedValuesDirNames;
 
   public ListBucketingCtx() {
     rowSkewedIndex = new ArrayList<SkewedColumnPositionPair>();
-    skewedValuesDirNames = new ArrayList<String>();
   }
 
   /**
@@ -119,41 +116,6 @@ public class ListBucketingCtx implements Serializable {
   }
 
   /**
-   * Calculate skewed value subdirectory directory which is used in
-   * FileSinkOperator.java createKeyForStatsPublisher()
-   * For example, create table test skewed by (key, value) on (('484','val_484')
-   * stored as DIRECTORIES;
-   * after the method, skewedValuesDirNames will contain 2 elements:
-   * key=484/value=val_484
-   * HIVE_LIST_BUCKETING_DEFAULT_DIR_NAME/HIVE_LIST_BUCKETING_DEFAULT_DIR_NAME
-   */
-  public void calculateSkewedValueSubDirList() {
-    if (isSkewedStoredAsDir()) {
-      for (List<String> value : this.skewedColValues) {
-        skewedValuesDirNames.add(FileUtils.makeListBucketingDirName(this.skewedColNames, value));
-      }
-      // creat default dir
-      skewedValuesDirNames.add(FileUtils.makeDefaultListBucketingDirName(
-          this.skewedColNames,
-          ListBucketingPrunerUtils.HIVE_LIST_BUCKETING_DEFAULT_DIR_NAME));
-    }
-  }
-
-  /**
-   * @return the isStoredAsSubDirectories
-   */
-  public boolean isStoredAsSubDirectories() {
-    return isStoredAsSubDirectories;
-  }
-
-  /**
-   * @param isStoredAsSubDirectories the isStoredAsSubDirectories to set
-   */
-  public void setStoredAsSubDirectories(boolean isStoredAsSubDirectories) {
-    this.isStoredAsSubDirectories = isStoredAsSubDirectories;
-  }
-
-  /**
    * @return the defaultKey
    */
   public String getDefaultKey() {
@@ -182,45 +144,15 @@ public class ListBucketingCtx implements Serializable {
   }
 
   /**
-   * check if list bucketing is enabled.
-   *
-   * @param ctx
-   * @return
-   */
-  public  boolean isSkewedStoredAsDir() {
-    return (this.getSkewedColNames() != null)
-        && (this.getSkewedColNames().size() > 0)
-        && (this.getSkewedColValues() != null)
-        && (this.getSkewedColValues().size() > 0)
-        && (this.isStoredAsSubDirectories());
-  }
-
-  /**
    * Calculate list bucketing level.
    *
-   * 0: not list bucketing
-   * int: no. of skewed columns
+   * no list bucketing, it's been removed with HIVE-17852
    *
    * @param ctx
    * @return
    */
-  public  int calculateListBucketingLevel() {
-    int lbLevel = isSkewedStoredAsDir() ? this.getSkewedColNames().size() : 0;
-    return lbLevel;
-  }
-
-  /**
-   * @return the skewedValuesDirNames
-   */
-  public List<String> getSkewedValuesDirNames() {
-    return skewedValuesDirNames;
-  }
-
-  /**
-   * @param skewedValuesDirNames the skewedValuesDirNames to set
-   */
-  public void setSkewedValuesDirNames(List<String> skewedValuesDirNames) {
-    this.skewedValuesDirNames = skewedValuesDirNames;
+  public int calculateListBucketingLevel() {
+    return 0;
   }
 
   /**

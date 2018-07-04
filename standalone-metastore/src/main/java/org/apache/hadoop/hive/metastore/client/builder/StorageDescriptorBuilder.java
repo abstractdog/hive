@@ -41,7 +41,7 @@ abstract class StorageDescriptorBuilder<T> extends SerdeAndColsBuilder<T> {
   private String location, inputFormat, outputFormat;
   private int numBuckets;
   private Map<String, String> storageDescriptorParams;
-  private boolean compressed, storedAsSubDirectories;
+  private boolean compressed;
   private List<String> bucketCols, skewedColNames;
   private List<Order> sortCols;
   private List<List<String>> skewedColValues;
@@ -64,7 +64,6 @@ abstract class StorageDescriptorBuilder<T> extends SerdeAndColsBuilder<T> {
   protected StorageDescriptor buildSd() throws MetaException {
     StorageDescriptor sd = new StorageDescriptor(getCols(), location, inputFormat, outputFormat,
         compressed, numBuckets, buildSerde(), bucketCols, sortCols, storageDescriptorParams);
-    sd.setStoredAsSubDirectories(storedAsSubDirectories);
     if (skewedColNames != null) {
       SkewedInfo skewed = new SkewedInfo(skewedColNames, skewedColValues,
           skewedColValueLocationMaps);
@@ -107,11 +106,6 @@ abstract class StorageDescriptorBuilder<T> extends SerdeAndColsBuilder<T> {
 
   public T setCompressed(boolean compressed) {
     this.compressed = compressed;
-    return child;
-  }
-
-  public T setStoredAsSubDirectories(boolean storedAsSubDirectories) {
-    this.storedAsSubDirectories = storedAsSubDirectories;
     return child;
   }
 

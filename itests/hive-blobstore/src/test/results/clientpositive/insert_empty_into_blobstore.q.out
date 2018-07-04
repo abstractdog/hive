@@ -80,7 +80,7 @@ PARTITIONED BY (
     pt string,
     dt string,
     hr string)
-SKEWED BY (id) ON ('1', '2', '3') STORED AS DIRECTORIES
+SKEWED BY (id) ON ('1', '2', '3')
 #### A masked pattern was here ####
 PREHOOK: type: CREATETABLE
 PREHOOK: Input: ### test.blobstore.path ###/insert_empty_into_blobstore/blobstore_list_bucketing
@@ -94,7 +94,7 @@ PARTITIONED BY (
     pt string,
     dt string,
     hr string)
-SKEWED BY (id) ON ('1', '2', '3') STORED AS DIRECTORIES
+SKEWED BY (id) ON ('1', '2', '3')
 #### A masked pattern was here ####
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Input: ### test.blobstore.path ###/insert_empty_into_blobstore/blobstore_list_bucketing

@@ -1621,8 +1621,7 @@ public final class GenMapRedUtils {
     ArrayList<String> inputDirstr = new ArrayList<String>(1);
     // this will be populated by MergeFileWork.resolveDynamicPartitionStoredAsSubDirsMerge
     // in case of dynamic partitioning and list bucketing
-    if (!hasDynamicPartitions &&
-        !GenMapRedUtils.isSkewedStoredAsDirs(fsInputDesc)) {
+    if (!hasDynamicPartitions) {
       inputDirs.add(inputDir);
     }
     inputDirstr.add(inputDir.toString());
@@ -1849,17 +1848,6 @@ public final class GenMapRedUtils {
     addDependentMoveTasks(moveTaskToLink, conf, mergeAndMoveMoveTask, dependencyTask);
 
     return cndTsk;
-  }
-
-  /**
-   * check if it is skewed table and stored as dirs.
-   *
-   * @param fsInputDesc
-   * @return
-   */
-  public static boolean isSkewedStoredAsDirs(FileSinkDesc fsInputDesc) {
-    return (fsInputDesc.getLbCtx() == null) ? false : fsInputDesc.getLbCtx()
-        .isSkewedStoredAsDir();
   }
 
   public static Task<MoveWork> findMoveTaskForFsopOutput(

@@ -1016,7 +1016,6 @@ public class TestAddPartitionsFromPartSpec extends MetaStoreClientTest {
         .setPartCols(partCols)
         .addStorageDescriptorParam("partTestSDParamKey", "partTestSDParamValue")
         .setSerdeName(tableName)
-        .setStoredAsSubDirectories(false)
         .addSerdeParam("partTestSerdeParamKey", "partTestSerdeParamValue")
         .setLocation(location)
         .create(client, metaStore.getConf());

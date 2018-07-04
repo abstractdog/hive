@@ -1,14 +1,12 @@
 PREHOOK: query: create table fact_daily (key String, value String) 
 partitioned by (ds String, hr String) 
-skewed by (key, value) on (('484','val_484'),('238','val_238')) 
-stored as DIRECTORIES
+skewed by (key, value) on (('484','val_484'),('238','val_238'))
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@fact_daily
 POSTHOOK: query: create table fact_daily (key String, value String) 
 partitioned by (ds String, hr String) 
-skewed by (key, value) on (('484','val_484'),('238','val_238')) 
-stored as DIRECTORIES
+skewed by (key, value) on (('484','val_484'),('238','val_238'))
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@fact_daily
@@ -46,7 +44,7 @@ Table:              	fact_daily
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	3                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	5312                
 	totalSize           	5812                
@@ -60,11 +58,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key, value]        	 
 Skewed Values:      	[[238, val_238], [484, val_484]]	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[238, val_238]=/fact_daily/ds=1/hr=4/key=238/value=val_238, [484, val_484]=/fact_daily/ds=1/hr=4/key=484/value=val_484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: SELECT count(1) FROM fact_daily WHERE ds='1' and hr='4'
@@ -103,7 +98,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.fact_daily
-              numFiles 3
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string
@@ -189,7 +184,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.fact_daily
-              numFiles 3
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string
@@ -276,7 +271,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.fact_daily
-              numFiles 3
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string
@@ -361,7 +356,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.fact_daily
-              numFiles 3
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string

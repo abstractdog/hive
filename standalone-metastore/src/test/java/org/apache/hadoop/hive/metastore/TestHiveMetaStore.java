@@ -1857,7 +1857,6 @@ public abstract class TestHiveMetaStore {
       assertEquals(tbl2.getTableName(), tblName);
       assertEquals(tbl2.getSd().getCols().size(), typ1.getFields().size());
       assertFalse(tbl2.getSd().isCompressed());
-      assertFalse(tbl2.getSd().isStoredAsSubDirectories());
       assertEquals(tbl2.getSd().getNumBuckets(), 1);
 
       assertEquals("Use this for comments etc", tbl2.getSd().getParameters()

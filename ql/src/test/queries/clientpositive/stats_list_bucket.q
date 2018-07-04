@@ -9,7 +9,6 @@ create table stats_list_bucket (
   c2 string
 ) partitioned by (ds string, hr string)
 skewed by (c1, c2) on  (('466','val_466'),('287','val_287'),('82','val_82'))
-stored as directories
 stored as rcfile;
 
 
@@ -29,7 +28,6 @@ create table stats_list_bucket_1 (
   c2 string
 )
 skewed by (c1, c2) on  (('466','val_466'),('287','val_287'),('82','val_82'))
-stored as directories
 stored as rcfile;
 
 insert overwrite table stats_list_bucket_1

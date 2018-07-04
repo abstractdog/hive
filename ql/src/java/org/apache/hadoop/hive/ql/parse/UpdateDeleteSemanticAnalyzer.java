@@ -1136,7 +1136,6 @@ public class UpdateDeleteSemanticAnalyzer extends SemanticAnalyzer {
         table.setDataLocation(Warehouse.getDnsPath(new Path(SessionState.get().getTempTableSpace(),
           tableName), conf));
         table.getTTable().setTemporary(true);
-        table.setStoredAsSubDirectories(false);
         table.setInputFormatClass(format.getInputFormat());
         table.setOutputFormatClass(format.getOutputFormat());
         db.createTable(table, true);

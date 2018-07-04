@@ -13,7 +13,6 @@ set hive.merge.mapredfiles=false;
 create table list_bucketing_static_part_n3 (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (value) on ('val_466','val_287','val_82')
-    stored as DIRECTORIES
     STORED AS RCFILE;
 
 -- list bucketing DML without merge. use bucketize to generate a few small files.

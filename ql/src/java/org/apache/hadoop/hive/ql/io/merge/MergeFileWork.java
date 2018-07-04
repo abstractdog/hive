@@ -20,10 +20,7 @@ package org.apache.hadoop.hive.ql.io.merge;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.common.HiveStatsUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
 import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
@@ -38,9 +35,7 @@ import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.plan.Explain.Level;
 import org.apache.hadoop.mapred.InputFormat;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 @Explain(displayName = "Merge File Operator", explainLevels = { Level.USER, Level.DEFAULT, Level.EXTENDED })
@@ -140,57 +135,6 @@ public class MergeFileWork extends MapWork {
     partDesc.setInputFileFormatClass(internalInputFormat);
     // Add the DP path to the list of input paths
     inputPaths.add(path);
-  }
-
-  /**
-   * alter table ... concatenate
-   * <p/>
-   * If it is skewed table, use subdirectories in inputpaths.
-   */
-  public void resolveConcatenateMerge(HiveConf conf) {
-    isListBucketingAlterTableConcatenate =
-        ((listBucketingCtx == null) ? false : listBucketingCtx
-            .isSkewedStoredAsDir());
-    LOG.info("isListBucketingAlterTableConcatenate : " +
-        isListBucketingAlterTableConcatenate);
-    if (isListBucketingAlterTableConcatenate) {
-      // use sub-dir as inputpath.
-      assert ((this.inputPaths != null) && (this.inputPaths.size() == 1)) :
-          "alter table ... concatenate should only have one" +
-              " directory inside inputpaths";
-      Path dirPath = inputPaths.get(0);
-      try {
-        FileSystem inpFs = dirPath.getFileSystem(conf);
-        List<FileStatus> status = HiveStatsUtils.getFileStatusRecurse(
-            dirPath, listBucketingCtx.getSkewedColNames().size(), inpFs);
-        List<Path> newInputPath = new ArrayList<Path>();
-        boolean succeed = true;
-        for (FileStatus s : status) {
-          if (s.isDir()) {
-            // Add the lb path to the list of input paths
-            newInputPath.add(s.getPath());
-          } else {
-            // find file instead of dir. dont change inputpath
-            succeed = false;
-          }
-        }
-        assert (succeed || ((!succeed) && newInputPath.isEmpty())) :
-            "This partition has "
-                + " inconsistent file structure: "
-                +
-                "it is stored-as-subdir and expected all files in the same depth"
-                + " of subdirectories.";
-        if (succeed) {
-          inputPaths.clear();
-          inputPaths.addAll(newInputPath);
-        }
-      } catch (IOException e) {
-        String msg =
-            "Fail to get filesystem for directory name : " + dirPath.toUri();
-        throw new RuntimeException(msg, e);
-      }
-
-    }
   }
 
   /**

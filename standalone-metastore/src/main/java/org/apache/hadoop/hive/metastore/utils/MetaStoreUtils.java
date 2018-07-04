@@ -450,7 +450,7 @@ public class MetaStoreUtils {
           md.update(e.getValue().getBytes(ENCODING));
         }
       }
-      md.update(sd.isStoredAsSubDirectories() ? "true".getBytes(ENCODING) : "false".getBytes(ENCODING));
+      md.update("false".getBytes(ENCODING));
     }
 
     return md.digest();

@@ -1,7 +1,6 @@
 PREHOOK: query: CREATE TABLE list_bucketing_dynamic_part (key String, value STRING)
     PARTITIONED BY (ds string, hr string)
     skewed by (key) on ('484')
-    stored as DIRECTORIES
     STORED AS RCFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
@@ -9,7 +8,6 @@ PREHOOK: Output: default@list_bucketing_dynamic_part
 POSTHOOK: query: CREATE TABLE list_bucketing_dynamic_part (key String, value STRING)
     PARTITIONED BY (ds string, hr string)
     skewed by (key) on ('484')
-    stored as DIRECTORIES
     STORED AS RCFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -331,7 +329,6 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
 Storage Desc Params:	 	 
@@ -358,10 +355,10 @@ Table:              	list_bucketing_dynamic_part
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	4                   
+	numFiles            	2                   
 	numRows             	984                 
 	rawDataSize         	9488                
-	totalSize           	10576               
+	totalSize           	10422               
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -372,11 +369,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/list_bucketing_dynamic_part/ds=2008-04-08/hr=b1/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: explain extended
@@ -822,7 +816,6 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
 Storage Desc Params:	 	 
@@ -849,10 +842,10 @@ Table:              	list_bucketing_dynamic_part
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	3                   
+	numFiles            	2                   
 	numRows             	984                 
 	rawDataSize         	9488                
-	totalSize           	10520               
+	totalSize           	10422               
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -863,11 +856,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/list_bucketing_dynamic_part/ds=2008-04-08/hr=b1/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: select count(1) from srcpart where ds = '2008-04-08'
@@ -964,7 +954,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.list_bucketing_dynamic_part
-              numFiles 3
+              numFiles 2
               numRows 984
               partition_columns ds/hr
               partition_columns.types string:string
@@ -972,7 +962,7 @@ STAGE PLANS:
               serialization.ddl struct list_bucketing_dynamic_part { string key, string value}
               serialization.format 1
               serialization.lib org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
-              totalSize 10520
+              totalSize 10422
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
           

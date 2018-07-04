@@ -84,7 +84,7 @@ public class HiveStrictManagedUtils {
   }
 
   public static boolean isListBucketedTable(Table table) {
-    return table.getSd().isStoredAsSubDirectories();
+    return table.getSd().getNumBuckets() > 0;
   }
 
   private static String createValidationError(Table table, String message) {

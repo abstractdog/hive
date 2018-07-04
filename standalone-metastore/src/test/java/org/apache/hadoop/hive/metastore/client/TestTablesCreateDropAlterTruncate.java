@@ -309,7 +309,6 @@ public class TestTablesCreateDropAlterTruncate extends MetaStoreClientTest {
     Assert.assertEquals("Storage descriptor bucket cols", 0, createdSd.getBucketCols().size());
     Assert.assertEquals("Storage descriptor sort cols", 0, createdSd.getSortCols().size());
     Assert.assertEquals("Storage descriptor parameters", 0, createdSd.getParameters().size());
-    Assert.assertFalse("Storage descriptor stored as subdir", createdSd.isStoredAsSubDirectories());
 
     // Serde info
     SerDeInfo serDeInfo = createdSd.getSerdeInfo();
@@ -1375,7 +1374,6 @@ public class TestTablesCreateDropAlterTruncate extends MetaStoreClientTest {
                .setViewOriginalText("viewOriginalText")
                .setSerdeLib("serdelib")
                .setSerdeName("serdename")
-               .setStoredAsSubDirectories(true)
                .addSerdeParam("serdeParam", "serdeParamValue")
                .addTableParam("tableParam", "tableParamValue")
                .addStorageDescriptorParam("sdParam", "sdParamValue")

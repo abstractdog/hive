@@ -26,11 +26,11 @@ POSTHOOK: query: CREATE TABLE tmp_feng.tmp_showcrt2(key string, value int) skewe
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:tmp_feng
 POSTHOOK: Output: tmp_feng@tmp_showcrt2
-PREHOOK: query: CREATE TABLE tmp_feng.tmp_showcrt3(key string, value int) skewed by (key) on ('1','2') stored as directories
+PREHOOK: query: CREATE TABLE tmp_feng.tmp_showcrt3(key string, value int) skewed by (key) on ('1','2')
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:tmp_feng
 PREHOOK: Output: tmp_feng@tmp_showcrt3
-POSTHOOK: query: CREATE TABLE tmp_feng.tmp_showcrt3(key string, value int) skewed by (key) on ('1','2') stored as directories
+POSTHOOK: query: CREATE TABLE tmp_feng.tmp_showcrt3(key string, value int) skewed by (key) on ('1','2')
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:tmp_feng
 POSTHOOK: Output: tmp_feng@tmp_showcrt3
@@ -93,7 +93,6 @@ CREATE TABLE `tmp_feng.tmp_showcrt3`(
   `value` int)
 SKEWED BY (key)
   ON (('1'),('2'))
-  STORED AS DIRECTORIES
 ROW FORMAT SERDE 
   'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' 
 STORED AS INPUTFORMAT 

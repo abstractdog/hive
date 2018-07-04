@@ -25,14 +25,11 @@ package org.apache.hadoop.hive.ql.plan;
  * create table list_bucketing_static_part (key String, value String)
  * partitioned by (ds String, hr String)
  * skewed by (value) on ('val_466','val_287','val_82')
- * stored as DIRECTORIES
  * STORED AS RCFILE;
  *
  * Skewed column is "value".
  * 1. It's position in table column is 1.
  * 2. It's position in skewed column list is 0.
- *
- * This information will be used in {@FileSinkOperator} generateListBucketingDirName
  */
 public class SkewedColumnPositionPair {
   private int tblColPosition;

@@ -6,11 +6,11 @@ POSTHOOK: query: CREATE TABLE test_tab_n0 (key STRING, value STRING) PARTITIONED
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@test_tab_n0
-PREHOOK: query: ALTER TABLE test_tab_n0 SKEWED BY (key) ON ("484") STORED AS DIRECTORIES
+PREHOOK: query: ALTER TABLE test_tab_n0 SKEWED BY (key) ON ("484")
 PREHOOK: type: ALTERTABLE_SKEWED
 PREHOOK: Input: default@test_tab_n0
 PREHOOK: Output: default@test_tab_n0
-POSTHOOK: query: ALTER TABLE test_tab_n0 SKEWED BY (key) ON ("484") STORED AS DIRECTORIES
+POSTHOOK: query: ALTER TABLE test_tab_n0 SKEWED BY (key) ON ("484")
 POSTHOOK: type: ALTERTABLE_SKEWED
 POSTHOOK: Input: default@test_tab_n0
 POSTHOOK: Output: default@test_tab_n0
@@ -45,10 +45,10 @@ Table:              	test_tab_n0
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	2                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	4812                
-	totalSize           	5370                
+	totalSize           	5293                
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -59,10 +59,7 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/test_tab_n0/part=1/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   

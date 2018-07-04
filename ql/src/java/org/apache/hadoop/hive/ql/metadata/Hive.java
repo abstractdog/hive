@@ -1671,9 +1671,9 @@ public class Hive {
    * @return Partition object being loaded with data
    */
   public Partition loadPartition(Path loadPath, Table tbl, Map<String, String> partSpec,
-      LoadFileType loadFileType, boolean inheritTableSpecs, boolean isSkewedStoreAsSubdir,
-      boolean isSrcLocal, boolean isAcidIUDoperation, boolean hasFollowingStatsTask, Long writeId,
-      int stmtId, boolean isInsertOverwrite) throws HiveException {
+      LoadFileType loadFileType, boolean inheritTableSpecs, boolean isSrcLocal,
+      boolean isAcidIUDoperation, boolean hasFollowingStatsTask, Long writeId, int stmtId,
+      boolean isInsertOverwrite) throws HiveException {
     Path tblDataLocationPath =  tbl.getDataLocation();
     boolean isMmTableWrite = AcidUtils.isInsertOnlyTable(tbl.getParameters());
     assert tbl.getPath() != null : "null==getPath() for " + tbl.getTableName();
@@ -1805,17 +1805,6 @@ public class Hive {
         StatsSetupConst.clearColumnStatsState(newTPart.getParameters());
       }
 
-      // recreate the partition if it existed before
-      if (isSkewedStoreAsSubdir) {
-        org.apache.hadoop.hive.metastore.api.Partition newCreatedTpart = newTPart.getTPartition();
-        SkewedInfo skewedInfo = newCreatedTpart.getSd().getSkewedInfo();
-        /* Construct list bucketing location mappings from sub-directory name. */
-        Map<List<String>, String> skewedColValueLocationMaps = constructListBucketingLocationMap(
-            newPartPath, skewedInfo);
-        /* Add list bucketing location mappings. */
-        skewedInfo.setSkewedColValueLocationMaps(skewedColValueLocationMaps);
-        newCreatedTpart.getSd().setSkewedInfo(skewedInfo);
-      }
       if (!this.getConf().getBoolVar(HiveConf.ConfVars.HIVESTATSAUTOGATHER)) {
         StatsSetupConst.setBasicStatsState(newTPart.getParameters(), StatsSetupConst.FALSE);
       }
@@ -2216,7 +2205,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
 
               // load the partition
               Partition newPartition = loadPartition(partPath, tbl, fullPartSpec, loadFileType,
-                  true, numLB > 0, false, isAcid, hasFollowingStatsTask, writeId, stmtId,
+                  true, false, isAcid, hasFollowingStatsTask, writeId, stmtId,
                   isInsertOverwrite);
               partitionsMap.put(fullPartSpec, newPartition);
 
@@ -2304,8 +2293,6 @@ private void constructOneLBLocationMap(FileStatus fSta,
    *          otherwise add files to table (KEEP_EXISTING, OVERWRITE_EXISTING)
    * @param isSrcLocal
    *          If the source directory is LOCAL
-   * @param isSkewedStoreAsSubdir
-   *          if list bucketing enabled
    * @param hasFollowingStatsTask
    *          if there is any following stats task
    * @param isAcidIUDoperation true if this is an ACID based Insert [overwrite]/update/delete
@@ -2313,7 +2300,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @param stmtId statement ID of the current load statement
    */
   public void loadTable(Path loadPath, String tableName, LoadFileType loadFileType, boolean isSrcLocal,
-      boolean isSkewedStoreAsSubdir, boolean isAcidIUDoperation, boolean hasFollowingStatsTask,
+      boolean isAcidIUDoperation, boolean hasFollowingStatsTask,
       Long writeId, int stmtId, boolean isInsertOverwrite) throws HiveException {
 
     PerfLogger perfLogger = SessionState.getPerfLogger();
@@ -2392,20 +2379,6 @@ private void constructOneLBLocationMap(FileStatus fSta,
     //column stats will be inaccurate
     if (!hasFollowingStatsTask) {
       StatsSetupConst.clearColumnStatsState(tbl.getParameters());
-    }
-
-    try {
-      if (isSkewedStoreAsSubdir) {
-        SkewedInfo skewedInfo = tbl.getSkewedInfo();
-        // Construct list bucketing location mappings from sub-directory name.
-        Map<List<String>, String> skewedColValueLocationMaps = constructListBucketingLocationMap(
-            tbl.getPath(), skewedInfo);
-        // Add list bucketing location mappings.
-        skewedInfo.setSkewedColValueLocationMaps(skewedColValueLocationMaps);
-      }
-    } catch (IOException e) {
-      LOG.error(StringUtils.stringifyException(e));
-      throw new HiveException(e);
     }
 
     EnvironmentContext environmentContext = null;

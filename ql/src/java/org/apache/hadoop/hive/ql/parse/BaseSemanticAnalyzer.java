@@ -1837,17 +1837,15 @@ public abstract class BaseSemanticAnalyzer {
    * @param skewedColNames
    * @param skewedValues
    * @param skewedColValueLocationMaps
-   * @param isStoredAsSubDirectories
    * @return
    */
   protected ListBucketingCtx constructListBucketingCtx(List<String> skewedColNames,
       List<List<String>> skewedValues, Map<List<String>, String> skewedColValueLocationMaps,
-      boolean isStoredAsSubDirectories, HiveConf conf) {
+      HiveConf conf) {
     ListBucketingCtx lbCtx = new ListBucketingCtx();
     lbCtx.setSkewedColNames(skewedColNames);
     lbCtx.setSkewedColValues(skewedValues);
     lbCtx.setLbLocationMap(skewedColValueLocationMaps);
-    lbCtx.setStoredAsSubDirectories(isStoredAsSubDirectories);
     lbCtx.setDefaultKey(ListBucketingPrunerUtils.HIVE_LIST_BUCKETING_DEFAULT_KEY);
     lbCtx.setDefaultDirName(ListBucketingPrunerUtils.HIVE_LIST_BUCKETING_DEFAULT_DIR_NAME);
     return lbCtx;
@@ -1958,22 +1956,6 @@ public abstract class BaseSemanticAnalyzer {
       default:
         break;
     }
-  }
-
-  /**
-   * process stored as directories
-   *
-   * @param child
-   * @return
-   */
-  protected boolean analyzeStoredAdDirs(ASTNode child) {
-    boolean storedAsDirs = false;
-    if ((child.getChildCount() == 3)
-        && (((ASTNode) child.getChild(2)).getToken().getType()
-            == HiveParser.TOK_STOREDASDIRS)) {
-      storedAsDirs = true;
-    }
-    return storedAsDirs;
   }
 
   private static boolean getPartExprNodeDesc(ASTNode astNode, HiveConf conf,

@@ -1,14 +1,12 @@
 PREHOOK: query: create table list_bucketing_dynamic_part_n0 (key String, value String) 
 partitioned by (ds String, hr String) 
 skewed by (key) on ("484")
-stored as DIRECTORIES
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@list_bucketing_dynamic_part_n0
 POSTHOOK: query: create table list_bucketing_dynamic_part_n0 (key String, value String) 
 partitioned by (ds String, hr String) 
 skewed by (key) on ("484")
-stored as DIRECTORIES
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@list_bucketing_dynamic_part_n0
@@ -303,7 +301,7 @@ Table:              	list_bucketing_dynamic_part_n0
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	2                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	5312                
 	totalSize           	5812                
@@ -317,11 +315,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/list_bucketing_dynamic_part_n0/ds=2008-04-08/hr=11/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: desc formatted list_bucketing_dynamic_part_n0 partition (ds='2008-04-08', hr='12')
@@ -346,7 +341,7 @@ Table:              	list_bucketing_dynamic_part_n0
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	2                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	5312                
 	totalSize           	5812                
@@ -360,11 +355,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/list_bucketing_dynamic_part_n0/ds=2008-04-08/hr=12/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: select count(1) from srcpart where ds='2008-04-08'
@@ -425,7 +417,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.list_bucketing_dynamic_part_n0
-              numFiles 2
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string

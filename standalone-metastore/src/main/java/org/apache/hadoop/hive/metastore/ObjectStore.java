@@ -2166,7 +2166,6 @@ public class ObjectStore implements RawStore, Configurable {
         convertToSkewedValues(msd.getSkewedColValues()),
         covertToSkewedMap(msd.getSkewedColValueLocationMaps()));
     sd.setSkewedInfo(skewedInfo);
-    sd.setStoredAsSubDirectories(msd.isStoredAsSubDirectories());
     return sd;
   }
 
@@ -2277,7 +2276,7 @@ public class ObjectStore implements RawStore, Configurable {
         convertToMStringLists((null == sd.getSkewedInfo()) ? null : sd.getSkewedInfo()
             .getSkewedColValues()),
         covertToMapMStringList((null == sd.getSkewedInfo()) ? null : sd.getSkewedInfo()
-            .getSkewedColValueLocationMaps()), sd.isStoredAsSubDirectories());
+            .getSkewedColValueLocationMaps()));
   }
 
   private MCreationMetadata convertToMCreationMetadata(
@@ -4359,7 +4358,6 @@ public class ObjectStore implements RawStore, Configurable {
     oldSd.setSkewedColValueLocationMaps(newSd.getSkewedColValueLocationMaps());
     oldSd.setSortCols(newSd.getSortCols());
     oldSd.setParameters(newSd.getParameters());
-    oldSd.setStoredAsSubDirectories(newSd.isStoredAsSubDirectories());
   }
 
   /**

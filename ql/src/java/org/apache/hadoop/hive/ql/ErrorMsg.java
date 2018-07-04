@@ -246,8 +246,6 @@ public enum ErrorMsg {
   INVALID_TABLE_IN_ON_CLAUSE_OF_MERGE(10149, "No columns from target table ''{0}'' found in ON " +
     "clause ''{1}'' of MERGE statement.", true),
 
-  LOAD_INTO_STORED_AS_DIR(10195, "A stored-as-directories table cannot be used as target for LOAD"),
-  ALTER_TBL_STOREDASDIR_NOT_SKEWED(10196, "This operation is only valid on skewed table."),
   ALTER_TBL_SKEWED_LOC_NO_LOC(10197, "Alter table skewed location doesn't have locations."),
   ALTER_TBL_SKEWED_LOC_NO_MAP(10198, "Alter table skewed location doesn't have location map."),
   SKEWED_TABLE_NO_COLUMN_NAME(10200, "No skewed column name."),

@@ -26,7 +26,6 @@ set hive.stats.reliable=true;
 create table list_bucketing_static_part_n4 (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (key, value) on (('484','val_484'),('51','val_14'),('103','val_103'))
-    stored as DIRECTORIES
     STORED AS RCFILE;
 
 -- list bucketing DML without merge. use bucketize to generate a few small files.

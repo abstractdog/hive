@@ -8,13 +8,11 @@ POSTHOOK: Output: database:default
 POSTHOOK: Output: default@test_tab_n3
 PREHOOK: query: ALTER TABLE test_tab_n3
 SKEWED BY (key) ON ("484")
-STORED AS DIRECTORIES
 PREHOOK: type: ALTERTABLE_SKEWED
 PREHOOK: Input: default@test_tab_n3
 PREHOOK: Output: default@test_tab_n3
 POSTHOOK: query: ALTER TABLE test_tab_n3
 SKEWED BY (key) ON ("484")
-STORED AS DIRECTORIES
 POSTHOOK: type: ALTERTABLE_SKEWED
 POSTHOOK: Input: default@test_tab_n3
 POSTHOOK: Output: default@test_tab_n3
@@ -74,7 +72,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.test_tab_n3
-              numFiles 2
+              numFiles 1
               numRows 500
               partition_columns part
               partition_columns.types string
@@ -82,7 +80,7 @@ STAGE PLANS:
               serialization.ddl struct test_tab_n3 { string key, string value}
               serialization.format 1
               serialization.lib org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
-              totalSize 1761
+              totalSize 1685
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
           
@@ -158,7 +156,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.test_tab_n3
-              numFiles 2
+              numFiles 1
               numRows 500
               partition_columns part
               partition_columns.types string
@@ -166,7 +164,7 @@ STAGE PLANS:
               serialization.ddl struct test_tab_n3 { string key, string value}
               serialization.format 1
               serialization.lib org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
-              totalSize 1761
+              totalSize 1685
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
           

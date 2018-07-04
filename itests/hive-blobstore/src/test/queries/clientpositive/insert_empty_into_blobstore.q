@@ -36,7 +36,7 @@ PARTITIONED BY (
     pt string,
     dt string,
     hr string)
-SKEWED BY (id) ON ('1', '2', '3') STORED AS DIRECTORIES
+SKEWED BY (id) ON ('1', '2', '3')
 LOCATION '${hiveconf:test.blobstore.path.unique}/insert_empty_into_blobstore/blobstore_list_bucketing';
 
 INSERT INTO TABLE blobstore_list_bucketing PARTITION (pt='a', dt='a', hr='a') SELECT id, name, dept FROM empty;

@@ -1,7 +1,6 @@
 PREHOOK: query: create table list_bucketing_static_part_n2 (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (key, value) on (('484','val_484'),('51','val_14'),('103','val_103'))
-    stored as DIRECTORIES
     STORED AS RCFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
@@ -9,7 +8,6 @@ PREHOOK: Output: default@list_bucketing_static_part_n2
 POSTHOOK: query: create table list_bucketing_static_part_n2 (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (key, value) on (('484','val_484'),('51','val_14'),('103','val_103'))
-    stored as DIRECTORIES
     STORED AS RCFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -313,10 +311,10 @@ Table:              	list_bucketing_static_part_n2
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	6                   
+	numFiles            	2                   
 	numRows             	1000                
 	rawDataSize         	9624                
-	totalSize           	10898               
+	totalSize           	10586               
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -327,11 +325,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key, value]        	 
 Skewed Values:      	[[103, val_103], [484, val_484], [51, val_14]]	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[103, val_103]=/list_bucketing_static_part_n2/ds=2008-04-08/hr=11/key=103/value=val_103, [484, val_484]=/list_bucketing_static_part_n2/ds=2008-04-08/hr=11/key=484/value=val_484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: explain extended
@@ -753,10 +748,10 @@ Table:              	list_bucketing_static_part_n2
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	4                   
+	numFiles            	2                   
 	numRows             	1000                
 	rawDataSize         	9624                
-	totalSize           	10786               
+	totalSize           	10586               
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -767,11 +762,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key, value]        	 
 Skewed Values:      	[[103, val_103], [484, val_484], [51, val_14]]	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[103, val_103]=/list_bucketing_static_part_n2/ds=2008-04-08/hr=11/key=103/value=val_103, [484, val_484]=/list_bucketing_static_part_n2/ds=2008-04-08/hr=11/key=484/value=val_484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: select count(1) from srcpart where ds = '2008-04-08'
@@ -821,7 +813,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.list_bucketing_static_part_n2
-              numFiles 4
+              numFiles 2
               numRows 1000
               partition_columns ds/hr
               partition_columns.types string:string
@@ -829,7 +821,7 @@ STAGE PLANS:
               serialization.ddl struct list_bucketing_static_part_n2 { string key, string value}
               serialization.format 1
               serialization.lib org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
-              totalSize 10786
+              totalSize 10586
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
           

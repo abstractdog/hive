@@ -644,7 +644,7 @@ class MetaStoreDirectSql {
       "select " + PARTITIONS + ".\"PART_ID\", " + SDS + ".\"SD_ID\", " + SDS + ".\"CD_ID\","
     + " " + SERDES + ".\"SERDE_ID\", " + PARTITIONS + ".\"CREATE_TIME\","
     + " " + PARTITIONS + ".\"LAST_ACCESS_TIME\", " + SDS + ".\"INPUT_FORMAT\", " + SDS + ".\"IS_COMPRESSED\","
-    + " " + SDS + ".\"IS_STOREDASSUBDIRECTORIES\", " + SDS + ".\"LOCATION\", " + SDS + ".\"NUM_BUCKETS\","
+    + " " + SDS + ".\"LOCATION\", " + SDS + ".\"NUM_BUCKETS\","
     + " " + SDS + ".\"OUTPUT_FORMAT\", " + SERDES + ".\"NAME\", " + SERDES + ".\"SLIB\" "
     + "from " + PARTITIONS + ""
     + "  left outer join " + SDS + " on " + PARTITIONS + ".\"SD_ID\" = " + SDS + ".\"SD_ID\" "
@@ -717,11 +717,9 @@ class MetaStoreDirectSql {
       sd.setInputFormat((String)fields[6]);
       Boolean tmpBoolean = extractSqlBoolean(fields[7]);
       if (tmpBoolean != null) sd.setCompressed(tmpBoolean);
-      tmpBoolean = extractSqlBoolean(fields[8]);
-      if (tmpBoolean != null) sd.setStoredAsSubDirectories(tmpBoolean);
-      sd.setLocation((String)fields[9]);
-      if (fields[10] != null) sd.setNumBuckets(extractSqlInt(fields[10]));
-      sd.setOutputFormat((String)fields[11]);
+      sd.setLocation((String)fields[8]);
+      if (fields[10] != null) sd.setNumBuckets(extractSqlInt(fields[9]));
+      sd.setOutputFormat((String)fields[10]);
       sdSb.append(sdId).append(",");
       part.setSd(sd);
 
@@ -743,8 +741,8 @@ class MetaStoreDirectSql {
         throw new MetaException("SDs reuse serdes; we don't expect that");
       }
       serde.setParameters(new HashMap<String, String>());
-      serde.setName((String)fields[12]);
-      serde.setSerializationLib((String)fields[13]);
+      serde.setName((String)fields[11]);
+      serde.setSerializationLib((String)fields[12]);
       serdeSb.append(serdeId).append(",");
       sd.setSerdeInfo(serde);
       Deadline.checkTimeout();

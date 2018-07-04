@@ -12,8 +12,7 @@ set mapred.input.dir.recursive=true;
 CREATE TABLE test_tab_n3 (key STRING, value STRING) PARTITIONED BY (part STRING) STORED AS RCFILE;
 
 ALTER TABLE test_tab_n3
-SKEWED BY (key) ON ("484")
-STORED AS DIRECTORIES;
+SKEWED BY (key) ON ("484");
 
 INSERT OVERWRITE TABLE test_tab_n3 PARTITION (part = '1') SELECT * FROM src;
 

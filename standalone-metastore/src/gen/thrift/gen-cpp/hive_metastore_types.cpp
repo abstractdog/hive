@@ -6008,11 +6008,6 @@ void StorageDescriptor::__set_skewedInfo(const SkewedInfo& val) {
 __isset.skewedInfo = true;
 }
 
-void StorageDescriptor::__set_storedAsSubDirectories(const bool val) {
-  this->storedAsSubDirectories = val;
-__isset.storedAsSubDirectories = true;
-}
-
 uint32_t StorageDescriptor::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
@@ -6173,14 +6168,6 @@ uint32_t StorageDescriptor::read(::apache::thrift::protocol::TProtocol* iprot) {
           xfer += iprot->skip(ftype);
         }
         break;
-      case 12:
-        if (ftype == ::apache::thrift::protocol::T_BOOL) {
-          xfer += iprot->readBool(this->storedAsSubDirectories);
-          this->__isset.storedAsSubDirectories = true;
-        } else {
-          xfer += iprot->skip(ftype);
-        }
-        break;
       default:
         xfer += iprot->skip(ftype);
         break;
@@ -6276,11 +6263,6 @@ uint32_t StorageDescriptor::write(::apache::thrift::protocol::TProtocol* oprot) 
     xfer += this->skewedInfo.write(oprot);
     xfer += oprot->writeFieldEnd();
   }
-  if (this->__isset.storedAsSubDirectories) {
-    xfer += oprot->writeFieldBegin("storedAsSubDirectories", ::apache::thrift::protocol::T_BOOL, 12);
-    xfer += oprot->writeBool(this->storedAsSubDirectories);
-    xfer += oprot->writeFieldEnd();
-  }
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -6299,7 +6281,6 @@ void swap(StorageDescriptor &a, StorageDescriptor &b) {
   swap(a.sortCols, b.sortCols);
   swap(a.parameters, b.parameters);
   swap(a.skewedInfo, b.skewedInfo);
-  swap(a.storedAsSubDirectories, b.storedAsSubDirectories);
   swap(a.__isset, b.__isset);
 }
 
@@ -6315,7 +6296,6 @@ StorageDescriptor::StorageDescriptor(const StorageDescriptor& other234) {
   sortCols = other234.sortCols;
   parameters = other234.parameters;
   skewedInfo = other234.skewedInfo;
-  storedAsSubDirectories = other234.storedAsSubDirectories;
   __isset = other234.__isset;
 }
 StorageDescriptor& StorageDescriptor::operator=(const StorageDescriptor& other235) {
@@ -6330,7 +6310,6 @@ StorageDescriptor& StorageDescriptor::operator=(const StorageDescriptor& other23
   sortCols = other235.sortCols;
   parameters = other235.parameters;
   skewedInfo = other235.skewedInfo;
-  storedAsSubDirectories = other235.storedAsSubDirectories;
   __isset = other235.__isset;
   return *this;
 }
@@ -6348,7 +6327,6 @@ void StorageDescriptor::printTo(std::ostream& out) const {
   out << ", " << "sortCols=" << to_string(sortCols);
   out << ", " << "parameters=" << to_string(parameters);
   out << ", " << "skewedInfo="; (__isset.skewedInfo ? (out << to_string(skewedInfo)) : (out << "<null>"));
-  out << ", " << "storedAsSubDirectories="; (__isset.storedAsSubDirectories ? (out << to_string(storedAsSubDirectories)) : (out << "<null>"));
   out << ")";
 }
 

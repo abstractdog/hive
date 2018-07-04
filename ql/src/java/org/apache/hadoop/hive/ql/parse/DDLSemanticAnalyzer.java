@@ -1501,8 +1501,6 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         Path oldTblPartLoc = null;
         List<FieldSchema> cols = null;
         ListBucketingCtx lbCtx = null;
-        boolean isListBucketed = false;
-        List<String> listBucketColNames = null;
 
         if (table.isPartitioned()) {
           Partition part = db.getPartition(table, partSpec, false);
@@ -1522,9 +1520,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
           inputFormatClass = part.getInputFormatClass();
           isArchived = ArchiveUtils.isArchived(part);
           lbCtx = constructListBucketingCtx(part.getSkewedColNames(), part.getSkewedColValues(),
-              part.getSkewedColValueLocationMaps(), part.isStoredAsSubDirectories(), conf);
-          isListBucketed = part.isStoredAsSubDirectories();
-          listBucketColNames = part.getSkewedColNames();
+              part.getSkewedColValueLocationMaps(), conf);
         } else {
           // input and output are the same
           oldTblPartLoc = table.getPath();
@@ -1533,9 +1529,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
           bucketCols = table.getBucketCols();
           inputFormatClass = table.getInputFormatClass();
           lbCtx = constructListBucketingCtx(table.getSkewedColNames(), table.getSkewedColValues(),
-              table.getSkewedColValueLocationMaps(), table.isStoredAsSubDirectories(), conf);
-          isListBucketed = table.isStoredAsSubDirectories();
-          listBucketColNames = table.getSkewedColNames();
+              table.getSkewedColValueLocationMaps(), conf);
         }
 
         // throw a HiveException for non-rcfile.
@@ -1566,14 +1560,6 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
           for (String bucketCol : bucketCols) {
             if (bucketCol.equalsIgnoreCase(columnName)) {
               throw new SemanticException(ErrorMsg.TRUNCATE_BUCKETED_COLUMN.getMsg(columnName));
-            }
-          }
-          if (isListBucketed) {
-            for (String listBucketCol : listBucketColNames) {
-              if (listBucketCol.equalsIgnoreCase(columnName)) {
-                throw new SemanticException(
-                    ErrorMsg.TRUNCATE_LIST_BUCKETED_COLUMN.getMsg(columnName));
-              }
             }
           }
         }
@@ -2023,7 +2009,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
           oldTblPartLoc = partPath;
 
           lbCtx = constructListBucketingCtx(part.getSkewedColNames(), part.getSkewedColValues(),
-              part.getSkewedColValueLocationMaps(), part.isStoredAsSubDirectories(), conf);
+              part.getSkewedColValueLocationMaps(), conf);
         }
       } else {
         inputFormatClass = tblObj.getInputFormatClass();
@@ -2034,7 +2020,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
         newTblPartLoc = tblObj.getPath();
 
         lbCtx = constructListBucketingCtx(tblObj.getSkewedColNames(), tblObj.getSkewedColValues(),
-            tblObj.getSkewedColValueLocationMaps(), tblObj.isStoredAsSubDirectories(), conf);
+            tblObj.getSkewedColValueLocationMaps(), conf);
       }
 
       // throw a HiveException for other than rcfile and orcfile.
@@ -4072,16 +4058,12 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       /* Convert a skewed table to non-skewed table. */
       AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, true,
           new ArrayList<String>(), new ArrayList<List<String>>());
-      alterTblDesc.setStoredAsSubDirectories(false);
       rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
           alterTblDesc)));
     } else {
       switch (((ASTNode) ast.getChild(0)).getToken().getType()) {
       case HiveParser.TOK_TABLESKEWED:
         handleAlterTableSkewedBy(ast, tableName, tab);
-        break;
-      case HiveParser.TOK_STOREDASDIRS:
-        handleAlterTableDisableStoredAsDirs(tableName, tab);
         break;
       default:
         assert false;
@@ -4090,29 +4072,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   /**
-   * Handle alter table <name> not stored as directories
-   *
-   * @param tableName
-   * @param tab
-   * @throws SemanticException
-   */
-  private void handleAlterTableDisableStoredAsDirs(String tableName, Table tab)
-      throws SemanticException {
-  List<String> skewedColNames = tab.getSkewedColNames();
-    List<List<String>> skewedColValues = tab.getSkewedColValues();
-    if ((skewedColNames == null) || (skewedColNames.size() == 0) || (skewedColValues == null)
-        || (skewedColValues.size() == 0)) {
-      throw new SemanticException(ErrorMsg.ALTER_TBL_STOREDASDIR_NOT_SKEWED.getMsg(tableName));
-    }
-    AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, false,
-        skewedColNames, skewedColValues);
-    alterTblDesc.setStoredAsSubDirectories(false);
-    rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
-        alterTblDesc)));
-  }
-
-  /**
-   * Process "alter table <name> skewed by .. on .. stored as directories
+   * Process "alter table <name> skewed by .. on ..
    * @param ast
    * @param tableName
    * @param tab
@@ -4127,13 +4087,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     skewedColNames = analyzeSkewedTablDDLColNames(skewedColNames, skewedNode);
     /* skewed value. */
     analyzeDDLSkewedValues(skewedValues, skewedNode);
-    // stored as directories
-    boolean storedAsDirs = analyzeStoredAdDirs(skewedNode);
-
 
     AlterTableDesc alterTblDesc = new AlterTableDesc(tableName, false,
         skewedColNames, skewedValues);
-    alterTblDesc.setStoredAsSubDirectories(storedAsDirs);
     /**
      * Validate information about skewed table
      */
@@ -4142,51 +4098,6 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
         alterTblDesc)));
   }
-
-  /**
-   * Analyze skewed column names
-   *
-   * @param skewedColNames
-   * @param child
-   * @return
-   * @throws SemanticException
-   */
-  private List<String> analyzeAlterTableSkewedColNames(List<String> skewedColNames,
-      ASTNode child) throws SemanticException {
-    Tree nNode = child.getChild(0);
-    if (nNode == null) {
-      throw new SemanticException(ErrorMsg.SKEWED_TABLE_NO_COLUMN_NAME.getMsg());
-    } else {
-      ASTNode nAstNode = (ASTNode) nNode;
-      if (nAstNode.getToken().getType() != HiveParser.TOK_TABCOLNAME) {
-        throw new SemanticException(ErrorMsg.SKEWED_TABLE_NO_COLUMN_NAME.getMsg());
-      } else {
-        skewedColNames = getColumnNames(nAstNode);
-      }
-    }
-    return skewedColNames;
-  }
-
-  /**
-   * Given a ASTNode, return list of values.
-   *
-   * use case:
-   * create table xyz list bucketed (col1) with skew (1,2,5)
-   * AST Node is for (1,2,5)
-   *
-   * @param ast
-   * @return
-   */
-  private List<String> getColumnValues(ASTNode ast) {
-    List<String> colList = new ArrayList<String>();
-    int numCh = ast.getChildCount();
-    for (int i = 0; i < numCh; i++) {
-      ASTNode child = (ASTNode) ast.getChild(i);
-      colList.add(stripQuotes(child.getText()).toLowerCase());
-    }
-    return colList;
-  }
-
 
   /**
    * Analyze alter table's skewed location

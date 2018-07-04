@@ -27,13 +27,13 @@ select key, value from src;
 describe formatted fact_daily_n3 PARTITION (ds = '1', hr='1');
 
 -- partition. skewed value is 484/238
-alter table fact_daily_n3 skewed by (key, value) on (('484','val_484'),('238','val_238')) stored as DIRECTORIES;
+alter table fact_daily_n3 skewed by (key, value) on (('484','val_484'),('238','val_238'));
 insert overwrite table fact_daily_n3 partition (ds = '1', hr = '2')
 select key, value from src;
 describe formatted fact_daily_n3 PARTITION (ds = '1', hr='2');
 
 -- another partition. skewed value is 327
-alter table fact_daily_n3 skewed by (key, value) on (('327','val_327')) stored as DIRECTORIES;
+alter table fact_daily_n3 skewed by (key, value) on (('327','val_327'));
 insert overwrite table fact_daily_n3 partition (ds = '1', hr = '3')
 select key, value from src;
 describe formatted fact_daily_n3 PARTITION (ds = '1', hr='3');

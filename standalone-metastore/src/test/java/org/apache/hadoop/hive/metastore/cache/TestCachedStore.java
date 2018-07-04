@@ -52,13 +52,10 @@ import org.apache.hadoop.hive.metastore.client.builder.DatabaseBuilder;
 import org.apache.hadoop.hive.metastore.columnstats.cache.LongColumnStatsDataInspector;
 import org.apache.hadoop.hive.metastore.columnstats.cache.StringColumnStatsDataInspector;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hadoop.hive.metastore.conf.MetastoreConf.ConfVars;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import jline.internal.Log;
 
 import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_CATALOG_NAME;
 
@@ -1054,7 +1051,6 @@ public class TestCachedStore {
     SerDeInfo serdeInfo = new SerDeInfo("serde", "seriallib", new HashMap<>());
     StorageDescriptor sd = new StorageDescriptor(cols, serdeLocation, "input", "output", false, 0,
         serdeInfo, null, null, serdeParams);
-    sd.setStoredAsSubDirectories(false);
     Table tbl = new Table(tblName, dbName, tblOwner, 0, 0, 0, sd, ptnCols, tblParams, null, null,
         TableType.MANAGED_TABLE.toString());
     tbl.setCatName(DEFAULT_CATALOG_NAME);

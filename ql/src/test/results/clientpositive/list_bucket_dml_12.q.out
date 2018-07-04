@@ -1,7 +1,6 @@
 PREHOOK: query: create table list_bucketing_mul_col_n0 (col1 String, col2 String, col3 String, col4 String, col5 string) 
     partitioned by (ds String, hr String) 
     skewed by (col2, col4) on (('466','val_466'),('287','val_287'),('82','val_82'))
-    stored as DIRECTORIES
     STORED AS RCFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
@@ -9,7 +8,6 @@ PREHOOK: Output: default@list_bucketing_mul_col_n0
 POSTHOOK: query: create table list_bucketing_mul_col_n0 (col1 String, col2 String, col3 String, col4 String, col5 string) 
     partitioned by (ds String, hr String) 
     skewed by (col2, col4) on (('466','val_466'),('287','val_287'),('82','val_82'))
-    stored as DIRECTORIES
     STORED AS RCFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -263,10 +261,10 @@ Table:              	list_bucketing_mul_col_n0
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"col1\":\"true\",\"col2\":\"true\",\"col3\":\"true\",\"col4\":\"true\",\"col5\":\"true\"}}
-	numFiles            	4                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	6312                
-	totalSize           	7094                
+	totalSize           	6826                
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -277,11 +275,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[col2, col4]        	 
 Skewed Values:      	[[287, val_287], [466, val_466], [82, val_82]]	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[287, val_287]=/list_bucketing_mul_col_n0/ds=2008-04-08/hr=11/col2=287/col4=val_287, [466, val_466]=/list_bucketing_mul_col_n0/ds=2008-04-08/hr=11/col2=466/col4=val_466, [82, val_82]=/list_bucketing_mul_col_n0/ds=2008-04-08/hr=11/col2=82/col4=val_82}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: explain extended
@@ -315,7 +310,7 @@ STAGE PLANS:
               columns.types string:string:string:string:string
 #### A masked pattern was here ####
               name default.list_bucketing_mul_col_n0
-              numFiles 4
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string
@@ -323,7 +318,7 @@ STAGE PLANS:
               serialization.ddl struct list_bucketing_mul_col_n0 { string col1, string col2, string col3, string col4, string col5}
               serialization.format 1
               serialization.lib org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
-              totalSize 7094
+              totalSize 6826
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
           
@@ -409,7 +404,7 @@ STAGE PLANS:
               columns.types string:string:string:string:string
 #### A masked pattern was here ####
               name default.list_bucketing_mul_col_n0
-              numFiles 4
+              numFiles 1
               numRows 500
               partition_columns ds/hr
               partition_columns.types string:string
@@ -417,7 +412,7 @@ STAGE PLANS:
               serialization.ddl struct list_bucketing_mul_col_n0 { string col1, string col2, string col3, string col4, string col5}
               serialization.format 1
               serialization.lib org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
-              totalSize 7094
+              totalSize 6826
 #### A masked pattern was here ####
             serde: org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe
           

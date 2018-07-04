@@ -10,7 +10,7 @@ set hive.stats.dbclass=fs;
 
 CREATE TABLE test_tab_n0 (key STRING, value STRING) PARTITIONED BY (part STRING) STORED AS RCFILE;
 
-ALTER TABLE test_tab_n0 SKEWED BY (key) ON ("484") STORED AS DIRECTORIES;
+ALTER TABLE test_tab_n0 SKEWED BY (key) ON ("484");
 
 INSERT OVERWRITE TABLE test_tab_n0 PARTITION (part = '1') SELECT * FROM src;
 

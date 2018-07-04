@@ -7294,9 +7294,8 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       currentTableId = destTableId;
       destTableId++;
 
-      lbCtx = constructListBucketingCtx(dest_tab.getSkewedColNames(),
-          dest_tab.getSkewedColValues(), dest_tab.getSkewedColValueLocationMaps(),
-          dest_tab.isStoredAsSubDirectories(), conf);
+      lbCtx = constructListBucketingCtx(dest_tab.getSkewedColNames(), dest_tab.getSkewedColValues(),
+          dest_tab.getSkewedColValueLocationMaps(), conf);
 
       // Create the work for moving the table
       // NOTE: specify Dynamic partitions in dest_tab for WriteEntity
@@ -7399,8 +7398,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       destTableId++;
 
       lbCtx = constructListBucketingCtx(dest_part.getSkewedColNames(),
-          dest_part.getSkewedColValues(), dest_part.getSkewedColValueLocationMaps(),
-          dest_part.isStoredAsSubDirectories(), conf);
+          dest_part.getSkewedColValues(), dest_part.getSkewedColValueLocationMaps(), conf);
       AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
       if (destTableIsFullAcid) {
         acidOp = getAcidType(table_desc.getOutputFileFormatClass(), dest);
@@ -7799,7 +7797,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     /* Set List Bucketing context. */
     if (lbCtx != null) {
       lbCtx.processRowSkewedIndex(fsRS);
-      lbCtx.calculateSkewedValueSubDirList();
     }
     fileSinkDesc.setLbCtx(lbCtx);
 
@@ -12984,7 +12981,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     List<String> skewedColNames = new ArrayList<String>();
     List<List<String>> skewedValues = new ArrayList<List<String>>();
     Map<List<String>, String> listBucketColValuesMapping = new HashMap<List<String>, String>();
-    boolean storedAsDirs = false;
     boolean isUserStorageFormat = false;
 
     RowFormatParams rowFormatParams = new RowFormatParams();
@@ -13114,9 +13110,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         skewedColNames = analyzeSkewedTablDDLColNames(skewedColNames, child);
         // skewed value
         analyzeDDLSkewedValues(skewedValues, child);
-        // stored as directories
-        storedAsDirs = analyzeStoredAdDirs(child);
-
         break;
       default:
         throw new AssertionError("Unknown token: " + child.getToken());
@@ -13193,7 +13186,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           storageFormat.getStorageHandler(), storageFormat.getSerdeProps(), tblProps, ifNotExists, skewedColNames,
           skewedValues, primaryKeys, foreignKeys, uniqueConstraints, notNullConstraints, defaultConstraints,
                                                        checkConstraints);
-      crtTblDesc.setStoredAsSubDirectories(storedAsDirs);
       crtTblDesc.setNullFormat(rowFormatParams.nullFormat);
 
       crtTblDesc.validate(conf);
@@ -13296,7 +13288,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           skewedColNames, skewedValues, true, primaryKeys, foreignKeys,
           uniqueConstraints, notNullConstraints, defaultConstraints, checkConstraints);
       tableDesc.setMaterialization(isMaterialization);
-      tableDesc.setStoredAsSubDirectories(storedAsDirs);
       tableDesc.setNullFormat(rowFormatParams.nullFormat);
       qb.setTableDesc(tableDesc);
 

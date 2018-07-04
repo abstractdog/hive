@@ -92,7 +92,6 @@ public class CreateTableDesc extends DDLDesc implements Serializable {
   boolean ifNotExists;
   List<String> skewedColNames;
   List<List<String>> skewedColValues;
-  boolean isStoredAsSubDirectories = false;
   boolean isTemporary = false;
   private boolean isMaterialization = false;
   private boolean replaceMode = false;
@@ -606,20 +605,6 @@ public class CreateTableDesc extends DDLDesc implements Serializable {
   }
 
   /**
-   * @return the isStoredAsSubDirectories
-   */
-  public boolean isStoredAsSubDirectories() {
-    return isStoredAsSubDirectories;
-  }
-
-  /**
-   * @param isStoredAsSubDirectories the isStoredAsSubDirectories to set
-   */
-  public void setStoredAsSubDirectories(boolean isStoredAsSubDirectories) {
-    this.isStoredAsSubDirectories = isStoredAsSubDirectories;
-  }
-
-  /**
    * @return the nullFormat
    */
   public String getNullFormat() {
@@ -805,8 +790,6 @@ public class CreateTableDesc extends DDLDesc implements Serializable {
     }
 
     tbl.getTTable().setTemporary(isTemporary());
-
-    tbl.setStoredAsSubDirectories(isStoredAsSubDirectories());
 
     tbl.setInputFormatClass(getInputFormat());
     tbl.setOutputFormatClass(getOutputFormat());

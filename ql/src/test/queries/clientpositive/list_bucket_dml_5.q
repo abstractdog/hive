@@ -14,8 +14,7 @@ set mapred.input.dir.recursive=true;
 -- create a skewed table
 create table list_bucketing_dynamic_part_n1 (key String, value String) 
 partitioned by (ds String, hr String) 
-skewed by (key, value) on (('484','val_484'),('51','val_14'),('103','val_103')) 
-stored as DIRECTORIES;
+skewed by (key, value) on (('484','val_484'),('51','val_14'),('103','val_103'));
 
 -- list bucketing DML
 explain extended

@@ -381,9 +381,6 @@
       <field name="isCompressed">
         <column name="IS_COMPRESSED"/>
       </field>
-      <field name="isStoredAsSubDirectories">
-        <column name="IS_STOREDASSUBDIRECTORIES"/>
-      </field>
       <field name="numBuckets">
         <column name="NUM_BUCKETS" jdbc-type="integer"/>
       </field>

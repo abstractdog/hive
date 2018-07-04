@@ -340,7 +340,6 @@ TOK_TABCOLVALUES;
 TOK_SKEWED_LOCATIONS;
 TOK_SKEWED_LOCATION_LIST;
 TOK_SKEWED_LOCATION_MAP;
-TOK_STOREDASDIRS;
 TOK_PARTITIONINGSPEC;
 TOK_PTBLFUNCTION;
 TOK_WINDOWDEF;
@@ -997,13 +996,6 @@ rewriteDisabled
     -> ^(TOK_REWRITE_DISABLED)
     ;
 
-storedAsDirs
-@init { pushMsg("stored as directories", state); }
-@after { popMsg(state); }
-    : KW_STORED KW_AS KW_DIRECTORIES
-    -> ^(TOK_STOREDASDIRS)
-    ;
-
 orReplace
 @init { pushMsg("or replace clause", state); }
 @after { popMsg(state); }
@@ -1433,9 +1425,6 @@ alterStatementSuffixSkewedby
 	|
 	 KW_NOT KW_SKEWED
 	->^(TOK_ALTERTABLE_SKEWED)
-	|
-	 KW_NOT storedAsDirs
-	->^(TOK_ALTERTABLE_SKEWED storedAsDirs)
 	;
 
 alterStatementSuffixExchangePartition
@@ -1994,8 +1983,8 @@ tableSkewed
 @init { pushMsg("table skewed specification", state); }
 @after { popMsg(state); }
     :
-     KW_SKEWED KW_BY LPAREN skewedCols=columnNameList RPAREN KW_ON LPAREN (skewedValues=skewedValueElement) RPAREN ((storedAsDirs) => storedAsDirs)?
-    -> ^(TOK_TABLESKEWED $skewedCols $skewedValues storedAsDirs?)
+     KW_SKEWED KW_BY LPAREN skewedCols=columnNameList RPAREN KW_ON LPAREN (skewedValues=skewedValueElement) RPAREN
+    -> ^(TOK_TABLESKEWED $skewedCols $skewedValues)
     ;
 
 rowFormat

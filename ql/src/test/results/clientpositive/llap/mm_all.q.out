@@ -778,12 +778,12 @@ POSTHOOK: type: DROPTABLE
 POSTHOOK: Input: default@partunion_mm
 POSTHOOK: Output: default@partunion_mm
 PREHOOK: query: create table skew_mm(k1 int, k2 int, k4 int) skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3))
- stored as directories tblproperties ("transactional"="true", "transactional_properties"="insert_only")
+tblproperties ("transactional"="true", "transactional_properties"="insert_only")
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@skew_mm
 POSTHOOK: query: create table skew_mm(k1 int, k2 int, k4 int) skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3))
- stored as directories tblproperties ("transactional"="true", "transactional_properties"="insert_only")
+tblproperties ("transactional"="true", "transactional_properties"="insert_only")
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@skew_mm
@@ -829,12 +829,12 @@ POSTHOOK: type: DROPTABLE
 POSTHOOK: Input: default@skew_mm
 POSTHOOK: Output: default@skew_mm
 PREHOOK: query: create table skew_dp_union_mm(k1 int, k2 int, k4 int) partitioned by (k3 int) 
-skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3)) stored as directories tblproperties ("transactional"="true", "transactional_properties"="insert_only")
+skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3)) tblproperties ("transactional"="true", "transactional_properties"="insert_only")
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@skew_dp_union_mm
 POSTHOOK: query: create table skew_dp_union_mm(k1 int, k2 int, k4 int) partitioned by (k3 int) 
-skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3)) stored as directories tblproperties ("transactional"="true", "transactional_properties"="insert_only")
+skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3)) tblproperties ("transactional"="true", "transactional_properties"="insert_only")
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@skew_dp_union_mm

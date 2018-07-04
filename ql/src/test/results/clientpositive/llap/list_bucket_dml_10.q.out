@@ -1,7 +1,6 @@
 PREHOOK: query: create table list_bucketing_static_part (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (key) on ('484','51','103')
-    stored as DIRECTORIES
     STORED AS RCFILE
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
@@ -9,7 +8,6 @@ PREHOOK: Output: default@list_bucketing_static_part
 POSTHOOK: query: create table list_bucketing_static_part (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (key) on ('484','51','103')
-    stored as DIRECTORIES
     STORED AS RCFILE
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
@@ -271,10 +269,10 @@ Table:              	list_bucketing_static_part
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	4                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	4812                
-	totalSize           	5520                
+	totalSize           	5293                
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -285,10 +283,7 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[103], [484], [51]]	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[103]=/list_bucketing_static_part/ds=2008-04-08/hr=11/key=103, [484]=/list_bucketing_static_part/ds=2008-04-08/hr=11/key=484, [51]=/list_bucketing_static_part/ds=2008-04-08/hr=11/key=51}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   

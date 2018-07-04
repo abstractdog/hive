@@ -987,7 +987,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   private int mergeFiles(Hive db, AlterTablePartMergeFilesDesc mergeFilesDesc,
       DriverContext driverContext) throws HiveException {
     ListBucketingCtx lbCtx = mergeFilesDesc.getLbCtx();
-    boolean lbatc = lbCtx == null ? false : lbCtx.isSkewedStoredAsDir();
     int lbd = lbCtx == null ? 0 : lbCtx.calculateListBucketingLevel();
 
     // merge work only needs input and output.
@@ -1000,7 +999,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     pathToAliases.put(mergeFilesDesc.getInputDir().get(0), inputDirstr);
     mergeWork.setPathToAliases(pathToAliases);
     mergeWork.setListBucketingCtx(mergeFilesDesc.getLbCtx());
-    mergeWork.resolveConcatenateMerge(db.getConf());
     mergeWork.setMapperCannotSpanPartns(true);
     mergeWork.setSourceTableInputFormat(mergeFilesDesc.getInputFormatClass().getName());
     final FileMergeDesc fmd;
@@ -1013,7 +1011,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
     fmd.setDpCtx(null);
     fmd.setHasDynamicPartitions(false);
-    fmd.setListBucketingAlterTableConcatenate(lbatc);
+    fmd.setListBucketingAlterTableConcatenate(false);
     fmd.setListBucketingDepth(lbd);
     fmd.setOutputPath(mergeFilesDesc.getOutputDir());
 
@@ -2673,9 +2671,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
           colValueList.add("('" + StringUtils.join(colValues, "','") + "')");
         }
         tbl_skewedinfo.append(StringUtils.join(colValueList, ",") + ")");
-        if (tbl.isStoredAsSubDirectories()) {
-          tbl_skewedinfo.append("\n  STORED AS DIRECTORIES");
-        }
       }
 
       // Row format (SerDe)
@@ -4328,8 +4323,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         tbl.setSkewedColNames(skewedColNames);
         tbl.setSkewedColValues(skewedValues);
       }
-
-      tbl.setStoredAsSubDirectories(alterTbl.isStoredAsSubDirectories());
     } else if (alterTbl.getOp() == AlterTableDesc.AlterTableTypes.OWNER) {
       if (alterTbl.getOwnerPrincipal() != null) {
         tbl.setOwner(alterTbl.getOwnerPrincipal().getName());
@@ -4410,24 +4403,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     return result;
   }
 
-  private void checkMmLb(Table tbl) throws HiveException {
-    if (!tbl.isStoredAsSubDirectories()) {
-      return;
-    }
-    // TODO [MM gap?]: by design; no-one seems to use LB tables. They will work, but not convert.
-    //                 It's possible to work around this by re-creating and re-inserting the table.
-    throw new HiveException("Converting list bucketed tables stored as subdirectories "
-        + " to MM is not supported. Please re-create a table in the desired format.");
-  }
-
-  private void checkMmLb(Partition part) throws HiveException {
-    if (!part.isStoredAsSubDirectories()) {
-      return;
-    }
-    throw new HiveException("Converting list bucketed tables stored as subdirectories "
-        + " to MM is not supported. Please re-create a table in the desired format.");
-  }
-
   private List<Task<?>> generateAddMmTasks(Table tbl, Long writeId) throws HiveException {
     // We will move all the files in the table/partition directories into the first MM
     // directory, then commit the first write ID.
@@ -4446,7 +4421,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       Iterator<Partition> partIter = parts.iterator();
       while (partIter.hasNext()) {
         Partition part = partIter.next();
-        checkMmLb(part);
         Path src = part.getDataLocation(), tgt = new Path(src, mmDir);
         srcs.add(src);
         tgts.add(tgt);
@@ -4455,7 +4429,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         }
       }
     } else {
-      checkMmLb(tbl);
       Path src = tbl.getDataLocation(), tgt = new Path(src, mmDir);
       srcs.add(src);
       tgts.add(tgt);
@@ -4485,19 +4458,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         if (!isFromMmTable && isToMmTable) {
           if (!HiveConf.getBoolVar(conf, ConfVars.HIVE_MM_ALLOW_ORIGINALS)) {
             result = generateAddMmTasks(tbl, alterTbl.getWriteId());
-          } else {
-            if (tbl.getPartitionKeys().size() > 0) {
-              Hive db = getHive();
-              PartitionIterable parts = new PartitionIterable(db, tbl, null,
-                  HiveConf.getIntVar(conf, ConfVars.METASTORE_BATCH_RETRIEVE_MAX));
-              Iterator<Partition> partIter = parts.iterator();
-              while (partIter.hasNext()) {
-                Partition part0 = partIter.next();
-                checkMmLb(part0);
-              }
-            } else {
-              checkMmLb(tbl);
-            }
           }
         } else if (isFromMmTable && !isToMmTable) {
           throw new HiveException("Cannot convert an ACID table to non-ACID");

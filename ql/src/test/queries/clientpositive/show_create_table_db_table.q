@@ -4,7 +4,7 @@ CREATE DATABASE tmp_feng comment 'for show create table test';
 SHOW DATABASES;
 CREATE TABLE tmp_feng.tmp_showcrt1(key string, value int);
 CREATE TABLE tmp_feng.tmp_showcrt2(key string, value int) skewed by (key) on ('1','2');
-CREATE TABLE tmp_feng.tmp_showcrt3(key string, value int) skewed by (key) on ('1','2') stored as directories;
+CREATE TABLE tmp_feng.tmp_showcrt3(key string, value int) skewed by (key) on ('1','2');
 USE default;
 SHOW CREATE TABLE tmp_feng.tmp_showcrt1;
 SHOW CREATE TABLE tmp_feng.tmp_showcrt2;

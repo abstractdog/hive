@@ -124,7 +124,7 @@ drop table partunion_mm;
 set mapreduce.input.fileinputformat.input.dir.recursive=true;
 
 create table skew_mm(k1 int, k2 int, k4 int) skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3))
- stored as directories tblproperties ("transactional"="true", "transactional_properties"="insert_only");
+tblproperties ("transactional"="true", "transactional_properties"="insert_only");
 
 insert into table skew_mm 
 select key, key, key from intermediate_n0;
@@ -134,7 +134,7 @@ drop table skew_mm;
 
 
 create table skew_dp_union_mm(k1 int, k2 int, k4 int) partitioned by (k3 int) 
-skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3)) stored as directories tblproperties ("transactional"="true", "transactional_properties"="insert_only");
+skewed by (k1, k4) on ((0,0),(1,1),(2,2),(3,3)) tblproperties ("transactional"="true", "transactional_properties"="insert_only");
 
 insert into table skew_dp_union_mm partition (k3)
 select key as i, key as j, key as k, key as l from intermediate_n0

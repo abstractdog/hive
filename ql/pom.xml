@@ -819,7 +819,7 @@
     <sourceDirectory>${basedir}/src/java</sourceDirectory>
     <testSourceDirectory>${basedir}/src/test</testSourceDirectory>
     <plugins>
-      <!-- plugins are always listed in sorted order by groupId, artifectId -->
+      <!-- plugins are always listed in sorted order by groupId, artifactId -->
       <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr3-maven-plugin</artifactId>

@@ -12,7 +12,6 @@ set hive.merge.mapredfiles=false;
 create table list_bucketing_mul_col_n0 (col1 String, col2 String, col3 String, col4 String, col5 string) 
     partitioned by (ds String, hr String) 
     skewed by (col2, col4) on (('466','val_466'),('287','val_287'),('82','val_82'))
-    stored as DIRECTORIES
     STORED AS RCFILE;
 
 -- list bucketing DML 

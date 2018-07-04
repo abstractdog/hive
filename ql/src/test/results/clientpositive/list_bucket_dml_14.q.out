@@ -1,12 +1,10 @@
 PREHOOK: query: create table list_bucketing (key String, value String)
 skewed by (key) on ("484")
-stored as DIRECTORIES
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@list_bucketing
 POSTHOOK: query: create table list_bucketing (key String, value String)
 skewed by (key) on ("484")
-stored as DIRECTORIES
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@list_bucketing
@@ -233,7 +231,7 @@ Table Type:         	MANAGED_TABLE
 Table Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
 	bucketing_version   	2                   
-	numFiles            	2                   
+	numFiles            	1                   
 	numRows             	500                 
 	rawDataSize         	5312                
 	totalSize           	5812                
@@ -247,11 +245,8 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/list_bucketing/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: select count(1) from src
@@ -349,7 +344,7 @@ STAGE PLANS:
               columns.types string:string
 #### A masked pattern was here ####
               name default.list_bucketing
-              numFiles 2
+              numFiles 1
               numRows 500
               rawDataSize 5312
               serialization.ddl struct list_bucketing { string key, string value}
@@ -371,7 +366,7 @@ STAGE PLANS:
                 columns.types string:string
 #### A masked pattern was here ####
                 name default.list_bucketing
-                numFiles 2
+                numFiles 1
                 numRows 500
                 rawDataSize 5312
                 serialization.ddl struct list_bucketing { string key, string value}

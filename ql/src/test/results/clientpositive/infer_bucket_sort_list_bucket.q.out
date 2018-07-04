@@ -1,14 +1,12 @@
 PREHOOK: query: CREATE TABLE list_bucketing_table (key STRING, value STRING) 
 PARTITIONED BY (part STRING) 
 SKEWED BY (key) ON ("484")
-STORED AS DIRECTORIES
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@list_bucketing_table
 POSTHOOK: query: CREATE TABLE list_bucketing_table (key STRING, value STRING) 
 PARTITIONED BY (part STRING) 
 SKEWED BY (key) ON ("484")
-STORED AS DIRECTORIES
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@list_bucketing_table
@@ -45,7 +43,7 @@ Table:              	list_bucketing_table
 #### A masked pattern was here ####
 Partition Parameters:	 	 
 	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"key\":\"true\",\"value\":\"true\"}}
-	numFiles            	2                   
+	numFiles            	1                   
 	numRows             	309                 
 	rawDataSize         	1482                
 	totalSize           	1791                
@@ -59,24 +57,19 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[484]]             	 
-#### A masked pattern was here ####
-Skewed Value to Truncated Path:	{[484]=/list_bucketing_table/part=1/key=484}	 
 Storage Desc Params:	 	 
 	serialization.format	1                   
 PREHOOK: query: CREATE TABLE list_bucketing_table2 (key STRING, value STRING) 
 PARTITIONED BY (part STRING) 
 SKEWED BY (key) ON ("abc")
-STORED AS DIRECTORIES
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
 PREHOOK: Output: default@list_bucketing_table2
 POSTHOOK: query: CREATE TABLE list_bucketing_table2 (key STRING, value STRING) 
 PARTITIONED BY (part STRING) 
 SKEWED BY (key) ON ("abc")
-STORED AS DIRECTORIES
 POSTHOOK: type: CREATETABLE
 POSTHOOK: Output: database:default
 POSTHOOK: Output: default@list_bucketing_table2
@@ -127,7 +120,6 @@ Compressed:         	No
 Num Buckets:        	-1                  	 
 Bucket Columns:     	[]                  	 
 Sort Columns:       	[]                  	 
-Stored As SubDirectories:	Yes                 	 
 Skewed Columns:     	[key]               	 
 Skewed Values:      	[[abc]]             	 
 Storage Desc Params:	 	 

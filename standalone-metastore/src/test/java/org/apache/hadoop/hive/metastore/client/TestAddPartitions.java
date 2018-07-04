@@ -1528,7 +1528,6 @@ public class TestAddPartitions extends MetaStoreClientTest {
         .setPartCols(partCols)
         .addStorageDescriptorParam("partTestSDParamKey", "partTestSDParamValue")
         .setSerdeName(tableName)
-        .setStoredAsSubDirectories(false)
         .addSerdeParam("partTestSerdeParamKey", "partTestSerdeParamValue")
         .setLocation(location)
         .create(client, metaStore.getConf());
@@ -1668,8 +1667,6 @@ public class TestAddPartitions extends MetaStoreClientTest {
         "org.apache.hadoop.hive.ql.io.HiveOutputFormat", sd.getOutputFormat());
     Assert.assertFalse("The compressed attribute doesn't have the default value.",
         sd.isCompressed());
-    Assert.assertFalse("The storedAsSubDirectories attribute doesn't have the default value.",
-        sd.isStoredAsSubDirectories());
     Assert.assertEquals("The numBuckets attribute doesn't have the default value.", 0,
         sd.getNumBuckets());
     Assert.assertTrue("The default value of the attribute 'bucketCols' should be an empty list.",

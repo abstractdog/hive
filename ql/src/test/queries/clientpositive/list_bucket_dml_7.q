@@ -27,7 +27,6 @@ set hive.merge.rcfile.block.level=true;
 CREATE TABLE list_bucketing_dynamic_part (key String, value STRING)
     PARTITIONED BY (ds string, hr string)
     skewed by (key) on ('484')
-    stored as DIRECTORIES
     STORED AS RCFILE;
    
 -- list bucketing DML without merge. use bucketize to generate a few small files.

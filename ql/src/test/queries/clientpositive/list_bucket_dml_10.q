@@ -18,7 +18,6 @@ set mapred.input.dir.recursive=true;
 create table list_bucketing_static_part (key String, value String) 
     partitioned by (ds String, hr String) 
     skewed by (key) on ('484','51','103')
-    stored as DIRECTORIES
     STORED AS RCFILE;
 
 -- list bucketing DML without merge. use bucketize to generate a few small files.

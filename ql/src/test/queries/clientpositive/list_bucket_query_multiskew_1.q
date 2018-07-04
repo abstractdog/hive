@@ -21,8 +21,7 @@ set hive.input.format=org.apache.hadoop.hive.ql.io.HiveInputFormat;
 -- create a skewed table
 create table fact_daily (key String, value String) 
 partitioned by (ds String, hr String) 
-skewed by (key, value) on (('484','val_484'),('238','val_238')) 
-stored as DIRECTORIES;
+skewed by (key, value) on (('484','val_484'),('238','val_238'));
 
 insert overwrite table fact_daily partition (ds = '1', hr = '4')
 select key, value from src;

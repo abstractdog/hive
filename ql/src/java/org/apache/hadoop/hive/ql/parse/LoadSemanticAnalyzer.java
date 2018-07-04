@@ -314,9 +314,6 @@ public class LoadSemanticAnalyzer extends SemanticAnalyzer {
       throw new SemanticException(ErrorMsg.LOAD_INTO_NON_NATIVE.getMsg());
     }
 
-    if(ts.tableHandle.isStoredAsSubDirectories()) {
-      throw new SemanticException(ErrorMsg.LOAD_INTO_STORED_AS_DIR.getMsg());
-    }
     List<FieldSchema> parts = ts.tableHandle.getPartitionKeys();
     if ((parts != null && parts.size() > 0)
         && (ts.partSpec == null || ts.partSpec.size() == 0)) {

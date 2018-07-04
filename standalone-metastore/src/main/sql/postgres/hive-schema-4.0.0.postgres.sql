@@ -299,8 +299,7 @@ CREATE TABLE "SDS" (
     "NUM_BUCKETS" bigint NOT NULL,
     "OUTPUT_FORMAT" character varying(4000) DEFAULT NULL::character varying,
     "SERDE_ID" bigint,
-    "CD_ID" bigint,
-    "IS_STOREDASSUBDIRECTORIES" boolean NOT NULL
+    "CD_ID" bigint
 );
 
 

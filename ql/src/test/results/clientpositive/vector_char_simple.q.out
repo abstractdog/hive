@@ -212,8 +212,13 @@ PLAN VECTORIZATION:
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
-  Stage-0 depends on stages: Stage-1
+  Stage-7 depends on stages: Stage-1 , consists of Stage-4, Stage-3, Stage-5
+  Stage-4
+  Stage-0 depends on stages: Stage-4, Stage-3, Stage-6
   Stage-2 depends on stages: Stage-0
+  Stage-3
+  Stage-5
+  Stage-6 depends on stages: Stage-5
 
 STAGE PLANS:
   Stage: Stage-1
@@ -227,11 +232,13 @@ STAGE PLANS:
                 Limit Vectorization:
                     className: VectorLimitOperator
                     native: true
-                  Reduce Sink Vectorization:
-                      className: VectorReduceSinkOperator
-                      native: false
-                      nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
-                      nativeConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
+                  Select Vectorization:
+                      className: VectorSelectOperator
+                      native: true
+                      selectExpressions: CastLongToChar(col 2:int, maxLength 12) -> 13:char(12)
+                    File Sink Vectorization:
+                        className: VectorFileSinkOperator
+                        native: false
       Execution mode: vectorized
       Map Vectorization:
           enabled: true
@@ -242,15 +249,22 @@ STAGE PLANS:
           allNative: false
           usesVectorUDFAdaptor: false
           vectorized: true
-      Reduce Vectorization:
-          enabled: false
-          enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true
-          enableConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
-      Reduce Operator Tree:
+
+  Stage: Stage-7
+
+  Stage: Stage-4
 
   Stage: Stage-0
 
   Stage: Stage-2
+
+  Stage: Stage-3
+      Map Operator Tree:
+
+  Stage: Stage-5
+      Map Operator Tree:
+
+  Stage: Stage-6
 
 PREHOOK: query: insert into table char_3 select cint from alltypesorc limit 10
 PREHOOK: type: QUERY

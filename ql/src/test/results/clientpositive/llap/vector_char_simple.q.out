@@ -237,8 +237,6 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Tez
-      Edges:
-        Reducer 2 <- Map 1 (CUSTOM_SIMPLE_EDGE)
       Vertices:
         Map 1 
             Map Operator Tree:
@@ -250,10 +248,13 @@ STAGE PLANS:
                       Limit Vectorization:
                           className: VectorLimitOperator
                           native: true
-                        Reduce Sink Vectorization:
-                            className: VectorReduceSinkEmptyKeyOperator
+                        Select Vectorization:
+                            className: VectorSelectOperator
                             native: true
-                            nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, hive.execution.engine tez IN [tez, spark] IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+                            selectExpressions: CastLongToChar(col 2:int, maxLength 12) -> 13:char(12)
+                          File Sink Vectorization:
+                              className: VectorFileSinkOperator
+                              native: false
             Execution mode: vectorized, llap
             LLAP IO: all inputs
             Map Vectorization:
@@ -262,31 +263,9 @@ STAGE PLANS:
                 inputFormatFeatureSupport: [DECIMAL_64]
                 featureSupportInUse: [DECIMAL_64]
                 inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
-                allNative: true
-                usesVectorUDFAdaptor: false
-                vectorized: true
-        Reducer 2 
-            Execution mode: vectorized, llap
-            Reduce Vectorization:
-                enabled: true
-                enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true, hive.execution.engine tez IN [tez, spark] IS true
                 allNative: false
                 usesVectorUDFAdaptor: false
                 vectorized: true
-            Reduce Operator Tree:
-                Select Vectorization:
-                    className: VectorSelectOperator
-                    native: true
-                  Limit Vectorization:
-                      className: VectorLimitOperator
-                      native: true
-                    Select Vectorization:
-                        className: VectorSelectOperator
-                        native: true
-                        selectExpressions: CastLongToChar(col 0:int, maxLength 12) -> 1:char(12)
-                      File Sink Vectorization:
-                          className: VectorFileSinkOperator
-                          native: false
 
   Stage: Stage-2
 

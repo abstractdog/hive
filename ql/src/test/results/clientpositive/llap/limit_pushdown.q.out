@@ -908,8 +908,7 @@ STAGE PLANS:
     Tez
 #### A masked pattern was here ####
       Edges:
-        Reducer 2 <- Map 1 (SIMPLE_EDGE), Reducer 3 (CUSTOM_SIMPLE_EDGE)
-        Reducer 3 <- Map 1 (SIMPLE_EDGE)
+        Reducer 2 <- Map 1 (SIMPLE_EDGE), Map 3 (SIMPLE_EDGE)
 #### A masked pattern was here ####
       Vertices:
         Map 1 
@@ -934,6 +933,23 @@ STAGE PLANS:
                         Statistics: Num rows: 250 Data size: 23750 Basic stats: COMPLETE Column stats: COMPLETE
                         TopN Hash Memory Usage: 0.3
                         value expressions: _col1 (type: bigint)
+            Execution mode: vectorized, llap
+            LLAP IO: no inputs
+        Map 3 
+            Map Operator Tree:
+                TableScan
+                  alias: src
+                  Statistics: Num rows: 500 Data size: 43500 Basic stats: COMPLETE Column stats: COMPLETE
+                  Select Operator
+                    expressions: key (type: string)
+                    outputColumnNames: key
+                    Statistics: Num rows: 500 Data size: 43500 Basic stats: COMPLETE Column stats: COMPLETE
+                    Group By Operator
+                      aggregations: count()
+                      keys: key (type: string)
+                      mode: hash
+                      outputColumnNames: _col0, _col1
+                      Statistics: Num rows: 250 Data size: 23750 Basic stats: COMPLETE Column stats: COMPLETE
                       Reduce Output Operator
                         key expressions: _col0 (type: string)
                         sort order: +
@@ -945,10 +961,12 @@ STAGE PLANS:
             LLAP IO: no inputs
         Reducer 2 
             Reduce Operator Tree:
-              Select Operator
-                expressions: VALUE._col0 (type: string), VALUE._col1 (type: bigint)
+              Group By Operator
+                aggregations: count(VALUE._col0)
+                keys: KEY._col0 (type: string)
+                mode: mergepartial
                 outputColumnNames: _col0, _col1
-                Statistics: Num rows: 3 Data size: 285 Basic stats: COMPLETE Column stats: COMPLETE
+                Statistics: Num rows: 250 Data size: 23750 Basic stats: COMPLETE Column stats: COMPLETE
                 Limit
                   Number of rows: 3
                   Statistics: Num rows: 3 Data size: 285 Basic stats: COMPLETE Column stats: COMPLETE
@@ -987,23 +1005,6 @@ STAGE PLANS:
                               input format: org.apache.hadoop.mapred.SequenceFileInputFormat
                               output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
                               serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-        Reducer 3 
-            Execution mode: vectorized, llap
-            Reduce Operator Tree:
-              Group By Operator
-                aggregations: count(VALUE._col0)
-                keys: KEY._col0 (type: string)
-                mode: mergepartial
-                outputColumnNames: _col0, _col1
-                Statistics: Num rows: 250 Data size: 23750 Basic stats: COMPLETE Column stats: COMPLETE
-                Limit
-                  Number of rows: 3
-                  Statistics: Num rows: 3 Data size: 285 Basic stats: COMPLETE Column stats: COMPLETE
-                  Reduce Output Operator
-                    sort order: 
-                    Statistics: Num rows: 3 Data size: 285 Basic stats: COMPLETE Column stats: COMPLETE
-                    TopN Hash Memory Usage: 0.3
-                    value expressions: _col0 (type: string), _col1 (type: bigint)
 
   Stage: Stage-0
     Fetch Operator

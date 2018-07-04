@@ -238,9 +238,6 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Spark
-      Edges:
-        Reducer 2 <- Map 1 (GROUP, 1)
-        Reducer 4 <- Map 1 (GROUP, 1)
 #### A masked pattern was here ####
       Vertices:
         Map 1 
@@ -256,56 +253,45 @@ STAGE PLANS:
                     Limit
                       Number of rows: 500
                       Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
-                      Reduce Output Operator
-                        sort order: 
-                        Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
-                        TopN Hash Memory Usage: 0.1
-                        value expressions: _col0 (type: string), _col1 (type: string)
+                      Select Operator
+                        expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string)
+                        outputColumnNames: _col0, _col1, _col2
+                        Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
+                        File Output Operator
+                          compressed: false
+                          Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
+                          table:
+                              input format: org.apache.hadoop.mapred.TextInputFormat
+                              output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                              serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                              name: default.outputtbl2_n6
             Execution mode: vectorized
-        Reducer 2 
-            Execution mode: vectorized
-            Reduce Operator Tree:
-              Select Operator
-                expressions: VALUE._col0 (type: string), VALUE._col1 (type: string)
-                outputColumnNames: _col0, _col1
-                Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
-                Limit
-                  Number of rows: 500
-                  Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
+        Map 2 
+            Map Operator Tree:
+                TableScan
+                  alias: srcpart
+                  filterExpr: (ds = '2008-04-08') (type: boolean)
+                  Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
                   Select Operator
-                    expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string)
-                    outputColumnNames: _col0, _col1, _col2
-                    Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
-                    File Output Operator
-                      compressed: false
-                      Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
-                      table:
-                          input format: org.apache.hadoop.mapred.TextInputFormat
-                          output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-                          serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-                          name: default.outputtbl2_n6
-        Reducer 4 
+                    expressions: key (type: string), value (type: string)
+                    outputColumnNames: _col0, _col1
+                    Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
+                    Limit
+                      Number of rows: 500
+                      Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
+                      Select Operator
+                        expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string)
+                        outputColumnNames: _col0, _col1, _col2
+                        Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
+                        File Output Operator
+                          compressed: false
+                          Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
+                          table:
+                              input format: org.apache.hadoop.mapred.TextInputFormat
+                              output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                              serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                              name: default.outputtbl2_n6
             Execution mode: vectorized
-            Reduce Operator Tree:
-              Select Operator
-                expressions: VALUE._col0 (type: string), VALUE._col1 (type: string)
-                outputColumnNames: _col0, _col1
-                Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
-                Limit
-                  Number of rows: 500
-                  Statistics: Num rows: 500 Data size: 5000 Basic stats: COMPLETE Column stats: NONE
-                  Select Operator
-                    expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string)
-                    outputColumnNames: _col0, _col1, _col2
-                    Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
-                    File Output Operator
-                      compressed: false
-                      Statistics: Num rows: 1000 Data size: 10000 Basic stats: COMPLETE Column stats: NONE
-                      table:
-                          input format: org.apache.hadoop.mapred.TextInputFormat
-                          output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-                          serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-                          name: default.outputtbl2_n6
 
   Stage: Stage-0
     Move Operator
@@ -372,8 +358,8 @@ Database:           	default
 Table:              	outputtbl2_n6       	 
 #### A masked pattern was here ####
 Partition Parameters:	 	 
-	numFiles            	2                   
-	totalSize           	6812                
+	numFiles            	4                   
+	totalSize           	13624               
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -409,9 +395,6 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-1
     Spark
-      Edges:
-        Reducer 2 <- Map 1 (GROUP, 1)
-        Reducer 4 <- Map 1 (GROUP, 1)
 #### A masked pattern was here ####
       Vertices:
         Map 1 
@@ -427,56 +410,45 @@ STAGE PLANS:
                     Limit
                       Number of rows: 1000
                       Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
-                      Reduce Output Operator
-                        sort order: 
-                        Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
-                        TopN Hash Memory Usage: 0.1
-                        value expressions: _col0 (type: string), _col1 (type: string), _col2 (type: string)
+                      Select Operator
+                        expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string), _col2 (type: string)
+                        outputColumnNames: _col0, _col1, _col2, _col3
+                        Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
+                        File Output Operator
+                          compressed: false
+                          Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
+                          table:
+                              input format: org.apache.hadoop.mapred.TextInputFormat
+                              output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                              serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                              name: default.outputtbl3_n3
             Execution mode: vectorized
-        Reducer 2 
-            Execution mode: vectorized
-            Reduce Operator Tree:
-              Select Operator
-                expressions: VALUE._col0 (type: string), VALUE._col1 (type: string), VALUE._col2 (type: string)
-                outputColumnNames: _col0, _col1, _col2
-                Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
-                Limit
-                  Number of rows: 1000
+        Map 2 
+            Map Operator Tree:
+                TableScan
+                  alias: srcpart
+                  filterExpr: (ds = '2008-04-08') (type: boolean)
                   Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
                   Select Operator
-                    expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string), _col2 (type: string)
-                    outputColumnNames: _col0, _col1, _col2, _col3
-                    Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
-                    File Output Operator
-                      compressed: false
-                      Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
-                      table:
-                          input format: org.apache.hadoop.mapred.TextInputFormat
-                          output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-                          serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-                          name: default.outputtbl3_n3
-        Reducer 4 
+                    expressions: key (type: string), value (type: string), hr (type: string)
+                    outputColumnNames: _col0, _col1, _col2
+                    Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
+                    Limit
+                      Number of rows: 1000
+                      Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
+                      Select Operator
+                        expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string), _col2 (type: string)
+                        outputColumnNames: _col0, _col1, _col2, _col3
+                        Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
+                        File Output Operator
+                          compressed: false
+                          Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
+                          table:
+                              input format: org.apache.hadoop.mapred.TextInputFormat
+                              output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+                              serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                              name: default.outputtbl3_n3
             Execution mode: vectorized
-            Reduce Operator Tree:
-              Select Operator
-                expressions: VALUE._col0 (type: string), VALUE._col1 (type: string), VALUE._col2 (type: string)
-                outputColumnNames: _col0, _col1, _col2
-                Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
-                Limit
-                  Number of rows: 1000
-                  Statistics: Num rows: 1000 Data size: 10624 Basic stats: COMPLETE Column stats: NONE
-                  Select Operator
-                    expressions: _col0 (type: string), UDFToLong(_col1) (type: bigint), '2008-04-08' (type: string), _col2 (type: string)
-                    outputColumnNames: _col0, _col1, _col2, _col3
-                    Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
-                    File Output Operator
-                      compressed: false
-                      Statistics: Num rows: 2000 Data size: 21248 Basic stats: COMPLETE Column stats: NONE
-                      table:
-                          input format: org.apache.hadoop.mapred.TextInputFormat
-                          output format: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-                          serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-                          name: default.outputtbl3_n3
 
   Stage: Stage-0
     Move Operator

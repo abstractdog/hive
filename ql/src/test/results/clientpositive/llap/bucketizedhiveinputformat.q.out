@@ -74,7 +74,7 @@ POSTHOOK: query: SELECT COUNT(1) FROM T2_n74
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@t2_n74
 #### A masked pattern was here ####
-5000000
+25000000
 PREHOOK: query: SELECT COUNT(1) FROM T3_n28
 PREHOOK: type: QUERY
 PREHOOK: Input: default@t3_n28
@@ -92,7 +92,7 @@ POSTHOOK: query: SELECT COUNT(1) FROM T2_n74
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@t2_n74
 #### A masked pattern was here ####
-5000000
+25000000
 PREHOOK: query: SELECT COUNT(1) FROM T3_n28
 PREHOOK: type: QUERY
 PREHOOK: Input: default@t3_n28

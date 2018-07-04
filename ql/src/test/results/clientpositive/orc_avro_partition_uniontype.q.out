@@ -33,8 +33,8 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@avro_orc_partitioned_uniontype
 POSTHOOK: Input: default@avro_orc_partitioned_uniontype@b=1
 #### A masked pattern was here ####
-{1:"val_165"}	1
-{1:"val_27"}	1
-{1:"val_311"}	1
-{1:"val_86"}	1
 {1:"val_238"}	1
+{1:"val_86"}	1
+{1:"val_311"}	1
+{1:"val_27"}	1
+{1:"val_165"}	1

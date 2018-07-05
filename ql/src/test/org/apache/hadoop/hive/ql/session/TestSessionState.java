@@ -28,17 +28,16 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.metastore.Warehouse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hive.common.util.HiveTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -47,12 +46,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
-
-import static org.mockito.Mockito.*;
-import net.jodah.concurrentunit.Waiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.io.Files;
+
+import net.jodah.concurrentunit.Waiter;
 
 /**
  * Test SessionState
@@ -321,26 +320,42 @@ public class TestSessionState {
    */
   @Test
   public void testConcurrentStart() throws Exception {
-    SessionState state = spy(new SessionState(new HiveConf()));
+    int TEST_THREAD_COUNT = 1000;
+    
+    class TestAtomic {
+      private AtomicBoolean isStarted = new AtomicBoolean(false);
+      public volatile int count = 0;
 
+      public void start() {
+        if (!isStarted.compareAndSet(false, true)) {
+          return;
+        }
+        System.out.println("reached atomic initalization...");
+        count += 1;
+      }
+    }
+    ;
+
+    TestAtomic t = new TestAtomic();
     final Waiter waiter = new Waiter();
     final CountDownLatch latch = new CountDownLatch(1);
 
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < TEST_THREAD_COUNT; ++i) {
       Runnable runner = new Runnable() {
         public void run() {
           try {
             latch.await();
-            SessionState.start(state);
-            verify(state, times(1)).createSessionDirs(anyString());
-          } catch (InterruptedException | IOException ie) {
+          } catch (InterruptedException e) {
             // don't care
           }
+          t.start();
+          waiter.resume();
         }
       };
       new Thread(runner, "TestThread" + i).start();
     }
     latch.countDown(); // release the latch
-    waiter.await(10000, 5);
+    waiter.await(5000, TEST_THREAD_COUNT);
+    Assert.assertEquals(1, t.count);
   }
 }

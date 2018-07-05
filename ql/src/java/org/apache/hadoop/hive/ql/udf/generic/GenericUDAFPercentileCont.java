@@ -326,8 +326,15 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       // lower has the range of [0 .. total-1]
       // The first entry with accumulated count (lower+1) corresponds to the lower position.
       int i = 0;
+      System.out.println(lower);
+      System.out.println(position);
+      System.out.println(entriesList);
+
       while (entriesList.get(i).getValue().get() < lower + 1) {
+        System.out.println(i);
         i++;
+        System.out.println("---");
+        System.out.println(entriesList.get(i).getValue().get());
       }
 
       long lowerKey = entriesList.get(i).getKey().get();

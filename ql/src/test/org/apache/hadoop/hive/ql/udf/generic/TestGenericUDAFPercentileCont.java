@@ -61,6 +61,12 @@ public class TestGenericUDAFPercentileCont {
     Long[] items = new Long[] { 1L };
     checkPercentile(items, 1, 1);
   }
+  
+  @Test
+  public void testExample() throws Exception {
+    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    checkPercentile(items, 50, 54);
+  }
 
   private void checkPercentile(Long[] items, double percentile, double expected) throws Exception {
     PercentileContLongEvaluator eval = new GenericUDAFPercentileCont.PercentileContLongEvaluator();

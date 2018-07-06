@@ -71,6 +71,7 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
         double position) {
       // We may need to do linear interpolation to get the exact percentile
       long lower = (long) Math.floor(position);
+      long higher = (long) Math.ceil(position);
 
       // Linear search since this won't take much time from the total execution anyway
       // lower has the range of [0 .. total-1]
@@ -81,7 +82,15 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
       }
 
       long lowerKey = entriesList.get(i).getKey().get();
-      return lowerKey;
+      if (higher == lower) {
+        // no interpolation needed because position does not have a fraction
+        return lowerKey;
+      }
+
+      if (entriesList.get(i).getValue().get() < higher + 1) {
+        i++;
+      }
+      return entriesList.get(i).getKey().get();
     }
   }
 }

@@ -41,13 +41,13 @@ public class TestGenericUDAFPercentileDisc {
   @Test
   public void testInterpolateLower() throws Exception {
     Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
-    checkPercentile(items, 0.49, 2.0);
+    checkPercentile(items, 0.49, 3.0);
   }
 
   @Test
   public void testInterpolateHigher() throws Exception {
     Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
-    checkPercentile(items, 0.51, 3.0);
+    checkPercentile(items, 0.51, 4.0);
   }
 
   @Test
@@ -60,6 +60,28 @@ public class TestGenericUDAFPercentileDisc {
   public void testSingleItem100() throws Exception {
     Long[] items = new Long[] { 1L };
     checkPercentile(items, 1, 1);
+  }
+
+  /*
+   * POSTGRES check: WITH vals (k) AS (VALUES (54), (35), (15), (15), (76), (87), (78)) SELECT *
+   * INTO table percentile_src FROM vals; select percentile_disc(.50) within group (order by k) as
+   * perc from percentile_src;
+   */
+  @Test
+  public void testPostresRefExample() throws Exception {
+    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    checkPercentile(items, 0.5, 54);
+  }
+
+  /*
+   * POSTGRES check: WITH vals (k) AS (VALUES (54), (35), (15), (15), (76), (87), (78)) SELECT *
+   * INTO table percentile_src FROM vals; select percentile_disc(.72) within group (order by k) as
+   * perc from percentile_src;
+   */
+  @Test
+  public void testPostresRefExample2() throws Exception {
+    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    checkPercentile(items, 0.72, 78);
   }
 
   private void checkPercentile(Long[] items, double percentile, double expected) throws Exception {

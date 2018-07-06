@@ -62,8 +62,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
 
     if (parameters[0].getCategory() != ObjectInspector.Category.PRIMITIVE) {
-      throw new UDFArgumentTypeException(0,
-          "Only primitive type arguments are accepted but " + parameters[0].getTypeName() + " is passed.");
+      throw new UDFArgumentTypeException(0, "Only primitive type arguments are accepted but "
+          + parameters[0].getTypeName() + " is passed.");
     }
     switch (((PrimitiveTypeInfo) parameters[0]).getPrimitiveCategory()) {
     case BYTE:
@@ -92,7 +92,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    */
   public static class MyComparator implements Comparator<Map.Entry<LongWritable, LongWritable>> {
     @Override
-    public int compare(Map.Entry<LongWritable, LongWritable> o1, Map.Entry<LongWritable, LongWritable> o2) {
+    public int compare(Map.Entry<LongWritable, LongWritable> o1,
+        Map.Entry<LongWritable, LongWritable> o2) {
       return COMPARATOR.compare(o1.getKey(), o2.getKey());
     }
   }
@@ -152,8 +153,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         foi.add(ObjectInspectorFactory.getStandardMapObjectInspector(
             PrimitiveObjectInspectorFactory.writableLongObjectInspector,
             PrimitiveObjectInspectorFactory.writableLongObjectInspector));
-        foi.add(ObjectInspectorFactory
-            .getStandardListObjectInspector(PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
+        foi.add(ObjectInspectorFactory.getStandardListObjectInspector(
+            PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
 
         ArrayList<String> fname = new ArrayList<String>();
         fname.add("counts");
@@ -226,8 +227,10 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       Object objCounts = soi.getStructFieldData(partial, countsField);
       Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
 
-      Map<LongWritable, LongWritable> counts = (Map<LongWritable, LongWritable>) countsOI.getMap(objCounts);
-      List<DoubleWritable> percentiles = (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
+      Map<LongWritable, LongWritable> counts =
+          (Map<LongWritable, LongWritable>) countsOI.getMap(objCounts);
+      List<DoubleWritable> percentiles =
+          (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
 
       if (counts == null || percentiles == null) {
         return;
@@ -317,7 +320,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     /**
      * Get the percentile value.
      */
-    public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList, double position) {
+    public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList,
+        double position) {
       // We may need to do linear interpolation to get the exact percentile
       long lower = (long) Math.floor(position);
       long higher = (long) Math.ceil(position);
@@ -326,15 +330,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       // lower has the range of [0 .. total-1]
       // The first entry with accumulated count (lower+1) corresponds to the lower position.
       int i = 0;
-      System.out.println(lower);
-      System.out.println(position);
-      System.out.println(entriesList);
-
       while (entriesList.get(i).getValue().get() < lower + 1) {
-        System.out.println(i);
         i++;
-        System.out.println("---");
-        System.out.println(entriesList.get(i).getValue().get());
       }
 
       long lowerKey = entriesList.get(i).getKey().get();

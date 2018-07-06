@@ -61,11 +61,27 @@ public class TestGenericUDAFPercentileCont {
     Long[] items = new Long[] { 1L };
     checkPercentile(items, 1, 1);
   }
-  
+
+  /*
+   * POSTGRES check: WITH vals (k) AS (VALUES (54), (35), (15), (15), (76), (87), (78)) SELECT *
+   * INTO table percentile_src FROM vals; select percentile_cont(.50) within group (order by k) as
+   * perc from percentile_src;
+   */
   @Test
-  public void testExample() throws Exception {
+  public void testPostresRefExample() throws Exception {
     Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
-    checkPercentile(items, 50, 54);
+    checkPercentile(items, 0.5, 54);
+  }
+
+  /*
+   * POSTGRES check: WITH vals (k) AS (VALUES (54), (35), (15), (15), (76), (87), (78)) SELECT *
+   * INTO table percentile_src FROM vals; select percentile_cont(.72) within group (order by k) as
+   * perc from percentile_src;
+   */
+  @Test
+  public void testPostresRefExample2() throws Exception {
+    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    checkPercentile(items, 0.72, 76.64);
   }
 
   private void checkPercentile(Long[] items, double percentile, double expected) throws Exception {

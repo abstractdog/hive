@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
   private static final org.apache.thrift.protocol.TField SORT_COLS_FIELD_DESC = new org.apache.thrift.protocol.TField("sortCols", org.apache.thrift.protocol.TType.LIST, (short)9);
   private static final org.apache.thrift.protocol.TField PARAMETERS_FIELD_DESC = new org.apache.thrift.protocol.TField("parameters", org.apache.thrift.protocol.TType.MAP, (short)10);
   private static final org.apache.thrift.protocol.TField SKEWED_INFO_FIELD_DESC = new org.apache.thrift.protocol.TField("skewedInfo", org.apache.thrift.protocol.TType.STRUCT, (short)11);
+  private static final org.apache.thrift.protocol.TField STORED_AS_SUB_DIRECTORIES_FIELD_DESC = new org.apache.thrift.protocol.TField("storedAsSubDirectories", org.apache.thrift.protocol.TType.BOOL, (short)12);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -67,6 +68,7 @@ import org.slf4j.LoggerFactory;
   private List<Order> sortCols; // required
   private Map<String,String> parameters; // required
   private SkewedInfo skewedInfo; // optional
+  private boolean storedAsSubDirectories; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -80,7 +82,8 @@ import org.slf4j.LoggerFactory;
     BUCKET_COLS((short)8, "bucketCols"),
     SORT_COLS((short)9, "sortCols"),
     PARAMETERS((short)10, "parameters"),
-    SKEWED_INFO((short)11, "skewedInfo");
+    SKEWED_INFO((short)11, "skewedInfo"),
+    STORED_AS_SUB_DIRECTORIES((short)12, "storedAsSubDirectories");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -117,6 +120,8 @@ import org.slf4j.LoggerFactory;
           return PARAMETERS;
         case 11: // SKEWED_INFO
           return SKEWED_INFO;
+        case 12: // STORED_AS_SUB_DIRECTORIES
+          return STORED_AS_SUB_DIRECTORIES;
         default:
           return null;
       }
@@ -159,8 +164,9 @@ import org.slf4j.LoggerFactory;
   // isset id assignments
   private static final int __COMPRESSED_ISSET_ID = 0;
   private static final int __NUMBUCKETS_ISSET_ID = 1;
+  private static final int __STOREDASSUBDIRECTORIES_ISSET_ID = 2;
   private byte __isset_bitfield = 0;
-  private static final _Fields optionals[] = {_Fields.SKEWED_INFO};
+  private static final _Fields optionals[] = {_Fields.SKEWED_INFO,_Fields.STORED_AS_SUB_DIRECTORIES};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -191,6 +197,8 @@ import org.slf4j.LoggerFactory;
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING))));
     tmpMap.put(_Fields.SKEWED_INFO, new org.apache.thrift.meta_data.FieldMetaData("skewedInfo", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, SkewedInfo.class)));
+    tmpMap.put(_Fields.STORED_AS_SUB_DIRECTORIES, new org.apache.thrift.meta_data.FieldMetaData("storedAsSubDirectories", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(StorageDescriptor.class, metaDataMap);
   }
@@ -269,6 +277,7 @@ import org.slf4j.LoggerFactory;
     if (other.isSetSkewedInfo()) {
       this.skewedInfo = new SkewedInfo(other.skewedInfo);
     }
+    this.storedAsSubDirectories = other.storedAsSubDirectories;
   }
 
   public StorageDescriptor deepCopy() {
@@ -290,6 +299,8 @@ import org.slf4j.LoggerFactory;
     this.sortCols = null;
     this.parameters = null;
     this.skewedInfo = null;
+    setStoredAsSubDirectoriesIsSet(false);
+    this.storedAsSubDirectories = false;
   }
 
   public int getColsSize() {
@@ -599,6 +610,28 @@ import org.slf4j.LoggerFactory;
     }
   }
 
+  public boolean isStoredAsSubDirectories() {
+    return this.storedAsSubDirectories;
+  }
+
+  public void setStoredAsSubDirectories(boolean storedAsSubDirectories) {
+    this.storedAsSubDirectories = storedAsSubDirectories;
+    setStoredAsSubDirectoriesIsSet(true);
+  }
+
+  public void unsetStoredAsSubDirectories() {
+    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __STOREDASSUBDIRECTORIES_ISSET_ID);
+  }
+
+  /** Returns true if field storedAsSubDirectories is set (has been assigned a value) and false otherwise */
+  public boolean isSetStoredAsSubDirectories() {
+    return EncodingUtils.testBit(__isset_bitfield, __STOREDASSUBDIRECTORIES_ISSET_ID);
+  }
+
+  public void setStoredAsSubDirectoriesIsSet(boolean value) {
+    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __STOREDASSUBDIRECTORIES_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case COLS:
@@ -689,6 +722,14 @@ import org.slf4j.LoggerFactory;
       }
       break;
 
+    case STORED_AS_SUB_DIRECTORIES:
+      if (value == null) {
+        unsetStoredAsSubDirectories();
+      } else {
+        setStoredAsSubDirectories((Boolean)value);
+      }
+      break;
+
     }
   }
 
@@ -727,6 +768,9 @@ import org.slf4j.LoggerFactory;
     case SKEWED_INFO:
       return getSkewedInfo();
 
+    case STORED_AS_SUB_DIRECTORIES:
+      return isStoredAsSubDirectories();
+
     }
     throw new IllegalStateException();
   }
@@ -760,6 +804,8 @@ import org.slf4j.LoggerFactory;
       return isSetParameters();
     case SKEWED_INFO:
       return isSetSkewedInfo();
+    case STORED_AS_SUB_DIRECTORIES:
+      return isSetStoredAsSubDirectories();
     }
     throw new IllegalStateException();
   }
@@ -876,6 +922,15 @@ import org.slf4j.LoggerFactory;
         return false;
     }
 
+    boolean this_present_storedAsSubDirectories = true && this.isSetStoredAsSubDirectories();
+    boolean that_present_storedAsSubDirectories = true && that.isSetStoredAsSubDirectories();
+    if (this_present_storedAsSubDirectories || that_present_storedAsSubDirectories) {
+      if (!(this_present_storedAsSubDirectories && that_present_storedAsSubDirectories))
+        return false;
+      if (this.storedAsSubDirectories != that.storedAsSubDirectories)
+        return false;
+    }
+
     return true;
   }
 
@@ -937,6 +992,11 @@ import org.slf4j.LoggerFactory;
     list.add(present_skewedInfo);
     if (present_skewedInfo)
       list.add(skewedInfo);
+
+    boolean present_storedAsSubDirectories = true && (isSetStoredAsSubDirectories());
+    list.add(present_storedAsSubDirectories);
+    if (present_storedAsSubDirectories)
+      list.add(storedAsSubDirectories);
 
     return list.hashCode();
   }
@@ -1059,6 +1119,16 @@ import org.slf4j.LoggerFactory;
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetStoredAsSubDirectories()).compareTo(other.isSetStoredAsSubDirectories());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetStoredAsSubDirectories()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.storedAsSubDirectories, other.storedAsSubDirectories);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -1158,6 +1228,12 @@ import org.slf4j.LoggerFactory;
       } else {
         sb.append(this.skewedInfo);
       }
+      first = false;
+    }
+    if (isSetStoredAsSubDirectories()) {
+      if (!first) sb.append(", ");
+      sb.append("storedAsSubDirectories:");
+      sb.append(this.storedAsSubDirectories);
       first = false;
     }
     sb.append(")");
@@ -1345,6 +1421,14 @@ import org.slf4j.LoggerFactory;
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 12: // STORED_AS_SUB_DIRECTORIES
+            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+              struct.storedAsSubDirectories = iprot.readBool();
+              struct.setStoredAsSubDirectoriesIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -1440,6 +1524,11 @@ import org.slf4j.LoggerFactory;
           oprot.writeFieldEnd();
         }
       }
+      if (struct.isSetStoredAsSubDirectories()) {
+        oprot.writeFieldBegin(STORED_AS_SUB_DIRECTORIES_FIELD_DESC);
+        oprot.writeBool(struct.storedAsSubDirectories);
+        oprot.writeFieldEnd();
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -1491,7 +1580,10 @@ import org.slf4j.LoggerFactory;
       if (struct.isSetSkewedInfo()) {
         optionals.set(10);
       }
-      oprot.writeBitSet(optionals, 11);
+      if (struct.isSetStoredAsSubDirectories()) {
+        optionals.set(11);
+      }
+      oprot.writeBitSet(optionals, 12);
       if (struct.isSetCols()) {
         {
           oprot.writeI32(struct.cols.size());
@@ -1550,12 +1642,15 @@ import org.slf4j.LoggerFactory;
       if (struct.isSetSkewedInfo()) {
         struct.skewedInfo.write(oprot);
       }
+      if (struct.isSetStoredAsSubDirectories()) {
+        oprot.writeBool(struct.storedAsSubDirectories);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, StorageDescriptor struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(11);
+      BitSet incoming = iprot.readBitSet(12);
       if (incoming.get(0)) {
         {
           org.apache.thrift.protocol.TList _list185 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
@@ -1641,6 +1736,10 @@ import org.slf4j.LoggerFactory;
         struct.skewedInfo = new SkewedInfo();
         struct.skewedInfo.read(iprot);
         struct.setSkewedInfoIsSet(true);
+      }
+      if (incoming.get(11)) {
+        struct.storedAsSubDirectories = iprot.readBool();
+        struct.setStoredAsSubDirectoriesIsSet(true);
       }
     }
   }

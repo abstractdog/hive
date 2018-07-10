@@ -4297,6 +4297,7 @@ class StorageDescriptor:
    - sortCols
    - parameters
    - skewedInfo
+   - storedAsSubDirectories
   """
 
   thrift_spec = (
@@ -4312,9 +4313,10 @@ class StorageDescriptor:
     (9, TType.LIST, 'sortCols', (TType.STRUCT,(Order, Order.thrift_spec)), None, ), # 9
     (10, TType.MAP, 'parameters', (TType.STRING,None,TType.STRING,None), None, ), # 10
     (11, TType.STRUCT, 'skewedInfo', (SkewedInfo, SkewedInfo.thrift_spec), None, ), # 11
+    (12, TType.BOOL, 'storedAsSubDirectories', None, None, ), # 12
   )
 
-  def __init__(self, cols=None, location=None, inputFormat=None, outputFormat=None, compressed=None, numBuckets=None, serdeInfo=None, bucketCols=None, sortCols=None, parameters=None, skewedInfo=None,):
+  def __init__(self, cols=None, location=None, inputFormat=None, outputFormat=None, compressed=None, numBuckets=None, serdeInfo=None, bucketCols=None, sortCols=None, parameters=None, skewedInfo=None, storedAsSubDirectories=None,):
     self.cols = cols
     self.location = location
     self.inputFormat = inputFormat
@@ -4326,6 +4328,7 @@ class StorageDescriptor:
     self.sortCols = sortCols
     self.parameters = parameters
     self.skewedInfo = skewedInfo
+    self.storedAsSubDirectories = storedAsSubDirectories
 
   def read(self, iprot):
     if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
@@ -4416,6 +4419,11 @@ class StorageDescriptor:
           self.skewedInfo.read(iprot)
         else:
           iprot.skip(ftype)
+      elif fid == 12:
+        if ftype == TType.BOOL:
+          self.storedAsSubDirectories = iprot.readBool()
+        else:
+          iprot.skip(ftype)
       else:
         iprot.skip(ftype)
       iprot.readFieldEnd()
@@ -4483,6 +4491,10 @@ class StorageDescriptor:
       oprot.writeFieldBegin('skewedInfo', TType.STRUCT, 11)
       self.skewedInfo.write(oprot)
       oprot.writeFieldEnd()
+    if self.storedAsSubDirectories is not None:
+      oprot.writeFieldBegin('storedAsSubDirectories', TType.BOOL, 12)
+      oprot.writeBool(self.storedAsSubDirectories)
+      oprot.writeFieldEnd()
     oprot.writeFieldStop()
     oprot.writeStructEnd()
 
@@ -4503,6 +4515,7 @@ class StorageDescriptor:
     value = (value * 31) ^ hash(self.sortCols)
     value = (value * 31) ^ hash(self.parameters)
     value = (value * 31) ^ hash(self.skewedInfo)
+    value = (value * 31) ^ hash(self.storedAsSubDirectories)
     return value
 
   def __repr__(self):

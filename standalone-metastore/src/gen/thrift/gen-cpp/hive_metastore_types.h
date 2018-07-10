@@ -2991,7 +2991,7 @@ inline std::ostream& operator<<(std::ostream& out, const SkewedInfo& obj)
 }
 
 typedef struct _StorageDescriptor__isset {
-  _StorageDescriptor__isset() : cols(false), location(false), inputFormat(false), outputFormat(false), compressed(false), numBuckets(false), serdeInfo(false), bucketCols(false), sortCols(false), parameters(false), skewedInfo(false) {}
+  _StorageDescriptor__isset() : cols(false), location(false), inputFormat(false), outputFormat(false), compressed(false), numBuckets(false), serdeInfo(false), bucketCols(false), sortCols(false), parameters(false), skewedInfo(false), storedAsSubDirectories(false) {}
   bool cols :1;
   bool location :1;
   bool inputFormat :1;
@@ -3003,6 +3003,7 @@ typedef struct _StorageDescriptor__isset {
   bool sortCols :1;
   bool parameters :1;
   bool skewedInfo :1;
+  bool storedAsSubDirectories :1;
 } _StorageDescriptor__isset;
 
 class StorageDescriptor {
@@ -3010,7 +3011,7 @@ class StorageDescriptor {
 
   StorageDescriptor(const StorageDescriptor&);
   StorageDescriptor& operator=(const StorageDescriptor&);
-  StorageDescriptor() : location(), inputFormat(), outputFormat(), compressed(0), numBuckets(0) {
+  StorageDescriptor() : location(), inputFormat(), outputFormat(), compressed(0), numBuckets(0), storedAsSubDirectories(0) {
   }
 
   virtual ~StorageDescriptor() throw();
@@ -3025,6 +3026,7 @@ class StorageDescriptor {
   std::vector<Order>  sortCols;
   std::map<std::string, std::string>  parameters;
   SkewedInfo skewedInfo;
+  bool storedAsSubDirectories;
 
   _StorageDescriptor__isset __isset;
 
@@ -3049,6 +3051,8 @@ class StorageDescriptor {
   void __set_parameters(const std::map<std::string, std::string> & val);
 
   void __set_skewedInfo(const SkewedInfo& val);
+
+  void __set_storedAsSubDirectories(const bool val);
 
   bool operator == (const StorageDescriptor & rhs) const
   {
@@ -3075,6 +3079,10 @@ class StorageDescriptor {
     if (__isset.skewedInfo != rhs.__isset.skewedInfo)
       return false;
     else if (__isset.skewedInfo && !(skewedInfo == rhs.skewedInfo))
+      return false;
+    if (__isset.storedAsSubDirectories != rhs.__isset.storedAsSubDirectories)
+      return false;
+    else if (__isset.storedAsSubDirectories && !(storedAsSubDirectories == rhs.storedAsSubDirectories))
       return false;
     return true;
   }

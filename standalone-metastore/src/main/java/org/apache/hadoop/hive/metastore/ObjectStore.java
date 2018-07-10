@@ -2276,7 +2276,7 @@ public class ObjectStore implements RawStore, Configurable {
         convertToMStringLists((null == sd.getSkewedInfo()) ? null : sd.getSkewedInfo()
             .getSkewedColValues()),
         covertToMapMStringList((null == sd.getSkewedInfo()) ? null : sd.getSkewedInfo()
-            .getSkewedColValueLocationMaps()));
+            .getSkewedColValueLocationMaps()), false);
   }
 
   private MCreationMetadata convertToMCreationMetadata(

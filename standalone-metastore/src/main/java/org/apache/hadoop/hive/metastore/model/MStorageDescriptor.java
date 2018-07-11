@@ -35,10 +35,9 @@ public class MStorageDescriptor {
   private List<String> skewedColNames;
   private List<MStringList> skewedColValues;
   private Map<MStringList, String> skewedColValueLocationMaps;
-  private boolean isStoredAsSubDirectories;
 
-  public MStorageDescriptor() {}
-
+  public MStorageDescriptor() {
+  }
 
   /**
    * @param cd
@@ -70,9 +69,7 @@ public class MStorageDescriptor {
     this.skewedColNames = skewedColNames;
     this.skewedColValues = skewedColValues;
     this.skewedColValueLocationMaps = skewedColValueLocationMaps;
-    this.isStoredAsSubDirectories = storedAsSubDirectories;
   }
-
 
   /**
    * @return the location
@@ -200,14 +197,12 @@ public class MStorageDescriptor {
     this.serDeInfo = serDe;
   }
 
-
   /**
    * @param sortOrder the sortOrder to set
    */
   public void setSortCols(List<MOrder> sortOrder) {
     this.sortCols = sortOrder;
   }
-
 
   /**
    * @return the sortOrder
@@ -257,21 +252,4 @@ public class MStorageDescriptor {
   public void setSkewedColValueLocationMaps(Map<MStringList, String> listBucketColValuesMapping) {
     this.skewedColValueLocationMaps = listBucketColValuesMapping;
   }
-
-
-  /**
-   * @return the storedAsSubDirectories
-   */
-  public boolean isStoredAsSubDirectories() {
-    return isStoredAsSubDirectories;
-  }
-
-
-  /**
-   * @param storedAsSubDirectories the storedAsSubDirectories to set
-   */
-  public void setStoredAsSubDirectories(boolean storedAsSubDirectories) {
-    this.isStoredAsSubDirectories = storedAsSubDirectories;
-  }
-
 }

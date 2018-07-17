@@ -952,4 +952,9 @@ public class AlterTableDesc extends DDLDesc implements Serializable, DDLDesc.DDL
   public Long getWriteId() {
     return this.writeId;
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " for " + getFullTableName();
+  }
 }

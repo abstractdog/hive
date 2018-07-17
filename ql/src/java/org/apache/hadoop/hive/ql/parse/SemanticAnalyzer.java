@@ -65,6 +65,7 @@ import org.apache.hadoop.hive.common.FileUtils;
 import org.apache.hadoop.hive.common.ObjectPair;
 import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.common.StatsSetupConst.StatDB;
+import org.apache.hadoop.hive.common.StringInternUtils;
 import org.apache.hadoop.hive.common.ValidTxnList;
 import org.apache.hadoop.hive.common.ValidTxnWriteIdList;
 import org.apache.hadoop.hive.common.metrics.common.MetricsConstant;
@@ -395,6 +396,15 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       HiveParser.TOK_DISTRIBUTEBY, HiveParser.TOK_SORTBY);
 
   private String invalidQueryMaterializationReason;
+
+  private static final CommonToken SELECTDI_TOKEN =
+      new ImmutableCommonToken(HiveParser.TOK_SELECTDI, "TOK_SELECTDI");
+  private static final CommonToken SELEXPR_TOKEN =
+      new ImmutableCommonToken(HiveParser.TOK_SELEXPR, "TOK_SELEXPR");
+  private static final CommonToken TABLEORCOL_TOKEN =
+      new ImmutableCommonToken(HiveParser.TOK_TABLE_OR_COL, "TOK_TABLE_OR_COL");
+  private static final CommonToken DOT_TOKEN =
+      new ImmutableCommonToken(HiveParser.DOT, ".");
 
   static class Phase1Ctx {
     String dest;
@@ -12123,8 +12133,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   void analyzeInternal(ASTNode ast, PlannerContextFactory pcf) throws SemanticException {
-    // 1. Generate Resolved Parse tree from syntax tree
     LOG.info("Starting Semantic Analysis");
+    // 1. Generate Resolved Parse tree from syntax tree
+    boolean needsTransform = needsTransform();
     //change the location of position alias process here
     processPositionAlias(ast);
     PlannerContext plannerCtx = pcf.create();
@@ -12144,7 +12155,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     // Otherwise we have to wait until after the masking/filtering step.
     boolean isCacheEnabled = isResultsCacheEnabled();
     QueryResultsCache.LookupInfo lookupInfo = null;
-    boolean needsTransform = needsTransform();
     if (isCacheEnabled && !needsTransform && queryTypeCanUseCache()) {
       lookupInfo = createLookupInfoForQuery(ast);
       if (checkResultsCache(lookupInfo)) {
@@ -12152,32 +12162,45 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       }
     }
 
+    ASTNode astForMasking;
+    if (isCBOExecuted() && needsTransform &&
+        (qb.isCTAS() || qb.isView() || qb.isMaterializedView() || qb.isMultiDestQuery())) {
+      // If we use CBO and we may apply masking/filtering policies, we create a copy of the ast.
+      // The reason is that the generation of the operator tree may modify the initial ast,
+      // but if we need to parse for a second time, we would like to parse the unmodified ast.
+      astForMasking = (ASTNode) ParseDriver.adaptor.dupTree(ast);
+    } else {
+      astForMasking = ast;
+    }
+
     // 2. Gen OP Tree from resolved Parse Tree
     Operator sinkOp = genOPTree(ast, plannerCtx);
 
+    boolean usesMasking = false;
     if (!unparseTranslator.isEnabled() &&
         (tableMask.isEnabled() && analyzeRewrite == null)) {
       // Here we rewrite the * and also the masking table
-      ASTNode tree = rewriteASTWithMaskAndFilter(tableMask, ast, ctx.getTokenRewriteStream(),
+      ASTNode rewrittenAST = rewriteASTWithMaskAndFilter(tableMask, astForMasking, ctx.getTokenRewriteStream(),
           ctx, db, tabNameToTabObject, ignoredTokens);
-      if (tree != ast) {
+      if (astForMasking != rewrittenAST) {
+        usesMasking = true;
         plannerCtx = pcf.create();
         ctx.setSkipTableMasking(true);
         init(true);
         //change the location of position alias process here
-        processPositionAlias(tree);
-        genResolvedParseTree(tree, plannerCtx);
+        processPositionAlias(rewrittenAST);
+        genResolvedParseTree(rewrittenAST, plannerCtx);
         if (this instanceof CalcitePlanner) {
           ((CalcitePlanner) this).resetCalciteConfiguration();
         }
-        sinkOp = genOPTree(tree, plannerCtx);
+        sinkOp = genOPTree(rewrittenAST, plannerCtx);
       }
     }
 
     // Check query results cache
-    // In the case that row or column masking/filtering was required, the cache must be checked
-    // here, after applying the masking/filtering rewrite rules to the AST.
-    if (isCacheEnabled && needsTransform && queryTypeCanUseCache()) {
+    // In the case that row or column masking/filtering was required, we do not support caching.
+    // TODO: Enable caching for queries with masking/filtering
+    if (isCacheEnabled && needsTransform && !usesMasking && queryTypeCanUseCache()) {
       lookupInfo = createLookupInfoForQuery(ast);
       if (checkResultsCache(lookupInfo)) {
         return;
@@ -14540,7 +14563,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
   public static ASTNode genSelectDIAST(RowResolver rr) {
     LinkedHashMap<String, LinkedHashMap<String, ColumnInfo>> map = rr.getRslvMap();
-    ASTNode selectDI = new ASTNode(new CommonToken(HiveParser.TOK_SELECTDI, "TOK_SELECTDI"));
+    ASTNode selectDI = new ASTNode(SELECTDI_TOKEN);
     // Note: this will determine the order of columns in the result. For now, the columns for each
     //       table will be together; the order of the tables, as well as the columns within each
     //       table, is deterministic, but undefined - RR stores them in the order of addition.
@@ -14552,10 +14575,11 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return selectDI;
   }
   private static ASTNode buildSelExprSubTree(String tableAlias, String col) {
-    ASTNode selexpr = new ASTNode(new CommonToken(HiveParser.TOK_SELEXPR, "TOK_SELEXPR"));
-    ASTNode tableOrCol = new ASTNode(new CommonToken(HiveParser.TOK_TABLE_OR_COL,
-        "TOK_TABLE_OR_COL"));
-    ASTNode dot = new ASTNode(new CommonToken(HiveParser.DOT, "."));
+    tableAlias = StringInternUtils.internIfNotNull(tableAlias);
+    col = StringInternUtils.internIfNotNull(col);
+    ASTNode selexpr = new ASTNode(SELEXPR_TOKEN);
+    ASTNode tableOrCol = new ASTNode(TABLEORCOL_TOKEN);
+    ASTNode dot = new ASTNode(DOT_TOKEN);
     tableOrCol.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, tableAlias)));
     dot.addChild(tableOrCol);
     dot.addChild(new ASTNode(new CommonToken(HiveParser.Identifier, col)));

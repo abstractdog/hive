@@ -28,6 +28,8 @@ import org.apache.hadoop.hive.llap.FieldDesc;
 import org.apache.hadoop.hive.llap.Row;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.BeforeClass;
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.hive.llap.LlapArrowRowInputFormat;
@@ -40,7 +42,9 @@ public class TestJdbcWithMiniLlapArrow extends BaseJdbcWithMiniLlap {
 
   @BeforeClass
   public static void beforeTest() throws Exception {
-    BaseJdbcWithMiniLlap.beforeTest(true);
+    HiveConf conf = defaultConf();
+    conf.setBoolVar(ConfVars.LLAP_OUTPUT_FORMAT_ARROW, true);
+    BaseJdbcWithMiniLlap.beforeTest(conf);
   }
 
   @Override

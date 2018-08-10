@@ -152,6 +152,7 @@ public class TestReplicationScenarios {
     hconf.set(HiveConf.ConfVars.PREEXECHOOKS.varname, "");
     hconf.set(HiveConf.ConfVars.POSTEXECHOOKS.varname, "");
     hconf.set(HiveConf.ConfVars.HIVE_IN_TEST_REPL.varname, "true");
+    hconf.setBoolVar(HiveConf.ConfVars.HIVE_IN_TEST, true);
     hconf.set(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY.varname, "false");
     hconf.set(HiveConf.ConfVars.HIVE_TXN_MANAGER.varname,
         "org.apache.hadoop.hive.ql.lockmgr.DummyTxnManager");
@@ -1568,7 +1569,7 @@ public class TestReplicationScenarios {
     run("USE " + replDbName, driverMirror);
     verifyRunWithPatternMatch("SHOW TABLE EXTENDED LIKE namelist PARTITION (year=1990,month=5,day=25)",
             "location", "namelist/year=1990/month=5/day=25", driverMirror);
-    run("USE " + dbName, driverMirror);
+    run("USE " + dbName, driver);
 
     String[] ptn_data_3 = new String[] { "abraham", "bob", "carter", "david", "fisher" };
     String[] data_after_ovwrite = new String[] { "fisher" };

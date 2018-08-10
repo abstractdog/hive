@@ -128,7 +128,7 @@ STAGE PLANS:
                     Filter Vectorization:
                         className: VectorFilterOperator
                         native: true
-                        predicateExpression: FilterExprAndExpr(children: SelectColumnIsNotNull(col 3:decimal(8,1))(children: ConvertDecimal64ToDecimal(col 0:decimal(8,1)/DECIMAL_64) -> 3:decimal(8,1)), SelectColumnIsNotNull(col 1:int))
+                        predicateExpression: FilterExprAndExpr(children: SelectColumnIsNotNull(col 0:decimal(8,1)/DECIMAL_64), SelectColumnIsNotNull(col 1:int))
                     predicate: (decimal0801_col is not null and int_col_1 is not null) (type: boolean)
                     Statistics: Num rows: 4 Data size: 464 Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
@@ -147,13 +147,12 @@ STAGE PLANS:
                           1 _col0 (type: int)
                         Map Join Vectorization:
                             bigTableKeyColumnNums: [1]
-                            bigTableRetainedColumnNums: [3]
-                            bigTableValueColumnNums: [3]
-                            bigTableValueExpressions: ConvertDecimal64ToDecimal(col 0:decimal(8,1)/DECIMAL_64) -> 3:decimal(8,1)
+                            bigTableRetainedColumnNums: [0]
+                            bigTableValueColumnNums: [0]
                             className: VectorMapJoinInnerBigOnlyLongOperator
                             native: true
                             nativeConditionsMet: hive.mapjoin.optimized.hashtable IS true, hive.vectorized.execution.mapjoin.native.enabled IS true, hive.execution.engine tez IN [tez, spark] IS true, One MapJoin Condition IS true, No nullsafe IS true, Small table vectorizes IS true, Optimized Table and Supports Key Types IS true
-                            projectedOutputColumnNums: [3]
+                            projectedOutputColumnNums: [0]
                         outputColumnNames: _col0
                         input vertices:
                           1 Reducer 3
@@ -184,7 +183,7 @@ STAGE PLANS:
                     includeColumns: [0, 1]
                     dataColumns: decimal0801_col:decimal(8,1)/DECIMAL_64, int_col_1:int
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [decimal(8,1)]
+                    scratchColumnTypeNames: []
         Map 2 
             Map Operator Tree:
                 TableScan
@@ -333,7 +332,7 @@ STAGE PLANS:
                     Filter Vectorization:
                         className: VectorFilterOperator
                         native: true
-                        predicateExpression: FilterExprAndExpr(children: SelectColumnIsNotNull(col 1:int), SelectColumnIsNotNull(col 3:decimal(8,1))(children: ConvertDecimal64ToDecimal(col 0:decimal(8,1)/DECIMAL_64) -> 3:decimal(8,1)))
+                        predicateExpression: FilterExprAndExpr(children: SelectColumnIsNotNull(col 1:int), SelectColumnIsNotNull(col 0:decimal(8,1)/DECIMAL_64))
                     predicate: (decimal0801_col is not null and int_col_1 is not null) (type: boolean)
                     Statistics: Num rows: 4 Data size: 464 Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
@@ -352,13 +351,12 @@ STAGE PLANS:
                           1 _col0 (type: int)
                         Map Join Vectorization:
                             bigTableKeyColumnNums: [1]
-                            bigTableRetainedColumnNums: [3]
-                            bigTableValueColumnNums: [3]
-                            bigTableValueExpressions: ConvertDecimal64ToDecimal(col 0:decimal(8,1)/DECIMAL_64) -> 3:decimal(8,1)
+                            bigTableRetainedColumnNums: [0]
+                            bigTableValueColumnNums: [0]
                             className: VectorMapJoinInnerBigOnlyLongOperator
                             native: true
                             nativeConditionsMet: hive.mapjoin.optimized.hashtable IS true, hive.vectorized.execution.mapjoin.native.enabled IS true, hive.execution.engine tez IN [tez, spark] IS true, One MapJoin Condition IS true, No nullsafe IS true, Small table vectorizes IS true, Optimized Table and Supports Key Types IS true
-                            projectedOutputColumnNums: [3]
+                            projectedOutputColumnNums: [0]
                         outputColumnNames: _col0
                         input vertices:
                           1 Reducer 3
@@ -389,7 +387,7 @@ STAGE PLANS:
                     includeColumns: [0, 1]
                     dataColumns: decimal0801_col:decimal(8,1)/DECIMAL_64, int_col_1:int
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [decimal(8,1)]
+                    scratchColumnTypeNames: []
         Map 2 
             Map Operator Tree:
                 TableScan
@@ -538,7 +536,7 @@ STAGE PLANS:
                     Filter Vectorization:
                         className: VectorFilterOperator
                         native: true
-                        predicateExpression: FilterExprAndExpr(children: SelectColumnIsNotNull(col 3:decimal(8,1))(children: ConvertDecimal64ToDecimal(col 0:decimal(8,1)/DECIMAL_64) -> 3:decimal(8,1)), SelectColumnIsNotNull(col 1:int))
+                        predicateExpression: FilterExprAndExpr(children: SelectColumnIsNotNull(col 0:decimal(8,1)/DECIMAL_64), SelectColumnIsNotNull(col 1:int))
                     predicate: (decimal0801_col is not null and int_col_1 is not null) (type: boolean)
                     Statistics: Num rows: 4 Data size: 464 Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
@@ -557,13 +555,12 @@ STAGE PLANS:
                           1 _col0 (type: int)
                         Map Join Vectorization:
                             bigTableKeyColumnNums: [1]
-                            bigTableRetainedColumnNums: [3]
-                            bigTableValueColumnNums: [3]
-                            bigTableValueExpressions: ConvertDecimal64ToDecimal(col 0:decimal(8,1)/DECIMAL_64) -> 3:decimal(8,1)
+                            bigTableRetainedColumnNums: [0]
+                            bigTableValueColumnNums: [0]
                             className: VectorMapJoinInnerBigOnlyLongOperator
                             native: true
                             nativeConditionsMet: hive.mapjoin.optimized.hashtable IS true, hive.vectorized.execution.mapjoin.native.enabled IS true, hive.execution.engine tez IN [tez, spark] IS true, One MapJoin Condition IS true, No nullsafe IS true, Small table vectorizes IS true, Optimized Table and Supports Key Types IS true
-                            projectedOutputColumnNums: [3]
+                            projectedOutputColumnNums: [0]
                         outputColumnNames: _col0
                         input vertices:
                           1 Reducer 3
@@ -594,7 +591,7 @@ STAGE PLANS:
                     includeColumns: [0, 1]
                     dataColumns: decimal0801_col:decimal(8,1)/DECIMAL_64, int_col_1:int
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [decimal(8,1)]
+                    scratchColumnTypeNames: []
         Map 2 
             Map Operator Tree:
                 TableScan

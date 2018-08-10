@@ -60,6 +60,7 @@ import org.apache.hadoop.hive.ql.exec.persistence.MapJoinKey;
 import org.apache.hadoop.hive.ql.exec.spark.SparkTask;
 import org.apache.hadoop.hive.ql.exec.tez.TezTask;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
+import org.apache.hadoop.hive.ql.exec.vector.filesink.VectorFileSinkArrowOperator;
 import org.apache.hadoop.hive.ql.exec.vector.mapjoin.VectorMapJoinInnerBigOnlyLongOperator;
 import org.apache.hadoop.hive.ql.exec.vector.mapjoin.VectorMapJoinInnerBigOnlyMultiKeyOperator;
 import org.apache.hadoop.hive.ql.exec.vector.mapjoin.VectorMapJoinInnerBigOnlyStringOperator;
@@ -124,6 +125,7 @@ import org.apache.hadoop.hive.ql.plan.MapredWork;
 import org.apache.hadoop.hive.ql.plan.OperatorDesc;
 import org.apache.hadoop.hive.ql.plan.PTFDesc;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
+import org.apache.hadoop.hive.ql.plan.TopNKeyDesc;
 import org.apache.hadoop.hive.ql.plan.VectorAppMasterEventDesc;
 import org.apache.hadoop.hive.ql.plan.VectorDesc;
 import org.apache.hadoop.hive.ql.plan.VectorFileSinkDesc;
@@ -135,6 +137,7 @@ import org.apache.hadoop.hive.ql.plan.VectorTableScanDesc;
 import org.apache.hadoop.hive.ql.plan.VectorGroupByDesc.ProcessingMode;
 import org.apache.hadoop.hive.ql.plan.VectorSparkHashTableSinkDesc;
 import org.apache.hadoop.hive.ql.plan.VectorSparkPartitionPruningSinkDesc;
+import org.apache.hadoop.hive.ql.plan.VectorTopNKeyDesc;
 import org.apache.hadoop.hive.ql.plan.VectorLimitDesc;
 import org.apache.hadoop.hive.ql.plan.VectorMapJoinInfo;
 import org.apache.hadoop.hive.ql.plan.VectorSMBJoinDesc;
@@ -204,7 +207,6 @@ import org.apache.hadoop.hive.ql.udf.UDFToFloat;
 import org.apache.hadoop.hive.ql.udf.UDFToInteger;
 import org.apache.hadoop.hive.ql.udf.UDFToLong;
 import org.apache.hadoop.hive.ql.udf.UDFToShort;
-import org.apache.hadoop.hive.ql.udf.UDFToString;
 import org.apache.hadoop.hive.ql.udf.UDFWeekOfYear;
 import org.apache.hadoop.hive.ql.udf.UDFYear;
 import org.apache.hadoop.hive.ql.udf.generic.*;
@@ -486,7 +488,7 @@ public class Vectorizer implements PhysicalPlanResolver {
     supportedGenericUDFs.add(UDFToBoolean.class);
     supportedGenericUDFs.add(UDFToFloat.class);
     supportedGenericUDFs.add(UDFToDouble.class);
-    supportedGenericUDFs.add(UDFToString.class);
+    supportedGenericUDFs.add(GenericUDFToString.class);
     supportedGenericUDFs.add(GenericUDFTimestamp.class);
     supportedGenericUDFs.add(GenericUDFToDecimal.class);
     supportedGenericUDFs.add(GenericUDFToDate.class);
@@ -2555,6 +2557,10 @@ public class Vectorizer implements PhysicalPlanResolver {
         desc, "Predicate", VectorExpressionDescriptor.Mode.FILTER, /* allowComplex */ true);
   }
 
+  private boolean validateTopNKeyOperator(TopNKeyOperator op) {
+    List<ExprNodeDesc> keyColumns = op.getConf().getKeyColumns();
+    return validateExprNodeDesc(keyColumns, "Key columns");
+  }
 
   private boolean validateGroupByOperator(GroupByOperator op, boolean isReduce,
       boolean isTezOrSpark, VectorGroupByDesc vectorGroupByDesc) {
@@ -3429,9 +3435,8 @@ public class Vectorizer implements PhysicalPlanResolver {
 
     boolean outerJoinHasNoKeys = (!desc.isNoOuterJoin() && keyDesc.size() == 0);
 
-    // For now, we don't support joins on or using DECIMAL_64.
-    VectorExpression[] allBigTableKeyExpressions =
-        vContext.getVectorExpressionsUpConvertDecimal64(keyDesc);
+    VectorExpression[] allBigTableKeyExpressions = vContext.getVectorExpressions(keyDesc);
+
     final int allBigTableKeyExpressionsLength = allBigTableKeyExpressions.length;
     boolean supportsKeyTypes = true;  // Assume.
     HashSet<String> notSupportedKeyTypes = new HashSet<String>();
@@ -3473,9 +3478,7 @@ public class Vectorizer implements PhysicalPlanResolver {
 
     List<ExprNodeDesc> bigTableExprs = desc.getExprs().get(posBigTable);
 
-    // For now, we don't support joins on or using DECIMAL_64.
-    VectorExpression[] allBigTableValueExpressions =
-        vContext.getVectorExpressionsUpConvertDecimal64(bigTableExprs);
+    VectorExpression[] allBigTableValueExpressions = vContext.getVectorExpressions(bigTableExprs);
 
     boolean isFastHashTableEnabled =
         HiveConf.getBoolVar(hiveConf,
@@ -4114,6 +4117,48 @@ public class Vectorizer implements PhysicalPlanResolver {
     return true;
   }
 
+  private boolean checkForArrowFileSink(FileSinkDesc fileSinkDesc,
+      boolean isTezOrSpark, VectorizationContext vContext,
+      VectorFileSinkDesc vectorDesc) throws HiveException {
+
+    // Various restrictions.
+
+    boolean isVectorizationFileSinkArrowNativeEnabled =
+        HiveConf.getBoolVar(hiveConf,
+            HiveConf.ConfVars.HIVE_VECTORIZATION_FILESINK_ARROW_NATIVE_ENABLED);
+
+    String engine = HiveConf.getVar(hiveConf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE);
+
+    String serdeClassName = fileSinkDesc.getTableInfo().getSerdeClassName();
+
+    boolean isOkArrowFileSink =
+        serdeClassName.equals("org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe") &&
+        isVectorizationFileSinkArrowNativeEnabled &&
+        engine.equalsIgnoreCase("tez");
+
+    return isOkArrowFileSink;
+  }
+
+  private Operator<? extends OperatorDesc> specializeArrowFileSinkOperator(
+      Operator<? extends OperatorDesc> op, VectorizationContext vContext, FileSinkDesc desc,
+      VectorFileSinkDesc vectorDesc) throws HiveException {
+
+    Class<? extends Operator<?>> opClass = VectorFileSinkArrowOperator.class;
+
+    Operator<? extends OperatorDesc> vectorOp = null;
+    try {
+      vectorOp = OperatorFactory.getVectorOperator(
+          opClass, op.getCompilationOpContext(), op.getConf(),
+          vContext, vectorDesc);
+    } catch (Exception e) {
+      LOG.info("Vectorizer vectorizeOperator file sink class exception " + opClass.getSimpleName() +
+          " exception " + e);
+      throw new HiveException(e);
+    }
+
+    return vectorOp;
+  }
+
   private boolean usesVectorUDFAdaptor(VectorExpression vecExpr) {
     if (vecExpr == null) {
       return false;
@@ -4155,6 +4200,20 @@ public class Vectorizer implements PhysicalPlanResolver {
         vContext, vectorFilterDesc);
   }
 
+  private static Operator<? extends OperatorDesc> vectorizeTopNKeyOperator(
+      Operator<? extends OperatorDesc> topNKeyOperator, VectorizationContext vContext,
+      VectorTopNKeyDesc vectorTopNKeyDesc) throws HiveException {
+
+    TopNKeyDesc topNKeyDesc = (TopNKeyDesc) topNKeyOperator.getConf();
+
+    List<ExprNodeDesc> keyColumns = topNKeyDesc.getKeyColumns();
+    VectorExpression[] keyExpressions = vContext.getVectorExpressions(keyColumns);
+    vectorTopNKeyDesc.setKeyExpressions(keyExpressions);
+    return OperatorFactory.getVectorOperator(
+        topNKeyOperator.getCompilationOpContext(), topNKeyDesc,
+        vContext, vectorTopNKeyDesc);
+  }
+
   private static Class<? extends VectorAggregateExpression> findVecAggrClass(
       Class<? extends VectorAggregateExpression>[] vecAggrClasses,
       String aggregateName, ColumnVector.Type inputColVectorType,
@@ -4183,7 +4242,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       AggregationDesc aggrDesc, VectorizationContext vContext) throws HiveException {
 
     String aggregateName = aggrDesc.getGenericUDAFName();
-    ArrayList<ExprNodeDesc> parameterList = aggrDesc.getParameters();
+    List<ExprNodeDesc> parameterList = aggrDesc.getParameters();
     final int parameterCount = parameterList.size();
     final GenericUDAFEvaluator.Mode udafEvaluatorMode = aggrDesc.getMode();
 
@@ -4192,10 +4251,9 @@ public class Vectorizer implements PhysicalPlanResolver {
      */
     GenericUDAFEvaluator evaluator = aggrDesc.getGenericUDAFEvaluator();
 
-    ArrayList<ExprNodeDesc> parameters = aggrDesc.getParameters();
     ObjectInspector[] parameterObjectInspectors = new ObjectInspector[parameterCount];
     for (int i = 0; i < parameterCount; i++) {
-      TypeInfo typeInfo = parameters.get(i).getTypeInfo();
+      TypeInfo typeInfo = parameterList.get(i).getTypeInfo();
       parameterObjectInspectors[i] = TypeInfoUtils
           .getStandardWritableObjectInspectorFromTypeInfo(typeInfo);
     }
@@ -4207,18 +4265,30 @@ public class Vectorizer implements PhysicalPlanResolver {
             aggrDesc.getMode(),
             parameterObjectInspectors);
 
+    final TypeInfo outputTypeInfo = TypeInfoUtils.getTypeInfoFromTypeString(returnOI.getTypeName());
+
+    return getVectorAggregationDesc(
+        aggregateName, parameterList, evaluator, outputTypeInfo, udafEvaluatorMode, vContext);
+  }
+
+  public static ImmutablePair<VectorAggregationDesc,String> getVectorAggregationDesc(
+      String aggregationName, List<ExprNodeDesc> parameterList,
+      GenericUDAFEvaluator evaluator, TypeInfo outputTypeInfo,
+      GenericUDAFEvaluator.Mode udafEvaluatorMode,
+      VectorizationContext vContext)
+          throws HiveException {
+
     VectorizedUDAFs annotation =
         AnnotationUtils.getAnnotation(evaluator.getClass(), VectorizedUDAFs.class);
     if (annotation == null) {
       String issue =
           "Evaluator " + evaluator.getClass().getSimpleName() + " does not have a " +
-          "vectorized UDAF annotation (aggregation: \"" + aggregateName + "\"). " +
+          "vectorized UDAF annotation (aggregation: \"" + aggregationName + "\"). " +
           "Vectorization not supported";
       return new ImmutablePair<VectorAggregationDesc,String>(null, issue);
     }
     final Class<? extends VectorAggregateExpression>[] vecAggrClasses = annotation.value();
 
-    final TypeInfo outputTypeInfo = TypeInfoUtils.getTypeInfoFromTypeString(returnOI.getTypeName());
 
     // Not final since it may change later due to DECIMAL_64.
     ColumnVector.Type outputColVectorType =
@@ -4233,6 +4303,7 @@ public class Vectorizer implements PhysicalPlanResolver {
     VectorExpression inputExpression;
     ColumnVector.Type inputColVectorType;
 
+    final int parameterCount = parameterList.size();
     if (parameterCount == 0) {
 
       // COUNT(*)
@@ -4246,7 +4317,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       inputTypeInfo = exprNodeDesc.getTypeInfo();
       if (inputTypeInfo == null) {
         String issue ="Aggregations with null parameter type not supported " +
-            aggregateName + "(" + parameterList.toString() + ")";
+            aggregationName + "(" + parameterList.toString() + ")";
         return new ImmutablePair<VectorAggregationDesc,String>(null, issue);
       }
 
@@ -4260,12 +4331,12 @@ public class Vectorizer implements PhysicalPlanResolver {
               exprNodeDesc, VectorExpressionDescriptor.Mode.PROJECTION);
       if (inputExpression == null) {
         String issue ="Parameter expression " + exprNodeDesc.toString() + " not supported " +
-            aggregateName + "(" + parameterList.toString() + ")";
+            aggregationName + "(" + parameterList.toString() + ")";
         return new ImmutablePair<VectorAggregationDesc,String>(null, issue);
       }
       if (inputExpression.getOutputTypeInfo() == null) {
         String issue ="Parameter expression " + exprNodeDesc.toString() + " with null type not supported " +
-            aggregateName + "(" + parameterList.toString() + ")";
+            aggregationName + "(" + parameterList.toString() + ")";
         return new ImmutablePair<VectorAggregationDesc,String>(null, issue);
       }
       inputColVectorType = inputExpression.getOutputColumnVectorType();
@@ -4273,7 +4344,7 @@ public class Vectorizer implements PhysicalPlanResolver {
 
       // No multi-parameter aggregations supported.
       String issue ="Aggregations with > 1 parameter are not supported " +
-          aggregateName + "(" + parameterList.toString() + ")";
+          aggregationName + "(" + parameterList.toString() + ")";
       return new ImmutablePair<VectorAggregationDesc,String>(null, issue);
     }
 
@@ -4291,12 +4362,13 @@ public class Vectorizer implements PhysicalPlanResolver {
           // Try with DECIMAL_64 input and DECIMAL_64 output.
           final Class<? extends VectorAggregateExpression> vecAggrClass =
               findVecAggrClass(
-                  vecAggrClasses, aggregateName, inputColVectorType,
+                  vecAggrClasses, aggregationName, inputColVectorType,
                   ColumnVector.Type.DECIMAL_64, udafEvaluatorMode);
           if (vecAggrClass != null) {
             final VectorAggregationDesc vecAggrDesc =
                 new VectorAggregationDesc(
-                    aggrDesc, evaluator, inputTypeInfo, inputColVectorType, inputExpression,
+                    aggregationName, evaluator, udafEvaluatorMode,
+                    inputTypeInfo, inputColVectorType, inputExpression,
                     outputTypeInfo, ColumnVector.Type.DECIMAL_64, vecAggrClass);
             return new ImmutablePair<VectorAggregationDesc,String>(vecAggrDesc, null);
           }
@@ -4305,12 +4377,13 @@ public class Vectorizer implements PhysicalPlanResolver {
         // Try with regular DECIMAL output type.
         final Class<? extends VectorAggregateExpression> vecAggrClass =
             findVecAggrClass(
-                vecAggrClasses, aggregateName, inputColVectorType,
+                vecAggrClasses, aggregationName, inputColVectorType,
                 outputColVectorType, udafEvaluatorMode);
         if (vecAggrClass != null) {
           final VectorAggregationDesc vecAggrDesc =
               new VectorAggregationDesc(
-                  aggrDesc, evaluator, inputTypeInfo, inputColVectorType, inputExpression,
+                  aggregationName, evaluator, udafEvaluatorMode,
+                  inputTypeInfo, inputColVectorType, inputExpression,
                   outputTypeInfo, outputColVectorType, vecAggrClass);
           return new ImmutablePair<VectorAggregationDesc,String>(vecAggrDesc, null);
         }
@@ -4325,19 +4398,20 @@ public class Vectorizer implements PhysicalPlanResolver {
         // Try with with DECIMAL_64 input and desired output type.
         final Class<? extends VectorAggregateExpression> vecAggrClass =
             findVecAggrClass(
-                vecAggrClasses, aggregateName, inputColVectorType,
+                vecAggrClasses, aggregationName, inputColVectorType,
                 outputColVectorType, udafEvaluatorMode);
         if (vecAggrClass != null) {
           // for now, disable operating on decimal64 column vectors for semijoin reduction as
           // we have to make sure same decimal type should be used during bloom filter creation
           // and bloom filter probing
-          if (aggregateName.equals("bloom_filter")) {
+          if (aggregationName.equals("bloom_filter")) {
             inputExpression = vContext.wrapWithDecimal64ToDecimalConversion(inputExpression);
             inputColVectorType = ColumnVector.Type.DECIMAL;
           }
           final VectorAggregationDesc vecAggrDesc =
               new VectorAggregationDesc(
-                  aggrDesc, evaluator, inputTypeInfo, inputColVectorType, inputExpression,
+                  aggregationName, evaluator, udafEvaluatorMode,
+                  inputTypeInfo, inputColVectorType, inputExpression,
                   outputTypeInfo, outputColVectorType, vecAggrClass);
           return new ImmutablePair<VectorAggregationDesc,String>(vecAggrDesc, null);
         }
@@ -4355,19 +4429,20 @@ public class Vectorizer implements PhysicalPlanResolver {
      */
     Class<? extends VectorAggregateExpression> vecAggrClass =
         findVecAggrClass(
-            vecAggrClasses, aggregateName, inputColVectorType,
+            vecAggrClasses, aggregationName, inputColVectorType,
             outputColVectorType, udafEvaluatorMode);
     if (vecAggrClass != null) {
       final VectorAggregationDesc vecAggrDesc =
           new VectorAggregationDesc(
-              aggrDesc, evaluator, inputTypeInfo, inputColVectorType, inputExpression,
+              aggregationName, evaluator, udafEvaluatorMode,
+              inputTypeInfo, inputColVectorType, inputExpression,
               outputTypeInfo, outputColVectorType, vecAggrClass);
       return new ImmutablePair<VectorAggregationDesc,String>(vecAggrDesc, null);
     }
 
     // No match?
     String issue =
-        "Vector aggregation : \"" + aggregateName + "\" " +
+        "Vector aggregation : \"" + aggregationName + "\" " +
             "for input type: " +
                  (inputColVectorType == null ? "any" : "\"" + inputColVectorType) + "\" " +
             "and output type: \"" + outputColVectorType + "\" " +
@@ -4398,9 +4473,7 @@ public class Vectorizer implements PhysicalPlanResolver {
 
     List<ExprNodeDesc> keysDesc = groupByDesc.getKeys();
 
-    // For now, we don't support group by on DECIMAL_64 keys.
-    VectorExpression[] vecKeyExpressions =
-        vContext.getVectorExpressionsUpConvertDecimal64(keysDesc);
+    VectorExpression[] vecKeyExpressions = vContext.getVectorExpressions(keysDesc);
     ArrayList<AggregationDesc> aggrDesc = groupByDesc.getAggregators();
     final int size = aggrDesc.size();
 
@@ -4942,6 +5015,12 @@ public class Vectorizer implements PhysicalPlanResolver {
                   opClass = VectorMapJoinOuterFilteredOperator.class;
                 }
 
+                // Wrap any DECIMAL_64 expressions with Conversion.
+                vContext.wrapWithDecimal64ToDecimalConversions(
+                    vectorMapJoinDesc.getAllBigTableKeyExpressions());
+                vContext.wrapWithDecimal64ToDecimalConversions(
+                    vectorMapJoinDesc.getAllBigTableValueExpressions());
+
                 vectorOp = OperatorFactory.getVectorOperator(
                     opClass, op.getCompilationOpContext(), desc,
                     vContext, vectorMapJoinDesc);
@@ -5035,6 +5114,23 @@ public class Vectorizer implements PhysicalPlanResolver {
             }
           }
           break;
+        case TOPNKEY:
+          {
+            if (!validateTopNKeyOperator((TopNKeyOperator) op)) {
+              throw new VectorizerCannotVectorizeException();
+            }
+
+            VectorTopNKeyDesc vectorTopNKeyDesc = new VectorTopNKeyDesc();
+            vectorOp = vectorizeTopNKeyOperator(op, vContext, vectorTopNKeyDesc);
+            isNative = true;
+            if (vectorTaskColumnInfo != null) {
+              VectorExpression[] keyExpressions = vectorTopNKeyDesc.getKeyExpressions();
+              if (usesVectorUDFAdaptor(keyExpressions)) {
+                vectorTaskColumnInfo.setUsesVectorUDFAdaptor(true);
+              }
+            }
+          }
+          break;
         case SELECT:
           {
             if (!validateSelectOperator((SelectOperator) op)) {
@@ -5093,9 +5189,20 @@ public class Vectorizer implements PhysicalPlanResolver {
             FileSinkDesc fileSinkDesc = (FileSinkDesc) op.getConf();
 
             VectorFileSinkDesc vectorFileSinkDesc = new VectorFileSinkDesc();
-            vectorOp = OperatorFactory.getVectorOperator(
-                op.getCompilationOpContext(), fileSinkDesc, vContext, vectorFileSinkDesc);
-            isNative = false;
+            boolean isArrowSpecialization =
+                checkForArrowFileSink(fileSinkDesc, isTezOrSpark, vContext, vectorFileSinkDesc);
+
+            if (isArrowSpecialization) {
+              vectorOp =
+                  specializeArrowFileSinkOperator(
+                      op, vContext, fileSinkDesc, vectorFileSinkDesc);
+              isNative = true;
+            } else {
+              vectorOp =
+                  OperatorFactory.getVectorOperator(
+                      op.getCompilationOpContext(), fileSinkDesc, vContext, vectorFileSinkDesc);
+              isNative = false;
+            }
           }
           break;
         case LIMIT:

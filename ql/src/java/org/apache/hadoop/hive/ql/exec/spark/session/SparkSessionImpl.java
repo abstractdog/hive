@@ -72,8 +72,8 @@ public class SparkSessionImpl implements SparkSession {
   private Path scratchDir;
   private final Object dirLock = new Object();
 
-  public SparkSessionImpl() {
-    sessionId = makeSessionId();
+  SparkSessionImpl(String sessionId) {
+    this.sessionId = sessionId;
     initErrorPatterns();
   }
 
@@ -83,7 +83,8 @@ public class SparkSessionImpl implements SparkSession {
     this.conf = conf;
     isOpen = true;
     try {
-      hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(conf, sessionId);
+      hiveSparkClient = HiveSparkClientFactory.createHiveSparkClient(conf, sessionId,
+              SessionState.get().getSessionId());
     } catch (Throwable e) {
       // It's possible that user session is closed while creating Spark client.
       HiveException he;
@@ -215,18 +216,14 @@ public class SparkSessionImpl implements SparkSession {
               sessionId, matchedString.toString());
         } else {
           return new HiveException(e, ErrorMsg.SPARK_CREATE_CLIENT_ERROR, sessionId,
-                  getRootCause(oe));
+              Throwables.getRootCause(e).toString());
         }
       }
       e = e.getCause();
     }
 
-    return new HiveException(oe, ErrorMsg.SPARK_CREATE_CLIENT_ERROR, sessionId, getRootCause(oe));
-  }
-
-  private String getRootCause(Throwable e) {
-    Throwable rootCause = Throwables.getRootCause(e);
-    return rootCause.getClass().getName() + ": " + rootCause.getMessage();
+    return new HiveException(oe, ErrorMsg.SPARK_CREATE_CLIENT_ERROR, sessionId,
+        Throwables.getRootCause(oe).toString());
   }
 
   private boolean matches(String input, String regex, StringBuilder matchedString) {
@@ -262,10 +259,6 @@ public class SparkSessionImpl implements SparkSession {
       }
     }
     return scratchDir;
-  }
-
-  public static String makeSessionId() {
-    return UUID.randomUUID().toString();
   }
 
   @VisibleForTesting

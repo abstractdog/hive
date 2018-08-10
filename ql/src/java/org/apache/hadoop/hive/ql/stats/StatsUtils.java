@@ -128,6 +128,7 @@ public class StatsUtils {
 
   /**
    * Collect table, partition and column level statistics
+   * Note: DOES NOT CHECK txn stats.
    * @param conf
    *          - hive configuration
    * @param partList
@@ -226,6 +227,7 @@ public class StatsUtils {
     }
   }
 
+  /** Note: DOES NOT CHECK txn stats. */
   public static Statistics collectStatistics(HiveConf conf, PrunedPartitionList partList,
       Table table, List<ColumnInfo> schema, List<String> neededColumns, ColumnStatsList colStatsCache,
       List<String> referencedColumns, boolean fetchColStats)
@@ -261,8 +263,13 @@ public class StatsUtils {
       long nr = basicStats.getNumRows();
       List<ColStatistics> colStats = Lists.newArrayList();
 
+      long numErasureCodedFiles = getErasureCodedFiles(table);
+
       if (fetchColStats) {
-        colStats = getTableColumnStats(table, schema, neededColumns, colStatsCache);
+        // Note: this is currently called from two notable places (w/false for checkTxn)
+        //       1) StatsRulesProcFactory.TableScanStatsRule via collectStatistics
+        //       2) RelOptHiveTable via getColStats and updateColStats.
+        colStats = getTableColumnStats(table, schema, neededColumns, colStatsCache, false);
         if(colStats == null) {
           colStats = Lists.newArrayList();
         }
@@ -273,7 +280,7 @@ public class StatsUtils {
         long betterDS = getDataSizeFromColumnStats(nr, colStats);
         ds = (betterDS < 1 || colStats.isEmpty()) ? ds : betterDS;
       }
-      stats = new Statistics(nr, ds);
+      stats = new Statistics(nr, ds, numErasureCodedFiles);
       // infer if any column can be primary key based on column statistics
       inferAndSetPrimaryKey(stats.getNumRows(), colStats);
 
@@ -308,10 +315,14 @@ public class StatsUtils {
       long nr = bbs.getNumRows();
       long ds = bbs.getDataSize();
 
+      List<Long> erasureCodedFiles = getBasicStatForPartitions(table, partList.getNotDeniedPartns(),
+          StatsSetupConst.NUM_ERASURE_CODED_FILES);
+      long numErasureCodedFiles = getSumIgnoreNegatives(erasureCodedFiles);
+
       if (nr == 0) {
         nr=1;
       }
-      stats = new Statistics(nr, ds);
+      stats = new Statistics(nr, ds, numErasureCodedFiles);
       stats.setBasicStatsState(bbs.getState());
       if (nr > 0) {
         // FIXME: this promotion process should be removed later
@@ -378,8 +389,11 @@ public class StatsUtils {
         // size is 0, aggrStats is null after several retries. Thus, we can
         // skip the step to connect to the metastore.
         if (neededColsToRetrieve.size() > 0 && partNames.size() > 0) {
+          // Note: this is currently called from two notable places (w/false for checkTxn)
+          //       1) StatsRulesProcFactory.TableScanStatsRule via collectStatistics
+          //       2) RelOptHiveTable via getColStats and updateColStats.
           aggrStats = Hive.get().getAggrColStatsFor(table.getDbName(), table.getTableName(),
-              neededColsToRetrieve, partNames);
+              neededColsToRetrieve, partNames, false);
         }
 
         boolean statsRetrieved = aggrStats != null &&
@@ -990,7 +1004,7 @@ public class StatsUtils {
    */
   public static List<ColStatistics> getTableColumnStats(
       Table table, List<ColumnInfo> schema, List<String> neededColumns,
-      ColumnStatsList colStatsCache) {
+      ColumnStatsList colStatsCache, boolean checkTransactional) {
     if (table.isMaterializedTable()) {
       LOG.debug("Materialized table does not contain table statistics");
       return null;
@@ -1019,7 +1033,7 @@ public class StatsUtils {
     List<ColStatistics> stats = null;
     try {
       List<ColumnStatisticsObj> colStat = Hive.get().getTableColumnStatistics(
-          dbName, tabName, colStatsToRetrieve);
+          dbName, tabName, colStatsToRetrieve, checkTransactional);
       stats = convertColStats(colStat, tabName);
     } catch (HiveException e) {
       LOG.error("Failed to retrieve table statistics: ", e);
@@ -1656,6 +1670,14 @@ public class StatsUtils {
   }
 
   /**
+   * Get number of Erasure Coded files for a table
+   * @return count of EC files
+   */
+  public static long getErasureCodedFiles(Table table) {
+    return getBasicStatForTable(table, StatsSetupConst.NUM_ERASURE_CODED_FILES);
+  }
+
+  /**
    * Get basic stats of table
    * @param table
    *          - table
@@ -1782,7 +1804,7 @@ public class StatsUtils {
   }
 
   /**
-   * Get qualified column name from output key column names
+   * Get qualified column name from output key column names.
    * @param keyExprs
    *          - output key names
    * @return list of qualified names

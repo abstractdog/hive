@@ -36,6 +36,8 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -150,9 +152,9 @@ public class QTestUtil {
   public static final String TEST_HIVE_USER_PROPERTY = "test.hive.user";
 
   /**
-   * The Erasure Coding Policy to use in TestErasureCodingHDFSCliDriver.
+   * The default Erasure Coding Policy to use in Erasure Coding tests.
    */
-  private static final String DEFAULT_TEST_EC_POLICY = "RS-3-2-1024k";
+  public static final String DEFAULT_TEST_EC_POLICY = "RS-3-2-1024k";
 
   private String testWarehouse;
   @Deprecated
@@ -422,6 +424,7 @@ public class QTestUtil {
     llap_local(CoreClusterType.TEZ, FsType.local),
     none(CoreClusterType.MR, FsType.local),
     druid(CoreClusterType.TEZ, FsType.hdfs),
+    druidLocal(CoreClusterType.TEZ, FsType.local),
     druidKafka(CoreClusterType.TEZ, FsType.hdfs),
     kafka(CoreClusterType.TEZ, FsType.hdfs);
 
@@ -460,6 +463,8 @@ public class QTestUtil {
         return llap_local;
       } else if (type.equals("druid")) {
         return druid;
+      } else if (type.equals("druidLocal")) {
+        return druidLocal;
       } else if (type.equals("druid-kafka")) {
         return druidKafka;
       }
@@ -632,7 +637,9 @@ public class QTestUtil {
 
     String uriString = fs.getUri().toString();
 
-    if (clusterType == MiniClusterType.druid || clusterType == MiniClusterType.druidKafka) {
+    if (clusterType == MiniClusterType.druid
+        || clusterType == MiniClusterType.druidKafka
+        || clusterType == MiniClusterType.druidLocal) {
       final String tempDir = System.getProperty("test.tmp.dir");
       druidCluster = new MiniDruidCluster("mini-druid",
           logDir,
@@ -672,15 +679,28 @@ public class QTestUtil {
             + "/tez-site.xml"));
       }
       int numTrackers = 2;
-      if (EnumSet.of(MiniClusterType.llap, MiniClusterType.llap_local).contains(clusterType)) {
+      if (EnumSet.of(
+          MiniClusterType.llap,
+          MiniClusterType.llap_local,
+          MiniClusterType.druidLocal,
+          MiniClusterType.druid
+      ).contains(clusterType)) {
         llapCluster = LlapItUtils.startAndGetMiniLlapCluster(conf, setup.zooKeeperCluster, confDir);
       } else {
       }
-      if (EnumSet.of(MiniClusterType.llap_local, MiniClusterType.tez_local).contains(clusterType)) {
-        mr = shims.getLocalMiniTezCluster(conf, clusterType == MiniClusterType.llap_local);
+      if (EnumSet.of(MiniClusterType.llap_local, MiniClusterType.tez_local, MiniClusterType.druidLocal)
+                 .contains(clusterType)) {
+        mr = shims.getLocalMiniTezCluster(conf,
+                                          clusterType == MiniClusterType.llap_local
+                                          || clusterType == MiniClusterType.druidLocal
+        );
       } else {
-        mr = shims.getMiniTezCluster(conf, numTrackers, uriString,
-            EnumSet.of(MiniClusterType.llap, MiniClusterType.llap_local).contains(clusterType));
+        mr = shims.getMiniTezCluster(
+            conf,
+            numTrackers,
+            uriString,
+            EnumSet.of(MiniClusterType.llap, MiniClusterType.llap_local, MiniClusterType.druid).contains(clusterType)
+        );
       }
     } else if (clusterType == MiniClusterType.miniSparkOnYarn) {
       mr = shims.getMiniSparkCluster(conf, 2, uriString, 1);
@@ -1816,7 +1836,7 @@ public class QTestUtil {
       if (zooKeeperCluster == null) {
         //create temp dir
         String tmpBaseDir =  System.getProperty(TEST_TMP_DIR_PROPERTY);
-        File tmpDir = Utilities.createTempDir(tmpBaseDir);
+        File tmpDir = Files.createTempDirectory(Paths.get(tmpBaseDir), "tmp_").toFile();
 
         zooKeeperCluster = new MiniZooKeeperCluster();
         zkPort = zooKeeperCluster.startup(tmpDir);

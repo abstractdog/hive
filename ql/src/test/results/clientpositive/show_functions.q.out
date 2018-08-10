@@ -130,6 +130,7 @@ isnottrue
 isnull
 istrue
 java_method
+json_read
 json_tuple
 lag
 last_day
@@ -268,7 +269,6 @@ udftofloat
 udftointeger
 udftolong
 udftoshort
-udftostring
 unbase64
 unhex
 unix_timestamp

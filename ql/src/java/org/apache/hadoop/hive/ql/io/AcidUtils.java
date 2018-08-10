@@ -32,6 +32,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.apache.avro.generic.GenericData;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,26 +41,35 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hive.common.HiveStatsUtils;
-import org.apache.hadoop.hive.common.ValidReaderWriteIdList;
-import org.apache.hadoop.hive.common.ValidTxnWriteIdList;
-import org.apache.hadoop.hive.common.ValidWriteIdList;
+import org.apache.hadoop.hive.common.*;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.LockComponentBuilder;
 import org.apache.hadoop.hive.metastore.TransactionalValidationListener;
+import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.DataOperationType;
+import org.apache.hadoop.hive.metastore.api.LockComponent;
+import org.apache.hadoop.hive.metastore.api.LockType;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.hooks.Entity;
+import org.apache.hadoop.hive.ql.hooks.ReadEntity;
+import org.apache.hadoop.hive.ql.hooks.WriteEntity;
 import org.apache.hadoop.hive.ql.io.AcidUtils.ParsedDelta;
 import org.apache.hadoop.hive.ql.io.orc.OrcFile;
 import org.apache.hadoop.hive.ql.io.orc.OrcInputFormat;
 import org.apache.hadoop.hive.ql.io.orc.OrcRecordUpdater;
 import org.apache.hadoop.hive.ql.io.orc.Reader;
 import org.apache.hadoop.hive.ql.io.orc.Writer;
+import org.apache.hadoop.hive.ql.lockmgr.HiveTxnManager;
+import org.apache.hadoop.hive.ql.lockmgr.LockException;
+import org.apache.hadoop.hive.ql.metadata.HiveStorageHandler;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.CreateTableDesc;
 import org.apache.hadoop.hive.ql.plan.TableScanDesc;
+import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.HadoopShims.HdfsFileStatusWithId;
 import org.apache.hadoop.hive.shims.ShimLoader;
@@ -70,6 +81,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.nio.charset.Charset;
 
 /**
@@ -1606,6 +1618,133 @@ public class AcidUtils {
     }
   }
 
+  public static class TableSnapshot {
+    private long writeId;
+    private String validWriteIdList;
+
+    public TableSnapshot() {
+    }
+
+    public TableSnapshot(long writeId, String validWriteIdList) {
+      this.writeId = writeId;
+      this.validWriteIdList = validWriteIdList;
+    }
+
+    public String getValidWriteIdList() {
+      return validWriteIdList;
+    }
+
+    public long getWriteId() {
+      return writeId;
+    }
+
+    public void setWriteId(long writeId) {
+      this.writeId = writeId;
+    }
+
+    public void setValidWriteIdList(String validWriteIdList) {
+      this.validWriteIdList = validWriteIdList;
+    }
+
+    @Override
+    public String toString() {
+      return "[validWriteIdList=" + validWriteIdList + ", writeId=" + writeId + "]";
+    }
+  }
+
+  public static TableSnapshot getTableSnapshot(
+          Configuration conf,
+          Table tbl) throws LockException {
+    return getTableSnapshot(conf, tbl, false);
+  }
+
+
+  /** Note: this is generally called in Hive.java; so, the callers of Hive.java make sure
+   *        to set up the acid state during compile, and Hive.java retrieves it if needed. */
+  public static TableSnapshot getTableSnapshot(
+      Configuration conf, Table tbl, boolean isStatsUpdater) throws LockException {
+    return getTableSnapshot(conf, tbl, tbl.getDbName(), tbl.getTableName(), isStatsUpdater);
+  }
+
+  /** Note: this is generally called in Hive.java; so, the callers of Hive.java make sure
+   *        to set up the acid state during compile, and Hive.java retrieves it if needed. */
+  public static TableSnapshot getTableSnapshot(Configuration conf,
+      Table tbl, String dbName, String tblName, boolean isStatsUpdater)
+      throws LockException, AssertionError {
+    if (!isTransactionalTable(tbl)) {
+      return null;
+    }
+    if (dbName == null) {
+      dbName = tbl.getDbName();
+    }
+    if (tblName == null) {
+      tblName = tbl.getTableName();
+    }
+    long writeId = -1;
+    ValidWriteIdList validWriteIdList = null;
+
+    HiveTxnManager sessionTxnMgr = SessionState.get().getTxnMgr();
+    String fullTableName = getFullTableName(dbName, tblName);
+    if (sessionTxnMgr != null && sessionTxnMgr.getCurrentTxnId() > 0) {
+      validWriteIdList = getTableValidWriteIdList(conf, fullTableName);
+      if (isStatsUpdater) {
+        writeId = SessionState.get().getTxnMgr() != null ?
+                SessionState.get().getTxnMgr().getAllocatedTableWriteId(
+                  dbName, tblName) : -1;
+        if (writeId < 1) {
+          // TODO: this is not ideal... stats updater that doesn't have write ID is currently
+          //       "create table"; writeId would be 0/-1 here. No need to call this w/true.
+          LOG.debug("Stats updater for {}.{} doesn't have a write ID ({})",
+              dbName, tblName, writeId);
+        }
+      }
+
+
+      if (HiveConf.getBoolVar(conf, ConfVars.HIVE_IN_TEST)
+          && conf.get(ValidTxnList.VALID_TXNS_KEY) == null) {
+        return null;
+      }
+      if (validWriteIdList == null) {
+        validWriteIdList = getTableValidWriteIdListWithTxnList(
+            conf, dbName, tblName);
+      }
+      if (validWriteIdList == null) {
+        throw new AssertionError("Cannot find valid write ID list for " + tblName);
+      }
+    }
+    return new TableSnapshot(writeId,
+        validWriteIdList != null ? validWriteIdList.toString() : null);
+  }
+
+  /**
+   * Returns ValidWriteIdList for the table with the given "dbName" and "tableName".
+   * This is called when HiveConf has no list for the table.
+   * Otherwise use getTableSnapshot().
+   * @param conf       Configuration
+   * @param dbName
+   * @param tableName
+   * @return ValidWriteIdList on success, null on failure to get a list.
+   * @throws LockException
+   */
+  public static ValidWriteIdList getTableValidWriteIdListWithTxnList(
+      Configuration conf, String dbName, String tableName) throws LockException {
+    HiveTxnManager sessionTxnMgr = SessionState.get().getTxnMgr();
+    if (sessionTxnMgr == null) {
+      return null;
+    }
+    ValidWriteIdList validWriteIdList = null;
+    ValidTxnWriteIdList validTxnWriteIdList = null;
+
+    String validTxnList = conf.get(ValidTxnList.VALID_TXNS_KEY);
+    List<String> tablesInput = new ArrayList<>();
+    String fullTableName = getFullTableName(dbName, tableName);
+    tablesInput.add(fullTableName);
+
+    validTxnWriteIdList = sessionTxnMgr.getValidWriteIds(tablesInput, validTxnList);
+    return validTxnWriteIdList != null ?
+        validTxnWriteIdList.getTableValidWriteIdList(fullTableName) : null;
+  }
+
   public static String getFullTableName(String dbName, String tableName) {
     return dbName.toLowerCase() + "." + tableName.toLowerCase();
   }
@@ -1915,8 +2054,8 @@ public class AcidUtils {
   }
 
   public static boolean isAcidEnabled(HiveConf hiveConf) {
-    String txnMgr = hiveConf.getVar(HiveConf.ConfVars.HIVE_TXN_MANAGER);
-    boolean concurrency =  hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY);
+    String txnMgr = hiveConf.getVar(ConfVars.HIVE_TXN_MANAGER);
+    boolean concurrency =  hiveConf.getBoolVar(ConfVars.HIVE_SUPPORT_CONCURRENCY);
     String dbTxnMgr = "org.apache.hadoop.hive.ql.lockmgr.DbTxnManager";
     if (txnMgr.equals(dbTxnMgr) && concurrency) {
       return true;
@@ -1983,5 +2122,207 @@ public class AcidUtils {
   public static void setNonTransactional(Map<String, String> tblProps) {
     tblProps.put(hive_metastoreConstants.TABLE_IS_TRANSACTIONAL, "false");
     tblProps.remove(hive_metastoreConstants.TABLE_TRANSACTIONAL_PROPERTIES);
+  }
+
+  private static boolean needsLock(Entity entity) {
+    switch (entity.getType()) {
+    case TABLE:
+      return isLockableTable(entity.getTable());
+    case PARTITION:
+      return isLockableTable(entity.getPartition().getTable());
+    default:
+      return true;
+    }
+  }
+
+  private static Table getTable(WriteEntity we) {
+    Table t = we.getTable();
+    if (t == null) {
+      throw new IllegalStateException("No table info for " + we);
+    }
+    return t;
+  }
+
+  private static boolean isLockableTable(Table t) {
+    if (t.isTemporary()) {
+      return false;
+    }
+    switch (t.getTableType()) {
+    case MANAGED_TABLE:
+    case MATERIALIZED_VIEW:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /**
+   * Create lock components from write/read entities.
+   * @param outputs write entities
+   * @param inputs read entities
+   * @param conf
+   * @return list with lock components
+   */
+  public static List<LockComponent> makeLockComponents(Set<WriteEntity> outputs, Set<ReadEntity> inputs,
+      HiveConf conf) {
+    List<LockComponent> lockComponents = new ArrayList<>();
+    // For each source to read, get a shared lock
+    for (ReadEntity input : inputs) {
+      if (!input.needsLock() || input.isUpdateOrDelete() || !AcidUtils.needsLock(input)) {
+        // We don't want to acquire read locks during update or delete as we'll be acquiring write
+        // locks instead. Also, there's no need to lock temp tables since they're session wide
+        continue;
+      }
+      LockComponentBuilder compBuilder = new LockComponentBuilder();
+      compBuilder.setShared();
+      compBuilder.setOperationType(DataOperationType.SELECT);
+
+      Table t = null;
+      switch (input.getType()) {
+      case DATABASE:
+        compBuilder.setDbName(input.getDatabase().getName());
+        break;
+
+      case TABLE:
+        t = input.getTable();
+        compBuilder.setDbName(t.getDbName());
+        compBuilder.setTableName(t.getTableName());
+        break;
+
+      case PARTITION:
+      case DUMMYPARTITION:
+        compBuilder.setPartitionName(input.getPartition().getName());
+        t = input.getPartition().getTable();
+        compBuilder.setDbName(t.getDbName());
+        compBuilder.setTableName(t.getTableName());
+        break;
+
+      default:
+        // This is a file or something we don't hold locks for.
+        continue;
+      }
+      if (t != null) {
+        compBuilder.setIsTransactional(AcidUtils.isTransactionalTable(t));
+      }
+      LockComponent comp = compBuilder.build();
+      LOG.debug("Adding lock component to lock request " + comp.toString());
+      lockComponents.add(comp);
+    }
+    // For each source to write to, get the appropriate lock type.  If it's
+    // an OVERWRITE, we need to get an exclusive lock.  If it's an insert (no
+    // overwrite) than we need a shared.  If it's update or delete then we
+    // need a SEMI-SHARED.
+    for (WriteEntity output : outputs) {
+      LOG.debug("output is null " + (output == null));
+      if (output.getType() == Entity.Type.DFS_DIR || output.getType() == Entity.Type.LOCAL_DIR || !AcidUtils
+          .needsLock(output)) {
+        // We don't lock files or directories. We also skip locking temp tables.
+        continue;
+      }
+      LockComponentBuilder compBuilder = new LockComponentBuilder();
+      Table t = null;
+      switch (output.getType()) {
+      case DATABASE:
+        compBuilder.setDbName(output.getDatabase().getName());
+        break;
+
+      case TABLE:
+      case DUMMYPARTITION:   // in case of dynamic partitioning lock the table
+        t = output.getTable();
+        compBuilder.setDbName(t.getDbName());
+        compBuilder.setTableName(t.getTableName());
+        break;
+
+      case PARTITION:
+        compBuilder.setPartitionName(output.getPartition().getName());
+        t = output.getPartition().getTable();
+        compBuilder.setDbName(t.getDbName());
+        compBuilder.setTableName(t.getTableName());
+        break;
+
+      default:
+        // This is a file or something we don't hold locks for.
+        continue;
+      }
+      switch (output.getWriteType()) {
+        /* base this on HiveOperation instead?  this and DDL_NO_LOCK is peppered all over the code...
+         Seems much cleaner if each stmt is identified as a particular HiveOperation (which I'd think
+         makes sense everywhere).  This however would be problematic for merge...*/
+      case DDL_EXCLUSIVE:
+        compBuilder.setExclusive();
+        compBuilder.setOperationType(DataOperationType.NO_TXN);
+        break;
+      case INSERT_OVERWRITE:
+        t = AcidUtils.getTable(output);
+        if (AcidUtils.isTransactionalTable(t)) {
+          if (conf.getBoolVar(HiveConf.ConfVars.TXN_OVERWRITE_X_LOCK)) {
+            compBuilder.setExclusive();
+          } else {
+            compBuilder.setSemiShared();
+          }
+          compBuilder.setOperationType(DataOperationType.UPDATE);
+        } else {
+          compBuilder.setExclusive();
+          compBuilder.setOperationType(DataOperationType.NO_TXN);
+        }
+        break;
+      case INSERT:
+        assert t != null;
+        if (AcidUtils.isTransactionalTable(t)) {
+          compBuilder.setShared();
+        } else if (MetaStoreUtils.isNonNativeTable(t.getTTable())) {
+          final HiveStorageHandler storageHandler = Preconditions.checkNotNull(t.getStorageHandler(),
+              "Thought all the non native tables have an instance of storage handler");
+          LockType lockType = storageHandler.getLockType(output);
+          if (null == LockType.findByValue(lockType.getValue())) {
+            throw new IllegalArgumentException(String
+                .format("Lock type [%s] for Database.Table [%s.%s] is unknown", lockType, t.getDbName(),
+                    t.getTableName()));
+          }
+          compBuilder.setLock(lockType);
+        } else {
+          if (conf.getBoolVar(HiveConf.ConfVars.HIVE_TXN_STRICT_LOCKING_MODE)) {
+            compBuilder.setExclusive();
+          } else {  // this is backward compatible for non-ACID resources, w/o ACID semantics
+            compBuilder.setShared();
+          }
+        }
+        compBuilder.setOperationType(DataOperationType.INSERT);
+        break;
+      case DDL_SHARED:
+        compBuilder.setShared();
+        if (!output.isTxnAnalyze()) {
+          // Analyze needs txn components to be present, otherwise an aborted analyze write ID
+          // might be rolled under the watermark by compactor while stats written by it are
+          // still present.
+          compBuilder.setOperationType(DataOperationType.NO_TXN);
+        }
+        break;
+
+      case UPDATE:
+        compBuilder.setSemiShared();
+        compBuilder.setOperationType(DataOperationType.UPDATE);
+        break;
+      case DELETE:
+        compBuilder.setSemiShared();
+        compBuilder.setOperationType(DataOperationType.DELETE);
+        break;
+
+      case DDL_NO_LOCK:
+        continue; // No lock required here
+
+      default:
+        throw new RuntimeException("Unknown write type " + output.getWriteType().toString());
+      }
+      if (t != null) {
+        compBuilder.setIsTransactional(AcidUtils.isTransactionalTable(t));
+      }
+
+      compBuilder.setIsDynamicPartitionWrite(output.isDynamicPartitionWrite());
+      LockComponent comp = compBuilder.build();
+      LOG.debug("Adding lock component to lock request " + comp.toString());
+      lockComponents.add(comp);
+    }
+    return lockComponents;
   }
 }

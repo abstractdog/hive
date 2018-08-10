@@ -322,6 +322,7 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
           }
         }
       }
+
       // Multi-file load is for dynamic partitions when some partitions do not
       // need to merge and they can simply be moved to the target directory.
       // This is also used for MM table conversion.
@@ -482,7 +483,7 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
 
     db.loadPartition(tbd.getSourcePath(), db.getTable(tbd.getTable().getTableName()),
         tbd.getPartitionSpec(), tbd.getLoadFileType(), tbd.getInheritTableSpecs(),
-        isSkewedStoredAsDirs(tbd), work.isSrcLocal(),
+        tbd.getInheritLocation(), isSkewedStoredAsDirs(tbd), work.isSrcLocal(),
          work.getLoadTableWork().getWriteType() != AcidUtils.Operation.NOT_ACID &&
             !tbd.isMmTable(),
          hasFollowingStatsTask(),
@@ -797,7 +798,7 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
     }
 
     if (updateBucketCols || updateSortCols) {
-      db.alterPartition(table.getDbName(), table.getTableName(), partn, null);
+      db.alterPartition(table.getDbName(), table.getTableName(), partn, null, true);
     }
   }
 

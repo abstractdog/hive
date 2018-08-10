@@ -1132,9 +1132,12 @@ public class TestReplicationScenariosAcrossInstances {
 
     // Trigger bootstrap dump which just creates table t1 and other tables (t2, t3) and constraints not loaded.
     List<String> withConfigs = Arrays.asList("'hive.repl.approx.max.load.tasks'='1'");
-    replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(true, false);
+    try {
+      replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1169,11 +1172,14 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
 
-    // Retry with same dump with which it was already loaded should resume the bootstrap load.
-    // This time, it fails when try to load the foreign key constraints. All other constraints are loaded.
-    replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(true, false);
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it fails when try to load the foreign key constraints. All other constraints are loaded.
+      replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1205,11 +1211,14 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
 
-    // Retry with same dump with which it was already loaded should resume the bootstrap load.
-    // This time, it completes by adding just foreign key constraints for table t2.
-    replica.load(replicatedDbName, tuple.dumpLocation);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(true, false);
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it completes by adding just foreign key constraints for table t2.
+      replica.load(replicatedDbName, tuple.dumpLocation);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1292,11 +1301,14 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
 
-    // Retry with same dump with which it was already loaded should resume the bootstrap load.
-    // This time, it completes by adding remaining partitions.
-    replica.load(replicatedDbName, tuple.dumpLocation);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(false, false);
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it completes by adding remaining partitions.
+      replica.load(replicatedDbName, tuple.dumpLocation);
+      callerVerifier.assertInjectionsPerformed(false, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1375,6 +1387,7 @@ public class TestReplicationScenariosAcrossInstances {
     tuple = primary.run("use " + primaryDbName)
             .run("create external table t3 (id int)")
             .run("insert into table t3 values (10)")
+            .run("create external table t4 as select id from t3")
             .dump("repl dump " + primaryDbName + " from " + tuple.lastReplicationId
                     + " with ('hive.repl.include.external.tables'='true')");
 
@@ -1383,6 +1396,8 @@ public class TestReplicationScenariosAcrossInstances {
             .run("show tables like 't3'")
             .verifyResult("t3")
             .run("select id from t3")
-            .verifyResult("10");
+            .verifyResult("10")
+            .run("select id from t4")
+            .verifyResult(null); // Returns null as create table event doesn't list files
   }
 }

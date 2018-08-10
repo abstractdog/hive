@@ -223,10 +223,10 @@ public abstract class AbstractCliConfig {
         } else {
           qF = new File(qFile);
         }
-        if (excludedQueryFileNames.contains(qFile)) {
+        if (excludedQueryFileNames.contains(qFile) && !isDriverForcedToUse()) {
           LOG.warn(qF.getAbsolutePath() + " is among the excluded query files for this driver."
               + " Please update CliConfigs.java or testconfiguration.properties file to"
-              + " include the qfile");
+              + " include the qfile or use test.force.driver=true system property");
         }
         testFiles.add(qF);
       }
@@ -241,10 +241,16 @@ public abstract class AbstractCliConfig {
     }
 
     for (String qFileName : excludedQueryFileNames) {
-      testFiles.remove(new File(queryDir, qFileName));
+      if (!isDriverForcedToUse()) {
+        testFiles.remove(new File(queryDir, qFileName));
+      }
     }
 
     return testFiles;
+  }
+
+  private boolean isDriverForcedToUse() {
+    return "true".equalsIgnoreCase(System.getProperty("test.force.driver"));
   }
 
   private void prepareDirs() throws Exception {

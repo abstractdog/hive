@@ -567,11 +567,19 @@ public class QTestUtil {
     this.initScript = scriptsDir + File.separator + initScript;
     this.cleanupScript = scriptsDir + File.separator + cleanupScript;
 
-    overWrite = "true".equalsIgnoreCase(System.getProperty("test.output.overwrite"));
+    overWrite = shouldOverwriteResults();
 
     init();
     savedConf = new HiveConf(conf);
   }
+
+  private boolean shouldOverwriteResults() {
+    return "true".equalsIgnoreCase(System.getProperty("test.output.overwrite"))
+        || ("true".equalsIgnoreCase(System.getProperty("test.force.driver"))
+            // check if test.output.overwrite is not explicitly disabled for any reasons
+            && !"false".equalsIgnoreCase(System.getProperty("test.output.overwrite")));
+  }
+
   private String getScriptsDir() {
     // Use the current directory if it is not specified
     String scriptsDir = conf.get("test.data.scripts");

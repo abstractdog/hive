@@ -488,32 +488,12 @@ public class CalcitePlanner extends SemanticAnalyzer {
             }
 
             // 2. Regen OP plan from optimized AST
-            if (cboCtx.type == PreCboCtx.Type.VIEW && !materializedView) {
+            if (cboCtx.type == PreCboCtx.Type.VIEW) {
               try {
-                handleCreateViewDDL(newAST);
+                viewSelect = handleCreateViewDDL(newAST);
               } catch (SemanticException e) {
                 throw new CalciteViewSemanticException(e.getMessage());
               }
-            } else if (cboCtx.type == PreCboCtx.Type.VIEW && materializedView) {
-              // Store text of the ORIGINAL QUERY
-              String originalText = ctx.getTokenRewriteStream().toString(
-                  cboCtx.nodeOfInterest.getTokenStartIndex(),
-                  cboCtx.nodeOfInterest.getTokenStopIndex());
-              unparseTranslator.applyTranslations(ctx.getTokenRewriteStream());
-              String expandedText = ctx.getTokenRewriteStream().toString(
-                  cboCtx.nodeOfInterest.getTokenStartIndex(),
-                  cboCtx.nodeOfInterest.getTokenStopIndex());
-              // Redo create-table/view analysis, because it's not part of
-              // doPhase1.
-              // Use the REWRITTEN AST
-              init(false);
-              setAST(newAST);
-              newAST = reAnalyzeViewAfterCbo(newAST);
-              createVwDesc.setViewOriginalText(originalText);
-              createVwDesc.setViewExpandedText(expandedText);
-              viewSelect = newAST;
-              viewsExpanded = new ArrayList<>();
-              viewsExpanded.add(createVwDesc.getViewName());
             } else if (cboCtx.type == PreCboCtx.Type.CTAS) {
               // CTAS
               init(false);
@@ -631,19 +611,20 @@ public class CalcitePlanner extends SemanticAnalyzer {
     return sinkOp;
   }
 
-  private void handleCreateViewDDL(ASTNode newAST) throws SemanticException {
+  private ASTNode handleCreateViewDDL(ASTNode ast) throws SemanticException {
     saveViewDefinition();
     String originalText = createVwDesc.getViewOriginalText();
     String expandedText = createVwDesc.getViewExpandedText();
     List<FieldSchema> schema = createVwDesc.getSchema();
     List<FieldSchema> partitionColumns = createVwDesc.getPartCols();
     init(false);
-    setAST(newAST);
-    newAST = reAnalyzeViewAfterCbo(newAST);
+    setAST(ast);
+    ASTNode newAST = reAnalyzeViewAfterCbo(ast);
     createVwDesc.setViewOriginalText(originalText);
     createVwDesc.setViewExpandedText(expandedText);
     createVwDesc.setSchema(schema);
     createVwDesc.setPartCols(partitionColumns);
+    return newAST;
   }
 
   /*
@@ -1739,7 +1720,7 @@ public class CalcitePlanner extends SemanticAnalyzer {
         // if it is to create view, we do not use table alias
         resultSchema = SemanticAnalyzer.convertRowSchemaToResultSetSchema(
             relToHiveRR.get(calciteGenPlan),
-            getQB().isView() ? false : HiveConf.getBoolVar(conf,
+            getQB().isView() || getQB().isMaterializedView() ? false : HiveConf.getBoolVar(conf,
                 HiveConf.ConfVars.HIVE_RESULTSET_USE_UNIQUE_COLUMN_NAMES));
       } catch (SemanticException e) {
         semanticException = e;
@@ -3288,59 +3269,60 @@ public class CalcitePlanner extends SemanticAnalyzer {
     }
 
     private boolean genSubQueryRelNode(QB qb, ASTNode node, RelNode srcRel, boolean forHavingClause,
-                                       Map<ASTNode, RelNode> subQueryToRelNode) throws SemanticException {
+                                       Map<ASTNode, RelNode> subQueryToRelNode) throws CalciteSubquerySemanticException {
 
       Set<ASTNode> corrScalarQueriesWithAgg = new HashSet<ASTNode>();
-      Set<ASTNode> scalarQueriesWithAggNoWinNoGby= new HashSet<ASTNode>();
-      //disallow subqueries which HIVE doesn't currently support
-      subqueryRestrictionCheck(qb, node, srcRel, forHavingClause, corrScalarQueriesWithAgg,
-          scalarQueriesWithAggNoWinNoGby);
-      Deque<ASTNode> stack = new ArrayDeque<ASTNode>();
-      stack.push(node);
-
+      Set<ASTNode> scalarQueriesWithAggNoWinNoGby = new HashSet<ASTNode>();
       boolean isSubQuery = false;
+      try {
+        //disallow subqueries which HIVE doesn't currently support
+        subqueryRestrictionCheck(qb, node, srcRel, forHavingClause, corrScalarQueriesWithAgg,
+            scalarQueriesWithAggNoWinNoGby);
+        Deque<ASTNode> stack = new ArrayDeque<ASTNode>();
+        stack.push(node);
 
-      while (!stack.isEmpty()) {
-        ASTNode next = stack.pop();
+        while (!stack.isEmpty()) {
+          ASTNode next = stack.pop();
 
-        switch(next.getType()) {
-        case HiveParser.TOK_SUBQUERY_EXPR:
+          switch (next.getType()) {
+          case HiveParser.TOK_SUBQUERY_EXPR:
               /*
                * Restriction 2.h Subquery isnot allowed in LHS
                */
-          if(next.getChildren().size() == 3
-              && next.getChild(2).getType() == HiveParser.TOK_SUBQUERY_EXPR){
-            throw new CalciteSemanticException(ErrorMsg.UNSUPPORTED_SUBQUERY_EXPRESSION.getMsg(
-                next.getChild(2),
-                "SubQuery in LHS expressions are not supported."));
-          }
-          String sbQueryAlias = "sq_" + qb.incrNumSubQueryPredicates();
-          QB qbSQ = new QB(qb.getId(), sbQueryAlias, true);
-          Phase1Ctx ctx1 = initPhase1Ctx();
-          doPhase1((ASTNode)next.getChild(1), qbSQ, ctx1, null);
-          getMetaData(qbSQ);
-          this.subqueryId++;
-          RelNode subQueryRelNode = genLogicalPlan(qbSQ, false,
-              relToHiveColNameCalcitePosMap.get(srcRel), relToHiveRR.get(srcRel));
-          subQueryToRelNode.put(next, subQueryRelNode);
-          //keep track of subqueries which are scalar, correlated and contains aggregate
-          // subquery expression. This will later be special cased in Subquery remove rule
-          // for correlated scalar queries with aggregate we have take care of the case where
-          // inner aggregate happens on empty result
-          if(corrScalarQueriesWithAgg.contains(next)) {
-            corrScalarRexSQWithAgg.add(subQueryRelNode);
-          }
-          if(scalarQueriesWithAggNoWinNoGby.contains(next)) {
-            scalarAggNoGbyNoWin.add(subQueryRelNode);
-          }
-          isSubQuery = true;
-          break;
-        default:
-          int childCount = next.getChildCount();
-          for(int i = childCount - 1; i >= 0; i--) {
-            stack.push((ASTNode) next.getChild(i));
+            if (next.getChildren().size() == 3 && next.getChild(2).getType() == HiveParser.TOK_SUBQUERY_EXPR) {
+              throw new CalciteSubquerySemanticException(ErrorMsg.UNSUPPORTED_SUBQUERY_EXPRESSION
+                  .getMsg(next.getChild(2), "SubQuery in LHS expressions are not supported."));
+            }
+            String sbQueryAlias = "sq_" + qb.incrNumSubQueryPredicates();
+            QB qbSQ = new QB(qb.getId(), sbQueryAlias, true);
+            Phase1Ctx ctx1 = initPhase1Ctx();
+            doPhase1((ASTNode) next.getChild(1), qbSQ, ctx1, null);
+            getMetaData(qbSQ);
+            this.subqueryId++;
+            RelNode subQueryRelNode =
+                genLogicalPlan(qbSQ, false, relToHiveColNameCalcitePosMap.get(srcRel), relToHiveRR.get(srcRel));
+            subQueryToRelNode.put(next, subQueryRelNode);
+            //keep track of subqueries which are scalar, correlated and contains aggregate
+            // subquery expression. This will later be special cased in Subquery remove rule
+            // for correlated scalar queries with aggregate we have take care of the case where
+            // inner aggregate happens on empty result
+            if (corrScalarQueriesWithAgg.contains(next)) {
+              corrScalarRexSQWithAgg.add(subQueryRelNode);
+            }
+            if (scalarQueriesWithAggNoWinNoGby.contains(next)) {
+              scalarAggNoGbyNoWin.add(subQueryRelNode);
+            }
+            isSubQuery = true;
+            break;
+          default:
+            int childCount = next.getChildCount();
+            for (int i = childCount - 1; i >= 0; i--) {
+              stack.push((ASTNode) next.getChild(i));
+            }
           }
         }
+      } catch (SemanticException e) {
+        throw new CalciteSubquerySemanticException(e.getMessage());
       }
       return isSubQuery;
     }

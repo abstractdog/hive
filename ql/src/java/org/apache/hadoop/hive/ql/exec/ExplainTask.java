@@ -220,11 +220,12 @@ public class ExplainTask extends Task<ExplainWork> implements Serializable {
   public JSONObject getJSONPlan(PrintStream out, ExplainWork work)
       throws Exception {
     return getJSONPlan(out, work.getRootTasks(), work.getFetchTask(),
-                       work.isFormatted(), work.getExtended(), work.isAppendTaskType(), work.getOptimizedSQL());
+        work.isFormatted(), work.getExtended(), work.isAppendTaskType(), work.getCboInfo(),
+        work.getOptimizedSQL());
   }
 
   public JSONObject getJSONPlan(PrintStream out, List<Task<?>> tasks, Task<?> fetchTask,
-      boolean jsonOutput, boolean isExtended, boolean appendTaskType, String optimizedSQL) throws Exception {
+      boolean jsonOutput, boolean isExtended, boolean appendTaskType, String cboInfo, String optimizedSQL) throws Exception {
 
     // If the user asked for a formatted output, dump the json output
     // in the output stream
@@ -279,6 +280,9 @@ public class ExplainTask extends Task<ExplainWork> implements Serializable {
       }
 
       if (jsonOutput) {
+        if (cboInfo != null) {
+          outJSONObject.put("cboInfo", cboInfo);
+        }
         outJSONObject.put("STAGE DEPENDENCIES", jsonDependencies);
       }
 
@@ -397,6 +401,11 @@ public class ExplainTask extends Task<ExplainWork> implements Serializable {
         JSONObject jsonLocks = getLocks(out, work);
         if(work.isFormatted()) {
           out.print(jsonLocks);
+        }
+      } else if (work.isAst()) {
+        // Print out the parse AST
+        if (work.getAstStringTree() != null) {
+          outputAST(work.getAstStringTree(), out, work.isFormatted(), 0);
         }
       } else {
         if (work.isUserLevelExplain()) {

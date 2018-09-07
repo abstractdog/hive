@@ -296,7 +296,49 @@ public class AcidUtils {
     }
     return createBucketFile(new Path(directory, subdir), options.getBucketId());
   }
-
+  /**
+   * Represents bucketId and copy_N suffix
+   */
+  public static final class BucketMetaData {
+    private static final BucketMetaData INVALID = new BucketMetaData(-1, 0);
+    /**
+     * @param bucketFileName {@link #ORIGINAL_PATTERN} or {@link #ORIGINAL_PATTERN_COPY}
+     */
+    public static BucketMetaData parse(String bucketFileName) {
+      if (ORIGINAL_PATTERN.matcher(bucketFileName).matches()) {
+        int bucketId = Integer
+            .parseInt(bucketFileName.substring(0, bucketFileName.indexOf('_')));
+        return new BucketMetaData(bucketId, 0);
+      }
+      else if(ORIGINAL_PATTERN_COPY.matcher(bucketFileName).matches()) {
+        int copyNumber = Integer.parseInt(
+            bucketFileName.substring(bucketFileName.lastIndexOf('_') + 1));
+        int bucketId = Integer
+            .parseInt(bucketFileName.substring(0, bucketFileName.indexOf('_')));
+        return new BucketMetaData(bucketId, copyNumber);
+      }
+      else if (bucketFileName.startsWith(BUCKET_PREFIX)) {
+        return new BucketMetaData(Integer
+            .parseInt(bucketFileName.substring(bucketFileName.indexOf('_') + 1)), 0);
+      }
+      return INVALID;
+    }
+    public static BucketMetaData parse(Path bucketFile) {
+      return parse(bucketFile.getName());
+    }
+    /**
+     * -1 if non-standard file name
+     */
+    public final int bucketId;
+    /**
+     * 0 means no copy_N suffix
+     */
+    public final int copyNumber;
+    private BucketMetaData(int bucketId, int copyNumber) {
+      this.bucketId = bucketId;
+      this.copyNumber = copyNumber;
+    }
+  }
   /**
    * Get the write id from a base directory name.
    * @param path the base directory name
@@ -1085,12 +1127,19 @@ public class AcidUtils {
       }
     }
 
-    if(bestBase.oldestBase != null && bestBase.status == null) {
+    if(bestBase.oldestBase != null && bestBase.status == null &&
+        MetaDataFile.isCompacted(bestBase.oldestBase, fs)) {
       /**
        * If here, it means there was a base_x (> 1 perhaps) but none were suitable for given
        * {@link writeIdList}.  Note that 'original' files are logically a base_Long.MIN_VALUE and thus
        * cannot have any data for an open txn.  We could check {@link deltas} has files to cover
-       * [1,n] w/o gaps but this would almost never happen...*/
+       * [1,n] w/o gaps but this would almost never happen...
+       *
+       * We only throw for base_x produced by Compactor since that base erases all history and
+       * cannot be used for a client that has a snapshot in which something inside this base is
+       * open.  (Nor can we ignore this base of course)  But base_x which is a result of IOW,
+       * contains all history so we treat it just like delta wrt visibility.  Imagine, IOW which
+       * aborts. It creates a base_x, which can and should just be ignored.*/
       long[] exceptions = writeIdList.getInvalidWriteIds();
       String minOpenWriteId = exceptions != null && exceptions.length > 0 ?
         Long.toString(exceptions[0]) : "x";

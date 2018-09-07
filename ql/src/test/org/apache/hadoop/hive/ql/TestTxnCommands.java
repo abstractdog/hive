@@ -91,7 +91,7 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
     + "-" + System.currentTimeMillis()
   ).getPath().replaceAll("\\\\", "/");
   @Override
-  String getTestDataDir() {
+  protected String getTestDataDir() {
     return TEST_DATA_DIR;
   }
 
@@ -108,7 +108,7 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
     Assert.assertEquals(1, rs.size());
     Assert.assertEquals("1", rs.get(0));
     hiveConf.setBoolVar(HiveConf.ConfVars.HIVETESTMODEROLLBACKTXN, true);
-    runStatementOnDriver("insert into " + Table.ACIDTBL + " values(3,2)");
+    runStatementOnDriver("insert overwrite table " + Table.ACIDTBL + " values(3,2)");
     hiveConf.setBoolVar(HiveConf.ConfVars.HIVETESTMODEROLLBACKTXN, false);
     runStatementOnDriver("insert into " + Table.ACIDTBL + " values(5,6)");
     rs = runStatementOnDriver("select a from " + Table.ACIDTBL + " order by a");

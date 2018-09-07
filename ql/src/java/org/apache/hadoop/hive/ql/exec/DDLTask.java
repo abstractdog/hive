@@ -672,7 +672,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   private int createResourcePlan(Hive db, CreateResourcePlanDesc createResourcePlanDesc)
       throws HiveException {
     db.createResourcePlan(createResourcePlanDesc.getResourcePlan(),
-        createResourcePlanDesc.getCopyFromName());
+        createResourcePlanDesc.getCopyFromName(), createResourcePlanDesc.getIfNotExists());
     return 0;
   }
 
@@ -782,7 +782,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   }
 
   private int dropResourcePlan(Hive db, DropResourcePlanDesc desc) throws HiveException {
-    db.dropResourcePlan(desc.getRpName());
+    db.dropResourcePlan(desc.getRpName(), desc.getIfExists());
     return 0;
   }
 
@@ -1435,7 +1435,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
    */
   private int touch(Hive db, AlterTableSimpleDesc touchDesc)
       throws HiveException {
-
+    // TODO: catalog
     Table tbl = db.getTable(touchDesc.getTableName());
     EnvironmentContext environmentContext = new EnvironmentContext();
     environmentContext.putToProperties(StatsSetupConst.DO_NOT_UPDATE_STATS, StatsSetupConst.TRUE);
@@ -1450,7 +1450,8 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         throw new HiveException("Specified partition does not exist");
       }
       try {
-        db.alterPartition(touchDesc.getTableName(), part, environmentContext, true);
+        db.alterPartition(tbl.getCatalogName(), tbl.getDbName(), tbl.getTableName(),
+            part, environmentContext, true);
       } catch (InvalidOperationException e) {
         throw new HiveException(e);
       }
@@ -1799,6 +1800,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
             authority.toString(),
             harPartitionDir.getPath()); // make in Path to ensure no slash at the end
         setArchived(p, harPath, partSpecInfo.values.size());
+        // TODO: catalog
         db.alterPartition(simpleDesc.getTableName(), p, null, true);
       }
     } catch (Exception e) {
@@ -1948,7 +1950,6 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
         try {
           ret = ToolRunner.run(fss, args.toArray(new String[0]));
         } catch (Exception e) {
-          e.printStackTrace();
           throw new HiveException(e);
         }
 
@@ -2005,6 +2006,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     for(Partition p: partitions) {
       setUnArchived(p);
       try {
+        // TODO: catalog
         db.alterPartition(simpleDesc.getTableName(), p, null, true);
       } catch (InvalidOperationException e) {
         throw new HiveException(e);
@@ -3296,7 +3298,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
   private int killQuery(Hive db, KillQueryDesc desc) throws HiveException {
     SessionState sessionState = SessionState.get();
     for (String queryId : desc.getQueryIds()) {
-      sessionState.getKillQuery().killQuery(queryId, "User invoked KILL QUERY");
+      sessionState.getKillQuery().killQuery(queryId, "User invoked KILL QUERY", db.getConf());
     }
     LOG.info("kill query called ({})", desc.getQueryIds());
     return 0;
@@ -4766,6 +4768,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
 
     // drop the table
+    // TODO: API w/catalog name
     db.dropTable(dropTbl.getTableName(), dropTbl.getIfPurge());
     if (tbl != null) {
       // Remove from cache if it is a materialized view
@@ -4835,7 +4838,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
     catch (AlreadyExistsException ex) {
       //it would be better if AlreadyExistsException had an errorCode field....
-      throw new HiveException(ex, ErrorMsg.DATABSAE_ALREADY_EXISTS, crtDb.getName());
+      throw new HiveException(ex, ErrorMsg.DATABASE_ALREADY_EXISTS, crtDb.getName());
     }
     return 0;
   }
@@ -4945,8 +4948,11 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
 
     // create the table
     if (crtTbl.getReplaceMode()) {
+      ReplicationSpec replicationSpec = crtTbl.getReplicationSpec();
+      long writeId = replicationSpec != null && replicationSpec.isInReplicationScope() ? crtTbl.getReplWriteId() : 0L;
       // replace-mode creates are really alters using CreateTableDesc.
-      db.alterTable(tbl, false, null, true);
+      db.alterTable(tbl.getCatName(), tbl.getDbName(), tbl.getTableName(), tbl, false, null,
+              true, writeId);
     } else {
       if ((foreignKeys != null && foreignKeys.size() > 0) ||
           (primaryKeys != null && primaryKeys.size() > 0) ||
@@ -5222,7 +5228,8 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     String tableName = truncateTableDesc.getTableName();
     Map<String, String> partSpec = truncateTableDesc.getPartSpec();
 
-    if (!allowOperationInReplicationScope(db, tableName, partSpec, truncateTableDesc.getReplicationSpec())) {
+    ReplicationSpec replicationSpec = truncateTableDesc.getReplicationSpec();
+    if (!allowOperationInReplicationScope(db, tableName, partSpec, replicationSpec)) {
       // no truncate, the table is missing either due to drop/rename which follows the truncate.
       // or the existing table is newer than our update.
       if (LOG.isDebugEnabled()) {
@@ -5234,7 +5241,8 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
     }
 
     try {
-      db.truncateTable(tableName, partSpec);
+      db.truncateTable(tableName, partSpec,
+              replicationSpec != null && replicationSpec.isInReplicationScope() ? truncateTableDesc.getWriteId() : 0L);
     } catch (Exception e) {
       throw new HiveException(e, ErrorMsg.GENERIC_ERROR);
     }

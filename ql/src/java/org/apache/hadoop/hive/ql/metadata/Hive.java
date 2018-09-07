@@ -24,11 +24,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static org.apache.hadoop.hive.conf.Constants.MATERIALIZED_VIEW_REWRITING_TIME_WINDOW;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_STORAGE;
 import static org.apache.hadoop.hive.metastore.utils.MetaStoreUtils.getDefaultCatalog;
+import static org.apache.hadoop.hive.ql.io.AcidUtils.getFullTableName;
 import static org.apache.hadoop.hive.ql.parse.DDLSemanticAnalyzer.makeBinaryPredicate;
 import static org.apache.hadoop.hive.serde.serdeConstants.SERIALIZATION_FORMAT;
 import static org.apache.hadoop.hive.serde.serdeConstants.STRING_TYPE_NAME;
@@ -37,6 +39,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,6 +76,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -104,6 +108,7 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.ReplChangeManager;
 import org.apache.hadoop.hive.metastore.api.*;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.exec.AbstractFileMergeOperator;
@@ -617,7 +622,12 @@ public class Hive {
   }
 
   public void alterTable(String catName, String dbName, String tblName, Table newTbl, boolean cascade,
-      EnvironmentContext environmentContext, boolean transactional)
+                         EnvironmentContext environmentContext, boolean transactional) throws HiveException {
+    alterTable(catName, dbName, tblName, newTbl, cascade, environmentContext, transactional, 0);
+  }
+
+  public void alterTable(String catName, String dbName, String tblName, Table newTbl, boolean cascade,
+      EnvironmentContext environmentContext, boolean transactional, long replWriteId)
       throws HiveException {
 
     if (catName == null) {
@@ -639,8 +649,13 @@ public class Hive {
       // Take a table snapshot and set it to newTbl.
       AcidUtils.TableSnapshot tableSnapshot = null;
       if (transactional) {
-        // Make sure we pass in the names, so we can get the correct snapshot for rename table.
-        tableSnapshot = AcidUtils.getTableSnapshot(conf, newTbl, dbName, tblName, true);
+        if (replWriteId > 0) {
+          ValidWriteIdList writeIds = getMSC().getValidWriteIds(getFullTableName(dbName, tblName), replWriteId);
+          tableSnapshot = new TableSnapshot(replWriteId, writeIds.writeToString());
+        } else {
+          // Make sure we pass in the names, so we can get the correct snapshot for rename table.
+          tableSnapshot = AcidUtils.getTableSnapshot(conf, newTbl, dbName, tblName, true);
+        }
         if (tableSnapshot != null) {
           newTbl.getTTable().setWriteId(tableSnapshot.getWriteId());
         } else {
@@ -679,11 +694,12 @@ public class Hive {
    *           if the changes in metadata is not acceptable
    * @throws TException
    */
+  @Deprecated
   public void alterPartition(String tblName, Partition newPart,
       EnvironmentContext environmentContext, boolean transactional)
       throws InvalidOperationException, HiveException {
     String[] names = Utilities.getDbTableName(tblName);
-    alterPartition(names[0], names[1], newPart, environmentContext, transactional);
+    alterPartition(null, names[0], names[1], newPart, environmentContext, transactional);
   }
 
   /**
@@ -703,10 +719,13 @@ public class Hive {
    *           if the changes in metadata is not acceptable
    * @throws TException
    */
-  public void alterPartition(String dbName, String tblName, Partition newPart,
+  public void alterPartition(String catName, String dbName, String tblName, Partition newPart,
                              EnvironmentContext environmentContext, boolean transactional)
       throws InvalidOperationException, HiveException {
     try {
+      if (catName == null) {
+        catName = getDefaultCatalog(conf);
+      }
       validatePartition(newPart);
       String location = newPart.getLocation();
       if (location != null) {
@@ -725,7 +744,7 @@ public class Hive {
           LOG.warn("Cannot get a table snapshot for " + tblName);
         }
       }
-      getSynchronizedMSC().alter_partition(
+      getSynchronizedMSC().alter_partition(catName,
           dbName, tblName, newPart.getTPartition(), environmentContext,
           tableSnapshot == null ? null : tableSnapshot.getValidWriteIdList());
 
@@ -846,6 +865,7 @@ public class Hive {
     }
   }
 
+  // TODO: this whole path won't work with catalogs
   public void alterDatabase(String dbName, Database db)
       throws HiveException {
     try {
@@ -868,6 +888,8 @@ public class Hive {
   public void createTable(Table tbl) throws HiveException {
     createTable(tbl, false);
   }
+
+  // TODO: from here down dozens of methods do not support catalog. I got tired marking them.
 
   /**
    * Creates the table with the given objects. It takes additional arguments for
@@ -1044,6 +1066,13 @@ public class Hive {
       if (!ignoreUnknownTab) {
         throw new HiveException(e);
       }
+    } catch (MetaException e) {
+      int idx = ExceptionUtils.indexOfType(e, SQLIntegrityConstraintViolationException.class);
+      if (idx != -1 && ExceptionUtils.getThrowables(e)[idx].getMessage().contains("MV_TABLES_USED")) {
+        throw new HiveException("Cannot drop table since it is used by at least one materialized view definition. " +
+            "Please drop any materialized view that uses the table before dropping it", e);
+      }
+      throw new HiveException(e);
     } catch (Exception e) {
       throw new HiveException(e);
     }
@@ -1058,15 +1087,21 @@ public class Hive {
    *          name of the table
    * @throws HiveException
    */
-  public void truncateTable(String dbDotTableName, Map<String, String> partSpec) throws HiveException {
+  public void truncateTable(String dbDotTableName, Map<String, String> partSpec, Long writeId) throws HiveException {
     try {
       Table table = getTable(dbDotTableName, true);
-      // TODO: we should refactor code to make sure snapshot is always obtained in the same layer e.g. Hive.java
       AcidUtils.TableSnapshot snapshot = null;
       if (AcidUtils.isTransactionalTable(table)) {
-        snapshot = AcidUtils.getTableSnapshot(conf, table, true);
+        if (writeId <= 0) {
+          snapshot = AcidUtils.getTableSnapshot(conf, table, true);
+        } else {
+          String fullTableName = getFullTableName(table.getDbName(), table.getTableName());
+          ValidWriteIdList writeIdList = getMSC().getValidWriteIds(fullTableName, writeId);
+          snapshot = new TableSnapshot(writeId, writeIdList.writeToString());
+        }
       }
 
+      // TODO: APIs with catalog names
       List<String> partNames = ((null == partSpec)
         ? null : getPartitionNames(table.getDbName(), table.getTableName(), partSpec, (short) -1));
       if (snapshot == null) {
@@ -1120,6 +1155,7 @@ public class Hive {
    *              if there's an internal error or if the table doesn't exist
    */
   public Table getTable(final String dbName, final String tableName) throws HiveException {
+     // TODO: catalog... etc everywhere
     if (tableName.contains(".")) {
       String[] names = Utilities.getDbTableName(tableName);
       return this.getTable(names[0], names[1], true);
@@ -1832,7 +1868,7 @@ public class Hive {
         }
       } else {
         newPartPath = oldPartPath == null
-          ? newPartPath = genPartPathFromTable(tbl, partSpec, tblDataLocationPath) : oldPartPath;
+          ? genPartPathFromTable(tbl, partSpec, tblDataLocationPath) : oldPartPath;
       }
       List<Path> newFiles = Collections.synchronizedList(new ArrayList<Path>());
 
@@ -1957,10 +1993,10 @@ public class Hive {
               newPartPath, -1, newPartPath.getFileSystem(conf));
         }
         if (filesForStats != null) {
-          MetaStoreUtils.populateQuickStats(filesForStats, newTPart.getParameters());
+          MetaStoreServerUtils.populateQuickStats(filesForStats, newTPart.getParameters());
         } else {
           // The ACID state is probably absent. Warning is logged in the get method.
-          MetaStoreUtils.clearQuickStats(newTPart.getParameters());
+          MetaStoreServerUtils.clearQuickStats(newTPart.getParameters());
         }
         try {
           LOG.debug("Adding new partition " + newTPart.getSpec());
@@ -2107,7 +2143,7 @@ public class Hive {
       ec.putToProperties(StatsSetupConst.DO_NOT_UPDATE_STATS, StatsSetupConst.TRUE);
     }
     LOG.debug("Altering existing partition " + newTPart.getSpec());
-    getSynchronizedMSC().alter_partition(
+    getSynchronizedMSC().alter_partition(tbl.getCatName(),
         tbl.getDbName(), tbl.getTableName(), newTPart.getTPartition(), new EnvironmentContext(),
         tableSnapshot == null ? null : tableSnapshot.getValidWriteIdList());
   }
@@ -2581,6 +2617,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
   }
 
   public List<Partition> createPartitions(AddPartitionDesc addPartitionDesc) throws HiveException {
+    // TODO: catalog name everywhere in this method
     Table tbl = getTable(addPartitionDesc.getDbName(), addPartitionDesc.getTableName());
     int size = addPartitionDesc.getPartitionCount();
     List<org.apache.hadoop.hive.metastore.api.Partition> in =
@@ -2789,7 +2826,8 @@ private void constructOneLBLocationMap(FileStatus fSta,
     if (!org.apache.commons.lang.StringUtils.isEmpty(tbl.getDbName())) {
       fullName = tbl.getFullyQualifiedName();
     }
-    alterPartition(fullName, new Partition(tbl, tpart), null, true);
+    alterPartition(tbl.getCatalogName(), tbl.getDbName(), tbl.getTableName(),
+        new Partition(tbl, tpart), null, true);
   }
 
   private void alterPartitionSpecInMemory(Table tbl,
@@ -3737,10 +3775,13 @@ private void constructOneLBLocationMap(FileStatus fSta,
     } else if (isSrcLocal) {
       destFs.copyFromLocalFile(sourcePath, destFilePath);
     } else {
-      FileUtils.copy(sourceFs, sourcePath, destFs, destFilePath,
+      if (!FileUtils.copy(sourceFs, sourcePath, destFs, destFilePath,
           true,   // delete source
           false,  // overwrite destination
-          conf);
+          conf)) {
+        LOG.error("Copy failed for source: " + sourcePath + " to destination: " + destFilePath);
+        throw new IOException("File copy failed.");
+      }
     }
     return destFilePath;
   }
@@ -4322,16 +4363,52 @@ private void constructOneLBLocationMap(FileStatus fSta,
           listNewFilesRecursively(destFs, destf, newFiles);
         }
       } else {
+        final Map<Future<Boolean>, Path> moveFutures = Maps.newLinkedHashMapWithExpectedSize(srcs.length);
+        final int moveFilesThreadCount = HiveConf.getIntVar(conf, ConfVars.HIVE_MOVE_FILES_THREAD_COUNT);
+        final ExecutorService pool = moveFilesThreadCount > 0
+            ? Executors.newFixedThreadPool(
+                moveFilesThreadCount,
+                new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Replace-Thread-%d").build())
+            : MoreExecutors.newDirectExecutorService();
+        final SessionState parentSession = SessionState.get();
         // its either a file or glob
         for (FileStatus src : srcs) {
           Path destFile = new Path(destf, src.getPath().getName());
-          if (!moveFile(conf, src.getPath(), destFile, true, isSrcLocal, isManaged)) {
+          moveFutures.put(
+              pool.submit(
+                  new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() throws Exception {
+                      SessionState.setCurrentSessionState(parentSession);
+                      return moveFile(
+                          conf, src.getPath(), destFile, true, isSrcLocal, isManaged);
+                    }
+                  }),
+              destFile);
+        }
+
+        pool.shutdown();
+        for (Map.Entry<Future<Boolean>, Path> moveFuture : moveFutures.entrySet()) {
+          boolean moveFailed;
+          try {
+            moveFailed = !moveFuture.getKey().get();
+          } catch (InterruptedException | ExecutionException e) {
+            pool.shutdownNow();
+            if (e.getCause() instanceof IOException) {
+              throw (IOException) e.getCause();
+            }
+            if (e.getCause() instanceof HiveException) {
+              throw (HiveException) e.getCause();
+            }
+            throw handlePoolException(pool, e);
+          }
+          if (moveFailed) {
             throw new IOException("Error moving: " + srcf + " into: " + destf);
           }
 
           // Add file paths of the files that will be moved to the destination if the caller needs it
           if (null != newFiles) {
-            newFiles.add(destFile);
+            newFiles.add(moveFuture.getValue());
           }
         }
       }
@@ -5321,10 +5398,14 @@ private void constructOneLBLocationMap(FileStatus fSta,
   }
 
 
-  public void createResourcePlan(WMResourcePlan resourcePlan, String copyFromName)
+  public void createResourcePlan(WMResourcePlan resourcePlan, String copyFromName, boolean ifNotExists)
       throws HiveException {
     try {
       getMSC().createResourcePlan(resourcePlan, copyFromName);
+    } catch (AlreadyExistsException e) {
+      if (!ifNotExists) {
+        throw new HiveException(e, ErrorMsg.RESOURCE_PLAN_ALREADY_EXISTS, resourcePlan.getName());
+      }
     } catch (Exception e) {
       throw new HiveException(e);
     }
@@ -5348,9 +5429,13 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
   }
 
-  public void dropResourcePlan(String rpName) throws HiveException {
+  public void dropResourcePlan(String rpName, boolean ifExists) throws HiveException {
     try {
       getMSC().dropResourcePlan(rpName);
+    } catch (NoSuchObjectException e) {
+      if (!ifExists) {
+        throw new HiveException(e, ErrorMsg.RESOURCE_PLAN_NOT_EXISTS, rpName);
+      }
     } catch (Exception e) {
       throw new HiveException(e);
     }

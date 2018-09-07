@@ -534,6 +534,7 @@ public interface IMetaStoreClient {
    * @throws TException
    *           A thrift communication error occurred
    */
+  @Deprecated // TODO: deprecate all methods without a catalog here; a single layer (e.g. Hive.java) should handle current-catalog
   void dropTable(String dbname, String tableName, boolean deleteData,
       boolean ignoreUnknownTab, boolean ifPurge) throws MetaException, TException,
       NoSuchObjectException;
@@ -2079,7 +2080,7 @@ public interface IMetaStoreClient {
       throws InvalidOperationException, MetaException, TException;
 
 
-  void alter_partition(String dbName, String tblName, Partition newPart,
+  void alter_partition(String catName, String dbName, String tblName, Partition newPart,
       EnvironmentContext environmentContext, String writeIdList)
       throws InvalidOperationException, MetaException, TException;
 
@@ -2813,12 +2814,21 @@ public interface IMetaStoreClient {
   ValidTxnList getValidTxns(long currentTxn) throws TException;
 
   /**
-   * Get a structure that details valid transactions.
+   * Get a structure that details valid write ids.
    * @param fullTableName full table name of format <db_name>.<table_name>
    * @return list of valid write ids for the given table
    * @throws TException
    */
   ValidWriteIdList getValidWriteIds(String fullTableName) throws TException;
+
+  /**
+   * Get a structure that details valid write ids.
+   * @param fullTableName full table name of format <db_name>.<table_name>
+   * @param writeId The write id to get the corresponding txn
+   * @return list of valid write ids for the given table
+   * @throws TException
+   */
+  ValidWriteIdList getValidWriteIds(String fullTableName, Long writeId) throws TException;
 
   /**
    * Get a structure that details valid write ids list for all tables read by current txn.

@@ -27,6 +27,7 @@ import org.apache.hadoop.hive.metastore.events.AlterPartitionEvent;
 import org.apache.hadoop.hive.metastore.events.AlterTableEvent;
 import org.apache.hadoop.hive.metastore.messaging.EventMessage;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.txn.TxnUtils;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
@@ -110,7 +112,7 @@ public class HiveAlterHandler implements AlterHandler {
     if (!MetaStoreUtils.validateName(newTblName, handler.getConf())) {
       throw new InvalidOperationException(newTblName + " is not a valid object name");
     }
-    String validate = MetaStoreUtils.validateTblColumns(newt.getSd().getCols());
+    String validate = MetaStoreServerUtils.validateTblColumns(newt.getSd().getCols());
     if (validate != null) {
       throw new InvalidOperationException("Invalid column " + validate);
     }
@@ -314,16 +316,16 @@ public class HiveAlterHandler implements AlterHandler {
         }
       } else {
         // operations other than table rename
-        if (MetaStoreUtils.requireCalStats(null, null, newt, environmentContext) &&
+        if (MetaStoreServerUtils.requireCalStats(null, null, newt, environmentContext) &&
             !isPartitionedTable) {
           Database db = msdb.getDatabase(catName, newDbName);
           // Update table stats. For partitioned table, we update stats in alterPartition()
-          MetaStoreUtils.updateTableStatsSlow(db, newt, wh, false, true, environmentContext);
+          MetaStoreServerUtils.updateTableStatsSlow(db, newt, wh, false, true, environmentContext);
         }
 
         if (isPartitionedTable) {
           //Currently only column related changes can be cascaded in alter table
-          if(!MetaStoreUtils.areSameColumns(oldt.getSd().getCols(), newt.getSd().getCols())) {
+          if(!MetaStoreServerUtils.areSameColumns(oldt.getSd().getCols(), newt.getSd().getCols())) {
             parts = msdb.getPartitions(catName, dbname, name, -1);
             for (Partition part : parts) {
               Partition oldPart = new Partition(part);
@@ -358,7 +360,8 @@ public class HiveAlterHandler implements AlterHandler {
       if (transactionalListeners != null && !transactionalListeners.isEmpty()) {
         txnAlterTableEventResponses = MetaStoreListenerNotifier.notifyEvent(transactionalListeners,
                   EventMessage.EventType.ALTER_TABLE,
-                  new AlterTableEvent(oldt, newt, false, true, handler),
+                  new AlterTableEvent(oldt, newt, false, true,
+                          newt.getWriteId(), handler),
                   environmentContext);
       }
       // commit the changes
@@ -403,7 +406,7 @@ public class HiveAlterHandler implements AlterHandler {
       // make this call whether the event failed or succeeded. To make this behavior consistent,
       // this call is made for failed events also.
       MetaStoreListenerNotifier.notifyEvent(listeners, EventMessage.EventType.ALTER_TABLE,
-          new AlterTableEvent(oldt, newt, false, success, handler),
+          new AlterTableEvent(oldt, newt, false, success, newt.getWriteId(), handler),
           environmentContext, txnAlterTableEventResponses, msdb);
     }
   }
@@ -465,12 +468,12 @@ public class HiveAlterHandler implements AlterHandler {
               "Unable to alter partition because table or database does not exist.");
         }
         oldPart = msdb.getPartition(catName, dbname, name, new_part.getValues());
-        if (MetaStoreUtils.requireCalStats(oldPart, new_part, tbl, environmentContext)) {
+        if (MetaStoreServerUtils.requireCalStats(oldPart, new_part, tbl, environmentContext)) {
           // if stats are same, no need to update
-          if (MetaStoreUtils.isFastStatsSame(oldPart, new_part)) {
-            MetaStoreUtils.updateBasicState(environmentContext, new_part.getParameters());
+          if (MetaStoreServerUtils.isFastStatsSame(oldPart, new_part)) {
+            MetaStoreServerUtils.updateBasicState(environmentContext, new_part.getParameters());
           } else {
-            MetaStoreUtils.updatePartitionStatsFast(
+            MetaStoreServerUtils.updatePartitionStatsFast(
                 new_part, tbl, wh, false, true, environmentContext, false);
           }
         }
@@ -485,7 +488,8 @@ public class HiveAlterHandler implements AlterHandler {
         if (transactionalListeners != null && !transactionalListeners.isEmpty()) {
           MetaStoreListenerNotifier.notifyEvent(transactionalListeners,
                                                 EventMessage.EventType.ALTER_PARTITION,
-                                                new AlterPartitionEvent(oldPart, new_part, tbl, false, true, handler),
+                                                new AlterPartitionEvent(oldPart, new_part, tbl, false,
+                                                        true, new_part.getWriteId(), handler),
                                                 environmentContext);
 
 
@@ -609,8 +613,8 @@ public class HiveAlterHandler implements AlterHandler {
         new_part.getSd().setLocation(oldPart.getSd().getLocation());
       }
 
-      if (MetaStoreUtils.requireCalStats(oldPart, new_part, tbl, environmentContext)) {
-        MetaStoreUtils.updatePartitionStatsFast(
+      if (MetaStoreServerUtils.requireCalStats(oldPart, new_part, tbl, environmentContext)) {
+        MetaStoreServerUtils.updatePartitionStatsFast(
             new_part, tbl, wh, false, true, environmentContext, false);
       }
 
@@ -633,7 +637,8 @@ public class HiveAlterHandler implements AlterHandler {
       if (transactionalListeners != null && !transactionalListeners.isEmpty()) {
         MetaStoreListenerNotifier.notifyEvent(transactionalListeners,
                                               EventMessage.EventType.ALTER_PARTITION,
-                                              new AlterPartitionEvent(oldPart, new_part, tbl, false, true, handler),
+                                              new AlterPartitionEvent(oldPart, new_part, tbl, false,
+                                                      true, new_part.getWriteId(), handler),
                                               environmentContext);
       }
 
@@ -709,12 +714,12 @@ public class HiveAlterHandler implements AlterHandler {
         oldParts.add(oldTmpPart);
         partValsList.add(tmpPart.getValues());
 
-        if (MetaStoreUtils.requireCalStats(oldTmpPart, tmpPart, tbl, environmentContext)) {
+        if (MetaStoreServerUtils.requireCalStats(oldTmpPart, tmpPart, tbl, environmentContext)) {
           // Check if stats are same, no need to update
-          if (MetaStoreUtils.isFastStatsSame(oldTmpPart, tmpPart)) {
-            MetaStoreUtils.updateBasicState(environmentContext, tmpPart.getParameters());
+          if (MetaStoreServerUtils.isFastStatsSame(oldTmpPart, tmpPart)) {
+            MetaStoreServerUtils.updateBasicState(environmentContext, tmpPart.getParameters());
           } else {
-            MetaStoreUtils.updatePartitionStatsFast(
+            MetaStoreServerUtils.updatePartitionStatsFast(
                 tmpPart, tbl, wh, false, true, environmentContext, false);
           }
         }
@@ -740,7 +745,8 @@ public class HiveAlterHandler implements AlterHandler {
         if (transactionalListeners != null && !transactionalListeners.isEmpty()) {
           MetaStoreListenerNotifier.notifyEvent(transactionalListeners,
                                                 EventMessage.EventType.ALTER_PARTITION,
-                                                new AlterPartitionEvent(oldPart, newPart, tbl, false, true, handler));
+                                                new AlterPartitionEvent(oldPart, newPart, tbl, false,
+                                                        true, newPart.getWriteId(), handler));
         }
       }
 
@@ -810,7 +816,10 @@ public class HiveAlterHandler implements AlterHandler {
       List<ColumnStatisticsObj> newStatsObjs = new ArrayList<>();
       ColumnStatistics colStats = null;
       boolean updateColumnStats = !newDbName.equals(dbName) || !newTableName.equals(tableName)
-          || !MetaStoreUtils.columnsIncludedByNameType(oldCols, newCols);
+          || !MetaStoreServerUtils.columnsIncludedByNameType(oldCols, newCols);
+      // Don't bother in the case of ACID conversion.
+      updateColumnStats = updateColumnStats
+          && (TxnUtils.isAcidTable(oldTable) == TxnUtils.isAcidTable(newTable));
       if (updateColumnStats) {
         List<String> oldColNames = new ArrayList<>(oldCols.size());
         for (FieldSchema oldCol : oldCols) {
@@ -886,7 +895,7 @@ public class HiveAlterHandler implements AlterHandler {
           || !oldPartName.equals(newPartName);
 
       // do not need to update column stats if alter partition is not for rename or changing existing columns
-      if (!rename && MetaStoreUtils.columnsIncludedByNameType(oldCols, newCols)) {
+      if (!rename && MetaStoreServerUtils.columnsIncludedByNameType(oldCols, newCols)) {
         return newPartsColStats;
       }
       List<String> oldColNames = new ArrayList<>(oldCols.size());

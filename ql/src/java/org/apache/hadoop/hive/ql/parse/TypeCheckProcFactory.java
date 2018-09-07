@@ -657,8 +657,14 @@ public class TypeCheckProcFactory {
           .getChild(0).getText());
 
       boolean isTableAlias = input.hasTableAlias(tableOrCol);
-      ColumnInfo colInfo = input.get(null, tableOrCol);
-
+      ColumnInfo colInfo = null;
+      try {
+        colInfo = input.get(null, tableOrCol);
+      } catch (SemanticException semanticException) {
+        if (!isTableAlias || parent == null || parent.getType() != HiveParser.DOT) {
+          throw semanticException;
+        }
+      }
       // try outer row resolver
       if(ctx.getOuterRR() != null && colInfo == null && !isTableAlias) {
         RowResolver outerRR = ctx.getOuterRR();
@@ -992,6 +998,17 @@ public class TypeCheckProcFactory {
       }
     }
 
+    protected void insertCast(String funcText, ArrayList<ExprNodeDesc> children) throws SemanticException {
+      // substring, concat UDFs expect first argument as string. Therefore this method inserts explicit cast
+      // to cast the first operand to string
+      if (funcText.equals("substring") || funcText.equals("concat")){
+        if(children.size() > 0 && !ExprNodeDescUtils.isStringType(children.get(0))) {
+            ExprNodeDesc newColumn = ParseUtils.createConversionCast(children.get(0), TypeInfoFactory.stringTypeInfo);
+            children.set(0, newColumn);
+        }
+      }
+    }
+
     protected ExprNodeDesc getXpathOrFuncExprNodeDesc(ASTNode expr,
         boolean isFunction, ArrayList<ExprNodeDesc> children, TypeCheckCtx ctx)
         throws SemanticException, UDFArgumentException {
@@ -1127,6 +1144,8 @@ public class TypeCheckProcFactory {
               break;
           }
         }
+
+        insertCast(funcText, children);
 
         validateUDF(expr, isFunction, ctx, fi, children, genericUDF);
 

@@ -214,7 +214,7 @@ public abstract class AbstractCliConfig {
 
     // dedup file list
     Set<File> testFiles = new TreeSet<>();
-    if (queryFile != null && !queryFile.equals("")) {
+    if (isQFileSpecified()) {
       // The user may have passed a list of files - comma separated
       for (String qFile : TEST_SPLITTER.split(queryFile)) {
         File qF;
@@ -223,10 +223,10 @@ public abstract class AbstractCliConfig {
         } else {
           qF = new File(qFile);
         }
-        if (excludedQueryFileNames.contains(qFile) && !isDriverForcedToUse()) {
+        if (excludedQueryFileNames.contains(qFile) && !isQFileSpecified()) {
           LOG.warn(qF.getAbsolutePath() + " is among the excluded query files for this driver."
               + " Please update CliConfigs.java or testconfiguration.properties file to"
-              + " include the qfile or use test.force.driver=true system property");
+              + " include the qfile or specify qfile through command line explicitly: -Dqfile=test.q");
         }
         testFiles.add(qF);
       }
@@ -241,7 +241,7 @@ public abstract class AbstractCliConfig {
     }
 
     for (String qFileName : excludedQueryFileNames) {
-      if (!isDriverForcedToUse()) {
+      if (!isQFileSpecified()) {
         testFiles.remove(new File(queryDir, qFileName));
       }
     }
@@ -249,8 +249,8 @@ public abstract class AbstractCliConfig {
     return testFiles;
   }
 
-  private boolean isDriverForcedToUse() {
-    return "true".equalsIgnoreCase(System.getProperty("test.force.driver"));
+  public boolean isQFileSpecified() {
+    return queryFile != null && !queryFile.equals("");
   }
 
   private void prepareDirs() throws Exception {

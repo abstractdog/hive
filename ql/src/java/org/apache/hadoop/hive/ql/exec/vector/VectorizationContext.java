@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hive.common.type.Date;
+import org.apache.hadoop.hive.ql.optimizer.SortedDynPartitionOptimizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.common.type.DataTypePhysicalVariation;
@@ -841,7 +842,7 @@ public class VectorizationContext {
           case ALL:
             if (LOG.isDebugEnabled()) {
               LOG.debug("We will try to use the VectorUDFAdaptor for " + exprDesc.toString()
-                  + " because hive.vectorized.adaptor.usage.mode=all");
+                + " because hive.vectorized.adaptor.usage.mode=all");
             }
             ve = getCustomUDFExpression(expr, mode);
             break;
@@ -858,7 +859,7 @@ public class VectorizationContext {
       }
     } else if (exprDesc instanceof ExprNodeConstantDesc) {
       ve = getConstantVectorExpression(((ExprNodeConstantDesc) exprDesc).getValue(), exprDesc.getTypeInfo(),
-          mode);
+        mode);
     } else if (exprDesc instanceof ExprNodeDynamicValueDesc) {
       ve = getDynamicValueVectorExpression((ExprNodeDynamicValueDesc) exprDesc, mode);
     } else if (exprDesc instanceof ExprNodeFieldDesc) {
@@ -2112,6 +2113,11 @@ public class VectorizationContext {
       ve = getCastToTimestamp((GenericUDFTimestamp)udf, childExpr, mode, returnType);
     } else if (udf instanceof GenericUDFDate || udf instanceof GenericUDFToDate) {
       ve = getIdentityForDateToDate(childExpr, returnType);
+    } else if (udf instanceof GenericUDFBucketNumber) {
+      int outCol = ocm.allocateOutputColumn(returnType);
+      ve = new BucketNumExpression(outCol);
+      ve.setInputTypeInfos(returnType);
+      ve.setOutputTypeInfo(returnType);
     }
     if (ve != null) {
       return ve;

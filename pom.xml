@@ -186,7 +186,7 @@
     <libthrift.version>0.9.3</libthrift.version>
     <log4j2.version>2.10.0</log4j2.version>
     <opencsv.version>2.3</opencsv.version>
-    <orc.version>1.5.2</orc.version>
+    <orc.version>1.5.3</orc.version>
     <mockito-all.version>1.10.19</mockito-all.version>
     <mina.version>2.0.0-M5</mina.version>
     <netty.version>4.1.17.Final</netty.version>
@@ -1329,6 +1329,7 @@
             <java.security.krb5.conf>${test.conf.dir}/krb5.conf</java.security.krb5.conf>
             <!-- Required by spark to work around SPARK-14958 -->
             <antlr.version>${antlr.version}</antlr.version>
+            <hadoop.version>${hadoop.version}</hadoop.version>
             <qfile>${qfile}</qfile>
             <initScript>${initScript}</initScript>
             <clustermode>${clustermode}</clustermode>

@@ -7262,7 +7262,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
       lbCtx = constructListBucketingCtx(destinationTable.getSkewedColNames(),
           destinationTable.getSkewedColValues(), destinationTable.getSkewedColValueLocationMaps(),
-          destinationTable.isStoredAsSubDirectories(), conf);
+          destinationTable.isStoredAsSubDirectories());
 
       // Create the work for moving the table
       // NOTE: specify Dynamic partitions in dest_tab for WriteEntity
@@ -7379,7 +7379,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
       lbCtx = constructListBucketingCtx(destinationPartition.getSkewedColNames(),
           destinationPartition.getSkewedColValues(), destinationPartition.getSkewedColValueLocationMaps(),
-          destinationPartition.isStoredAsSubDirectories(), conf);
+          destinationPartition.isStoredAsSubDirectories());
       AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
       if (destTableIsFullAcid) {
         acidOp = getAcidType(tableDescriptor.getOutputFileFormatClass(), dest);
@@ -11126,11 +11126,15 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       Iterator<VirtualColumn> vcs = VirtualColumn.getRegistry(conf).iterator();
       // use a list for easy cumtomize
       List<VirtualColumn> vcList = new ArrayList<VirtualColumn>();
-      while (vcs.hasNext()) {
-        VirtualColumn vc = vcs.next();
-        rwsch.put(alias, vc.getName().toLowerCase(), new ColumnInfo(vc.getName(),
-            vc.getTypeInfo(), alias, true, vc.getIsHidden()));
-        vcList.add(vc);
+      if(!tab.isNonNative()) {
+        // Virtual columns are only for native tables
+        while (vcs.hasNext()) {
+          VirtualColumn vc = vcs.next();
+          rwsch.put(alias, vc.getName().toLowerCase(), new ColumnInfo(vc.getName(),
+                  vc.getTypeInfo(), alias, true, vc.getIsHidden()
+          ));
+          vcList.add(vc);
+        }
       }
 
       // Create the root of the operator tree

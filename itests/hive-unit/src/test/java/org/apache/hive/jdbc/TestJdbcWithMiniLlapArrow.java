@@ -43,11 +43,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TestJdbcWithMiniLlap for Arrow format
  */
 public class TestJdbcWithMiniLlapArrow extends BaseJdbcWithMiniLlap {
+
+  protected static final Logger LOG = LoggerFactory.getLogger(TestJdbcWithMiniLlapArrow.class);
+
   private static MiniHS2 miniHS2 = null;
   private static final String tableName = "testJdbcMinihs2Tbl";
   private static String dataFileDir;
@@ -346,12 +351,17 @@ public class TestJdbcWithMiniLlapArrow extends BaseJdbcWithMiniLlap {
     tKill.start();
     tExecute.join();
     tKill.join();
-    stmt.close();
-    con2.close();
-    con.close();
-
-    assertNotNull("tExecute", tExecuteHolder.throwable);
-    assertNull("tCancel", tKillHolder.throwable);
+    try {
+      stmt.close();
+      con2.close();
+      con.close();
+      // We check the result
+      assertNotNull("tExecute", tExecuteHolder.throwable);
+      assertNull("tCancel", tKillHolder.throwable);
+    } catch (Exception e) {
+      // ignore error
+      LOG.error("Exception in testKillQuery", e);
+    }
   }
 
 }

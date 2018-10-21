@@ -495,6 +495,12 @@ public class HiveConf extends Configuration {
           + " the REPL LOAD on object data stores such as S3 or WASB where creating a directory and move \n"
           + " files are costly operations. In file system like HDFS where move operation is atomic, this \n"
           + " optimization should not be enabled as it may lead to inconsistent data read for non acid tables."),
+    REPL_MOVE_OPTIMIZED_FILE_SCHEMES("hive.repl.move.optimized.scheme", "s3a, wasb",
+        "Comma separated list of schemes for which move optimization will be enabled during repl load. \n"
+        + "This configuration overrides the value set using REPL_ENABLE_MOVE_OPTIMIZATION for the given schemes. \n"
+        + " Schemes of the file system which does not support atomic move (rename) can be specified here to \n "
+        + " speed up the repl load operation. In file system like HDFS where move operation is atomic, this \n"
+        + " optimization should not be enabled as it may lead to inconsistent data read for non acid tables."),
     LOCALSCRATCHDIR("hive.exec.local.scratchdir",
         "${system:java.io.tmpdir}" + File.separator + "${system:user.name}",
         "Local scratch space for Hive jobs"),
@@ -1110,15 +1116,15 @@ public class HiveConf extends Configuration {
      * @deprecated Use MetastoreConf.NOTIFICATION_SEQUENCE_LOCK_MAX_RETRIES
      */
     @Deprecated
-    NOTIFICATION_SEQUENCE_LOCK_MAX_RETRIES("hive.notification.sequence.lock.max.retries", 5,
+    NOTIFICATION_SEQUENCE_LOCK_MAX_RETRIES("hive.notification.sequence.lock.max.retries", 10,
         "Number of retries required to acquire a lock when getting the next notification sequential ID for entries "
             + "in the NOTIFICATION_LOG table."),
     /**
      * @deprecated Use MetastoreConf.NOTIFICATION_SEQUENCE_LOCK_RETRY_SLEEP_INTERVAL
      */
     @Deprecated
-    NOTIFICATION_SEQUENCE_LOCK_RETRY_SLEEP_INTERVAL("hive.notification.sequence.lock.retry.sleep.interval", 500L,
-        new TimeValidator(TimeUnit.MILLISECONDS),
+    NOTIFICATION_SEQUENCE_LOCK_RETRY_SLEEP_INTERVAL("hive.notification.sequence.lock.retry.sleep.interval", 10L,
+        new TimeValidator(TimeUnit.SECONDS),
         "Sleep interval between retries to acquire a notification lock as described part of property "
             + NOTIFICATION_SEQUENCE_LOCK_MAX_RETRIES.name()),
     /**
@@ -1529,6 +1535,10 @@ public class HiveConf extends Configuration {
     HIVEQUERYID("hive.query.id", "",
         "ID for query being executed (might be multiple per a session)"),
 
+    HIVEQUERYTAG("hive.query.tag", null, "Tag for the queries in the session. User can kill the queries with the tag " +
+        "in another session. Currently there is no tag duplication check, user need to make sure his tag is unique. " +
+        "Also 'kill query' needs to be issued to all HiveServer2 instances to proper kill the queries"),
+
     HIVESPARKJOBNAMELENGTH("hive.spark.jobname.length", 100000, "max jobname length for Hive on " +
             "Spark queries"),
     HIVEJOBNAMELENGTH("hive.jobname.length", 50, "max jobname length"),
@@ -1631,7 +1641,7 @@ public class HiveConf extends Configuration {
                                                                  + " expressed as multiple of Local FS read cost"),
     HIVE_CBO_SHOW_WARNINGS("hive.cbo.show.warnings", true,
          "Toggle display of CBO warnings like missing column stats"),
-    HIVE_CBO_STATS_CORRELATED_MULTI_KEY_JOINS("hive.cbo.stats.correlated.multi.key.joins", false,
+    HIVE_CBO_STATS_CORRELATED_MULTI_KEY_JOINS("hive.cbo.stats.correlated.multi.key.joins", true,
         "When CBO estimates output rows for a join involving multiple columns, the default behavior assumes" +
             "the columns are independent. Setting this flag to true will cause the estimator to assume" +
             "the columns are correlated."),
@@ -1949,6 +1959,10 @@ public class HiveConf extends Configuration {
         " ETL strategy is used when spending little more time in split generation is acceptable" +
         " (split generation reads and caches file footers). HYBRID chooses between the above strategies" +
         " based on heuristics."),
+    HIVE_ORC_WRITER_LLAP_MEMORY_MANAGER_ENABLED("hive.exec.orc.writer.llap.memory.manager.enabled", true,
+      "Whether orc writers should use llap-aware memory manager. LLAP aware memory manager will use memory\n" +
+        "per executor instead of entire heap memory when concurrent orc writers are involved. This will let\n" +
+        "task fragments to use memory within its limit (memory per executor) when performing ETL in LLAP."),
 
     // hive streaming ingest settings
     HIVE_STREAMING_AUTO_FLUSH_ENABLED("hive.streaming.auto.flush.enabled", true, "Whether to enable memory \n" +
@@ -2216,6 +2230,16 @@ public class HiveConf extends Configuration {
         "When enabled dynamic partitioning column will be globally sorted.\n" +
         "This way we can keep only one record writer open for each partition value\n" +
         "in the reducer thereby reducing the memory pressure on reducers."),
+    HIVEOPTSORTDYNAMICPARTITIONTHRESHOLD("hive.optimize.sort.dynamic.partition.threshold", 0,
+                                "When enabled dynamic partitioning column will be globally sorted.\n" +
+                                    "This way we can keep only one record writer open for each partition value\n" +
+                                    "in the reducer thereby reducing the memory pressure on reducers.\n" +
+                                    "This config has following possible values: \n" +
+                                    "\t-1 - This completely disables the optimization. \n" +
+                                    "\t1 - This always enable the optimization. \n" +
+                                    "\t0 - This makes the optimization a cost based decision. \n" +
+                                    "Setting it to any other positive integer will make Hive use this as threshold for number of writers."),
+
 
     HIVESAMPLINGFORORDERBY("hive.optimize.sampling.orderby", false, "Uses sampling on order-by clause for parallel execution."),
     HIVESAMPLINGNUMBERFORORDERBY("hive.optimize.sampling.orderby.number", 1000, "Total number of samples to be obtained."),
@@ -2928,7 +2952,7 @@ public class HiveConf extends Configuration {
     HIVE_ERROR_ON_EMPTY_PARTITION("hive.error.on.empty.partition", false,
         "Whether to throw an exception if dynamic partition insert generates empty results."),
 
-    HIVE_EXIM_URI_SCHEME_WL("hive.exim.uri.scheme.whitelist", "hdfs,pfile,file,s3,s3a",
+    HIVE_EXIM_URI_SCHEME_WL("hive.exim.uri.scheme.whitelist", "hdfs,pfile,file,s3,s3a,gs",
         "A comma separated list of acceptable URI schemes for import and export."),
     // temporary variable for testing. This is added just to turn off this feature in case of a bug in
     // deployment. It has not been documented in hive-default.xml intentionally, this should be removed
@@ -3801,7 +3825,7 @@ public class HiveConf extends Configuration {
         "Turn on Tez' auto reducer parallelism feature. When enabled, Hive will still estimate data sizes\n" +
         "and set parallelism estimates. Tez will sample source vertices' output sizes and adjust the estimates at runtime as\n" +
         "necessary."),
-    TEZ_LLAP_MIN_REDUCER_PER_EXECUTOR("hive.tez.llap.min.reducer.per.executor", 0.95f,
+    TEZ_LLAP_MIN_REDUCER_PER_EXECUTOR("hive.tez.llap.min.reducer.per.executor", 0.33f,
         "If above 0, the min number of reducers for auto-parallelism for LLAP scheduling will\n" +
         "be set to this fraction of the number of executors."),
     TEZ_MAX_PARTITION_FACTOR("hive.tez.max.partition.factor", 2f,
@@ -5487,6 +5511,7 @@ public class HiveConf extends Configuration {
     ConfVars.SHOW_JOB_FAIL_DEBUG_INFO.varname,
     ConfVars.TASKLOG_DEBUG_TIMEOUT.varname,
     ConfVars.HIVEQUERYID.varname,
+    ConfVars.HIVEQUERYTAG.varname,
   };
 
   /**

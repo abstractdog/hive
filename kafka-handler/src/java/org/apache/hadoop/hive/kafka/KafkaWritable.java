@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hive.kafka;
 
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
@@ -30,79 +33,45 @@ import java.util.Objects;
 
 /**
  * Writable implementation of Kafka ConsumerRecord.
- * Serialized in the form
- * {@code timestamp} long| {@code partition} (int) | {@code offset} (long) |
- * {@code startOffset} (long) | {@code endOffset} (long) | {@code value.size()} (int) |
+ * Serialized in the form:
+ * {@code timestamp} long| {@code partition} (int) | {@code offset} (long) | {@code value.size()} (int) |
  * {@code value} (byte []) | {@code recordKey.size()}| {@code recordKey (byte [])}
  */
-public class KafkaRecordWritable implements Writable {
+public class KafkaWritable implements Writable {
 
-  /**
-   * Kafka partition id
-   */
   private int partition;
-  /**
-   * Record Offset
-   */
   private long offset;
-  /**
-   * Fist offset given by the input split used to pull the event {@link KafkaPullerInputSplit#getStartOffset()}
-   */
-  private long startOffset;
-  /**
-   * Last Offset given by the input split used to pull the event {@link KafkaPullerInputSplit#getEndOffset()}
-   */
-  private long endOffset;
-  /**
-   * Event timestamp provided by Kafka Record {@link ConsumerRecord#timestamp()}
-   */
   private long timestamp;
-  /**
-   * Record value
-   */
   private byte[] value;
-
-  /**
-   * Record key content or null
-   */
   private byte[] recordKey;
 
-
-  void set(ConsumerRecord<byte[], byte[]> consumerRecord, long startOffset, long endOffset) {
+  void set(ConsumerRecord<byte[], byte[]> consumerRecord) {
     this.partition = consumerRecord.partition();
     this.timestamp = consumerRecord.timestamp();
     this.offset = consumerRecord.offset();
     this.value = consumerRecord.value();
     this.recordKey = consumerRecord.key();
-    this.startOffset = startOffset;
-    this.endOffset = endOffset;
   }
 
-   KafkaRecordWritable(int partition,
-       long offset,
-       long timestamp,
-       byte[] value,
-       long startOffset,
-       long endOffset,
-       @Nullable byte[] recordKey) {
+  KafkaWritable(int partition, long offset, long timestamp, byte[] value, @Nullable byte[] recordKey) {
     this.partition = partition;
     this.offset = offset;
     this.timestamp = timestamp;
     this.value = value;
     this.recordKey = recordKey;
-    this.startOffset = startOffset;
-    this.endOffset = endOffset;
   }
 
-  @SuppressWarnings("WeakerAccess") public KafkaRecordWritable() {
+  KafkaWritable(int partition, long timestamp, byte[] value, @Nullable byte[] recordKey) {
+    this(partition, -1, timestamp, value, recordKey);
+  }
+
+  @SuppressWarnings("WeakerAccess") public KafkaWritable() {
   }
 
   @Override public void write(DataOutput dataOutput) throws IOException {
     dataOutput.writeLong(timestamp);
     dataOutput.writeInt(partition);
     dataOutput.writeLong(offset);
-    dataOutput.writeLong(startOffset);
-    dataOutput.writeLong(endOffset);
     dataOutput.writeInt(value.length);
     dataOutput.write(value);
     if (recordKey != null) {
@@ -117,8 +86,6 @@ public class KafkaRecordWritable implements Writable {
     timestamp = dataInput.readLong();
     partition = dataInput.readInt();
     offset = dataInput.readLong();
-    startOffset = dataInput.readLong();
-    endOffset = dataInput.readLong();
     int dataSize = dataInput.readInt();
     if (dataSize > 0) {
       value = new byte[dataSize];
@@ -139,7 +106,7 @@ public class KafkaRecordWritable implements Writable {
     return partition;
   }
 
-  long getOffset() {
+  @SuppressWarnings("WeakerAccess") long getOffset() {
     return offset;
   }
 
@@ -151,16 +118,7 @@ public class KafkaRecordWritable implements Writable {
     return value;
   }
 
-  long getStartOffset() {
-    return startOffset;
-  }
-
-  long getEndOffset() {
-    return endOffset;
-  }
-
-  @Nullable
-  byte[] getRecordKey() {
+  @Nullable byte[] getRecordKey() {
     return recordKey;
   }
 
@@ -168,36 +126,30 @@ public class KafkaRecordWritable implements Writable {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof KafkaRecordWritable)) {
+    if (!(o instanceof KafkaWritable)) {
       return false;
     }
-    KafkaRecordWritable writable = (KafkaRecordWritable) o;
+    KafkaWritable writable = (KafkaWritable) o;
     return partition == writable.partition
         && offset == writable.offset
-        && startOffset == writable.startOffset
-        && endOffset == writable.endOffset
         && timestamp == writable.timestamp
         && Arrays.equals(value, writable.value)
         && Arrays.equals(recordKey, writable.recordKey);
   }
 
   @Override public int hashCode() {
-    int result = Objects.hash(partition, offset, startOffset, endOffset, timestamp);
+    int result = Objects.hash(partition, offset, timestamp);
     result = 31 * result + Arrays.hashCode(value);
     result = 31 * result + Arrays.hashCode(recordKey);
     return result;
   }
 
   @Override public String toString() {
-    return "KafkaRecordWritable{"
+    return "KafkaWritable{"
         + "partition="
         + partition
         + ", offset="
         + offset
-        + ", startOffset="
-        + startOffset
-        + ", endOffset="
-        + endOffset
         + ", timestamp="
         + timestamp
         + ", value="
@@ -206,4 +158,20 @@ public class KafkaRecordWritable implements Writable {
         + Arrays.toString(recordKey)
         + '}';
   }
+
+  Writable getHiveWritable(MetadataColumn metadataColumn) {
+    switch (metadataColumn) {
+    case OFFSET:
+      return new LongWritable(getOffset());
+    case PARTITION:
+      return new IntWritable(getPartition());
+    case TIMESTAMP:
+      return new LongWritable(getTimestamp());
+    case KEY:
+      return getRecordKey() == null ? null : new BytesWritable(getRecordKey());
+    default:
+      throw new IllegalArgumentException("Unknown metadata column [" + metadataColumn.getName() + "]");
+    }
+  }
+
 }

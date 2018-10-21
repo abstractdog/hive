@@ -50,6 +50,7 @@ import org.apache.hadoop.hive.ql.exec.repl.incremental.IncrementalLoadTasksBuild
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -404,7 +405,7 @@ public class TestReplicationScenariosAcrossInstances {
         })
         .run("show tblproperties table3('custom.property')")
         .verifyResults(new String[] {
-            "custom.value\t "
+            "custom.property\tcustom.value"
         });
   }
 
@@ -676,7 +677,7 @@ public class TestReplicationScenariosAcrossInstances {
                     "country             \tstring              \t                    ",
             })
             .run("show tblproperties table3('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " })
+            .verifyResults(new String[] { "custom.property\tcustom.value" })
             .run("select id from table2 order by id")
             .verifyResults(new String[] { "1" })
             .run("select * from table3")
@@ -981,7 +982,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("repl status " + replicatedDbName)
             .verifyResult(tuplePrimary.lastReplicationId)
             .run("show tblproperties t1('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " })
+            .verifyResults(new String[] { "custom.property\tcustom.value" })
             .dumpFailure(replicatedDbName, null)
             .run("alter database " + replicatedDbName
                     + " set dbproperties ('" + SOURCE_OF_REPLICATION + "' = '1, 2, 3')")
@@ -998,7 +999,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("select country from t1")
             .verifyResults(Arrays.asList("india"))
             .run("show tblproperties t1('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " });
+            .verifyResults(new String[] { "custom.property\tcustom.value" });
 
     // Check if DB/table/partition in C doesn't have repl.source.for props. Also ensure, ckpt property
     // is set to bootstrap dump location used in C.
@@ -1037,7 +1038,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("repl status " + replDbFromReplica)
             .verifyResult(tupleReplicaInc.lastReplicationId)
             .run("show tblproperties t1('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " });
+            .verifyResults(new String[] { "custom.property\tcustom.value" });
 
     // Check if DB/table/partition in C doesn't have repl.source.for props. Also ensure, ckpt property
     // in DB is set to bootstrap dump location used in C but for table/partition, it is missing.
@@ -1393,7 +1394,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("insert overwrite table t1 select * from t2")
             .dump(primaryDbName, tuple.lastReplicationId);
 
-    testMoveOptimization(primaryDbName, replicatedDbName, replicatedDbName_CM, "t1", "INSERT", tuple);
+    testMoveOptimization(primaryDbName, replicatedDbName, replicatedDbName_CM, "t1", "ADD_PARTITION", tuple);
   }
 
   @Test

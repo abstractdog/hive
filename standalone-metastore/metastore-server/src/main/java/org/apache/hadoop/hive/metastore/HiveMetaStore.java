@@ -66,10 +66,7 @@ import java.util.regex.Pattern;
 import javax.jdo.JDOException;
 
 import com.codahale.metrics.Counter;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
 
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.hadoop.conf.Configuration;
@@ -1804,6 +1801,11 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         if (validate != null) {
           throw new InvalidObjectException("Invalid partition column " + validate);
         }
+      }
+      if (tbl.isSetId()) {
+        throw new InvalidObjectException("Id shouldn't be set but table "
+            + tbl.getDbName() + "." + tbl.getTableName() + "has the Id set to "
+            + tbl.getId() + ". It's a read-only option");
       }
       SkewedInfo skew = tbl.getSd().getSkewedInfo();
       if (skew != null) {
@@ -4658,7 +4660,8 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         List<Partition> partitions = get_partitions(db_name, tableName, (short) max_parts);
 
         if (is_partition_spec_grouping_enabled(table)) {
-          partitionSpecs = get_partitionspecs_grouped_by_storage_descriptor(table, partitions);
+          partitionSpecs = MetaStoreServerUtils
+              .getPartitionspecsGroupedByStorageDescriptor(table, partitions);
         }
         else {
           PartitionSpec pSpec = new PartitionSpec();
@@ -4677,121 +4680,39 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       }
     }
 
-    private static class StorageDescriptorKey {
-
-      private final StorageDescriptor sd;
-
-      StorageDescriptorKey(StorageDescriptor sd) { this.sd = sd; }
-
-      StorageDescriptor getSd() {
-        return sd;
+    @Override
+    public GetPartitionsResponse get_partitions_with_specs(GetPartitionsRequest request)
+        throws MetaException, TException {
+      String catName = null;
+      if (request.isSetCatName()) {
+        catName = request.getCatName();
       }
-
-      private String hashCodeKey() {
-        return sd.getInputFormat() + "\t"
-            + sd.getOutputFormat() +  "\t"
-            + sd.getSerdeInfo().getSerializationLib() + "\t"
-            + sd.getCols();
+      String[] parsedDbName = parseDbName(request.getDbName(), conf);
+      String tableName = request.getTblName();
+      if (catName == null) {
+        // if catName is not provided in the request use the catName parsed from the dbName
+        catName = parsedDbName[CAT_NAME];
       }
-
-      @Override
-      public int hashCode() {
-        return hashCodeKey().hashCode();
+      startTableFunction("get_partitions_with_specs", catName, parsedDbName[DB_NAME],
+          tableName);
+      GetPartitionsResponse response = null;
+      Exception ex = null;
+      try {
+        Table table = get_table_core(parsedDbName[CAT_NAME], parsedDbName[DB_NAME], tableName);
+        List<Partition> partitions = getMS()
+            .getPartitionSpecsByFilterAndProjection(table, request.getProjectionSpec(),
+                request.getFilterSpec());
+        List<PartitionSpec> partitionSpecs =
+            MetaStoreServerUtils.getPartitionspecsGroupedByStorageDescriptor(table, partitions);
+        response = new GetPartitionsResponse();
+        response.setPartitionSpec(partitionSpecs);
+      } catch (Exception e) {
+        ex = e;
+        rethrowException(e);
+      } finally {
+        endFunction("get_partitions_with_specs", response != null, ex, tableName);
       }
-
-      @Override
-      public boolean equals(Object rhs) {
-        if (rhs == this) {
-          return true;
-        }
-
-        if (!(rhs instanceof StorageDescriptorKey)) {
-          return false;
-        }
-
-        return (hashCodeKey().equals(((StorageDescriptorKey) rhs).hashCodeKey()));
-      }
-    }
-
-    private List<PartitionSpec> get_partitionspecs_grouped_by_storage_descriptor(Table table, List<Partition> partitions)
-      throws NoSuchObjectException, MetaException {
-
-      assert is_partition_spec_grouping_enabled(table);
-
-      final String tablePath = table.getSd().getLocation();
-
-      ImmutableListMultimap<Boolean, Partition> partitionsWithinTableDirectory
-          = Multimaps.index(partitions, new com.google.common.base.Function<Partition, Boolean>() {
-
-        @Override
-        public Boolean apply(Partition input) {
-          return input.getSd().getLocation().startsWith(tablePath);
-        }
-      });
-
-      List<PartitionSpec> partSpecs = new ArrayList<>();
-
-      // Classify partitions within the table directory into groups,
-      // based on shared SD properties.
-
-      Map<StorageDescriptorKey, List<PartitionWithoutSD>> sdToPartList
-          = new HashMap<>();
-
-      if (partitionsWithinTableDirectory.containsKey(true)) {
-
-        ImmutableList<Partition> partsWithinTableDir = partitionsWithinTableDirectory.get(true);
-        for (Partition partition : partsWithinTableDir) {
-
-          PartitionWithoutSD partitionWithoutSD
-              = new PartitionWithoutSD( partition.getValues(),
-              partition.getCreateTime(),
-              partition.getLastAccessTime(),
-              partition.getSd().getLocation().substring(tablePath.length()), partition.getParameters());
-
-          StorageDescriptorKey sdKey = new StorageDescriptorKey(partition.getSd());
-          if (!sdToPartList.containsKey(sdKey)) {
-            sdToPartList.put(sdKey, new ArrayList<>());
-          }
-
-          sdToPartList.get(sdKey).add(partitionWithoutSD);
-
-        } // for (partitionsWithinTableDirectory);
-
-        for (Map.Entry<StorageDescriptorKey, List<PartitionWithoutSD>> entry : sdToPartList.entrySet()) {
-          partSpecs.add(getSharedSDPartSpec(table, entry.getKey(), entry.getValue()));
-        }
-
-      } // Done grouping partitions within table-dir.
-
-      // Lump all partitions outside the tablePath into one PartSpec.
-      if (partitionsWithinTableDirectory.containsKey(false)) {
-        List<Partition> partitionsOutsideTableDir = partitionsWithinTableDirectory.get(false);
-        if (!partitionsOutsideTableDir.isEmpty()) {
-          PartitionSpec partListSpec = new PartitionSpec();
-          partListSpec.setDbName(table.getDbName());
-          partListSpec.setTableName(table.getTableName());
-          partListSpec.setPartitionList(new PartitionListComposingSpec(partitionsOutsideTableDir));
-          partSpecs.add(partListSpec);
-        }
-
-      }
-      return partSpecs;
-    }
-
-    private PartitionSpec getSharedSDPartSpec(Table table, StorageDescriptorKey sdKey, List<PartitionWithoutSD> partitions) {
-
-      StorageDescriptor sd = new StorageDescriptor(sdKey.getSd());
-      sd.setLocation(table.getSd().getLocation()); // Use table-dir as root-dir.
-      PartitionSpecWithSharedSD sharedSDPartSpec =
-          new PartitionSpecWithSharedSD(partitions, sd);
-
-      PartitionSpec ret = new PartitionSpec();
-      ret.setRootPath(sd.getLocation());
-      ret.setSharedSDPartitionSpec(sharedSDPartSpec);
-      ret.setDbName(table.getDbName());
-      ret.setTableName(table.getTableName());
-
-      return ret;
+      return response;
     }
 
     private static boolean is_partition_spec_grouping_enabled(Table table) {
@@ -6050,7 +5971,8 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         List<Partition> partitions = get_partitions_by_filter(dbName, tblName, filter, (short) maxParts);
 
         if (is_partition_spec_grouping_enabled(table)) {
-          partitionSpecs = get_partitionspecs_grouped_by_storage_descriptor(table, partitions);
+          partitionSpecs = MetaStoreServerUtils
+              .getPartitionspecsGroupedByStorageDescriptor(table, partitions);
         }
         else {
           PartitionSpec pSpec = new PartitionSpec();
@@ -8278,7 +8200,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     public WMGetResourcePlanResponse get_resource_plan(WMGetResourcePlanRequest request)
         throws NoSuchObjectException, MetaException, TException {
       try {
-        WMFullResourcePlan rp = getMS().getResourcePlan(request.getResourcePlanName());
+        WMFullResourcePlan rp = getMS().getResourcePlan(request.getResourcePlanName(), request.getNs());
         WMGetResourcePlanResponse resp = new WMGetResourcePlanResponse();
         resp.setResourcePlan(rp);
         return resp;
@@ -8293,7 +8215,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         throws MetaException, TException {
       try {
         WMGetAllResourcePlanResponse resp = new WMGetAllResourcePlanResponse();
-        resp.setResourcePlans(getMS().getAllResourcePlans());
+        resp.setResourcePlans(getMS().getAllResourcePlans(request.getNs()));
         return resp;
       } catch (MetaException e) {
         LOG.error("Exception while trying to retrieve resource plans", e);
@@ -8313,7 +8235,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         // This method will only return full resource plan when activating one,
         // to give the caller the result atomically with the activation.
         WMFullResourcePlan fullPlanAfterAlter = getMS().alterResourcePlan(
-            request.getResourcePlanName(), request.getResourcePlan(),
+            request.getResourcePlanName(), request.getNs(), request.getResourcePlan(),
             request.isIsEnableAndActivate(), request.isIsForceDeactivate(), request.isIsReplace());
         if (fullPlanAfterAlter != null) {
           response.setFullResourcePlan(fullPlanAfterAlter);
@@ -8330,7 +8252,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         WMGetActiveResourcePlanRequest request) throws MetaException, TException {
       try {
         WMGetActiveResourcePlanResponse response = new WMGetActiveResourcePlanResponse();
-        response.setResourcePlan(getMS().getActiveResourcePlan());
+        response.setResourcePlan(getMS().getActiveResourcePlan(request.getNs()));
         return response;
       } catch (MetaException e) {
         LOG.error("Exception while trying to get active resource plan", e);
@@ -8342,7 +8264,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     public WMValidateResourcePlanResponse validate_resource_plan(WMValidateResourcePlanRequest request)
         throws NoSuchObjectException, MetaException, TException {
       try {
-        return getMS().validateResourcePlan(request.getResourcePlanName());
+        return getMS().validateResourcePlan(request.getResourcePlanName(), request.getNs());
       } catch (MetaException e) {
         LOG.error("Exception while trying to validate resource plan", e);
         throw e;
@@ -8353,7 +8275,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     public WMDropResourcePlanResponse drop_resource_plan(WMDropResourcePlanRequest request)
         throws NoSuchObjectException, InvalidOperationException, MetaException, TException {
       try {
-        getMS().dropResourcePlan(request.getResourcePlanName());
+        getMS().dropResourcePlan(request.getResourcePlanName(), request.getNs());
         return new WMDropResourcePlanResponse();
       } catch (MetaException e) {
         LOG.error("Exception while trying to drop resource plan", e);
@@ -8389,7 +8311,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     public WMDropTriggerResponse drop_wm_trigger(WMDropTriggerRequest request)
         throws NoSuchObjectException, InvalidOperationException, MetaException, TException {
       try {
-        getMS().dropWMTrigger(request.getResourcePlanName(), request.getTriggerName());
+        getMS().dropWMTrigger(request.getResourcePlanName(), request.getTriggerName(), request.getNs());
         return new WMDropTriggerResponse();
       } catch (MetaException e) {
         LOG.error("Exception while trying to drop trigger.", e);
@@ -8403,7 +8325,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         throws NoSuchObjectException, MetaException, TException {
       try {
         List<WMTrigger> triggers =
-            getMS().getTriggersForResourcePlan(request.getResourcePlanName());
+            getMS().getTriggersForResourcePlan(request.getResourcePlanName(), request.getNs());
         WMGetTriggersForResourePlanResponse response = new WMGetTriggersForResourePlanResponse();
         response.setTriggers(triggers);
         return response;
@@ -8443,7 +8365,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     public WMDropPoolResponse drop_wm_pool(WMDropPoolRequest request)
         throws NoSuchObjectException, InvalidOperationException, MetaException, TException {
       try {
-        getMS().dropWMPool(request.getResourcePlanName(), request.getPoolPath());
+        getMS().dropWMPool(request.getResourcePlanName(), request.getPoolPath(), request.getNs());
         return new WMDropPoolResponse();
       } catch (MetaException e) {
         LOG.error("Exception while trying to drop WMPool", e);
@@ -8482,11 +8404,11 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         NoSuchObjectException, InvalidObjectException, MetaException, TException {
       try {
         if (request.isDrop()) {
-          getMS().dropWMTriggerToPoolMapping(
-              request.getResourcePlanName(), request.getTriggerName(), request.getPoolPath());
+          getMS().dropWMTriggerToPoolMapping(request.getResourcePlanName(),
+              request.getTriggerName(), request.getPoolPath(), request.getNs());
         } else {
-          getMS().createWMTriggerToPoolMapping(
-              request.getResourcePlanName(), request.getTriggerName(), request.getPoolPath());
+          getMS().createWMTriggerToPoolMapping(request.getResourcePlanName(),
+              request.getTriggerName(), request.getPoolPath(), request.getNs());
         }
         return new WMCreateOrDropTriggerToPoolMappingResponse();
       } catch (MetaException e) {

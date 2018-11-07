@@ -54,6 +54,7 @@ public class ExplainWork implements Serializable {
   boolean appendTaskType;
 
   String cboInfo;
+  String cboPlan;
 
   private String optimizedSQL;
 
@@ -70,7 +71,8 @@ public class ExplainWork implements Serializable {
       BaseSemanticAnalyzer analyzer,
       ExplainConfiguration config,
       String cboInfo,
-      String optimizedSQL) {
+      String optimizedSQL,
+      String cboPlan) {
     this.resFile = resFile;
     this.rootTasks = new ArrayList<Task<?>>(rootTasks);
     this.fetchTask = fetchTask;
@@ -87,6 +89,7 @@ public class ExplainWork implements Serializable {
     this.pCtx = pCtx;
     this.cboInfo = cboInfo;
     this.optimizedSQL = optimizedSQL;
+    this.cboPlan = cboPlan;
     this.config = config;
   }
 
@@ -165,12 +168,20 @@ public class ExplainWork implements Serializable {
     return config.getVectorizationDetailLevel();
   }
 
+  public boolean isDebug() {
+    return config.isDebug();
+  }
+
   public ParseContext getParseContext() {
     return pCtx;
   }
 
   public void setParseContext(ParseContext pCtx) {
     this.pCtx = pCtx;
+  }
+
+  public boolean isCbo() {
+    return config.isCbo();
   }
 
   public boolean isLogical() {
@@ -211,6 +222,14 @@ public class ExplainWork implements Serializable {
 
   public void setOptimizedSQL(String optimizedSQL) {
     this.optimizedSQL = optimizedSQL;
+  }
+
+  public String getCboPlan() {
+    return cboPlan;
+  }
+
+  public void setCboPlan(String cboPlan) {
+    this.cboPlan = cboPlan;
   }
 
   public ExplainConfiguration getConfig() {

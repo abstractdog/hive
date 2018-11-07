@@ -546,6 +546,37 @@ public interface RawStore extends Configurable {
       throws MetaException, NoSuchObjectException;
 
   /**
+   * Generic Partition request API, providing different kinds of filtering and controlling output.
+   *
+   * @param table          table for which whose partitions are requested
+   *                       * @param table table for which partitions are requested
+   * @param projectionSpec the projection spec from the <code>GetPartitionsRequest</code>
+   *                       This projection spec includes a fieldList which represents the fields which must be returned.
+   *                       Any other field which is not in the fieldList may be unset in the returned
+   *                       partitions (it is up to the implementation to decide whether it chooses to
+   *                       include or exclude such fields). E.g. setting the field list to <em>sd.location</em>,
+   *                       <em>serdeInfo.name</em>, <em>sd.cols.name</em>, <em>sd.cols.type</em> will
+   *                       return partitions which will have location field set in the storage descriptor.
+   *                       Also the serdeInf in the returned storage descriptor will only have name field
+   *                       set. This applies to multi-valued fields as well like sd.cols, so in the
+   *                       example above only name and type fields will be set for <em>sd.cols</em>.
+   *                       If the <em>fieldList</em> is empty or not present, all the fields will be set.
+   *                       Additionally, it also includes a includeParamKeyPattern and excludeParamKeyPattern
+   *                       which is a SQL-92 compliant regex pattern to include or exclude parameters. The paramKeyPattern
+   *                       supports _ or % wildcards which represent one character and 0 or more characters respectively
+   * @param filterSpec     The filter spec from <code>GetPartitionsRequest</code> which includes the filter mode
+   *                       and the list of filter strings. The filter mode could be BY_NAMES, BY_VALUES or BY_EXPR
+   *                       to filter by partition names, partition values or expression. The filter strings are provided
+   *                       in the list of filters within the filterSpec. When more than one filters are provided in the list
+   *                       they are logically AND together
+   * @return List of matching partitions which which may be partially filled according to fieldList.
+   * @throws MetaException         in case of errors
+   * @throws NoSuchObjectException when table isn't found
+   */
+  List<Partition> getPartitionSpecsByFilterAndProjection(Table table,
+      GetPartitionsProjectionSpec projectionSpec, GetPartitionsFilterSpec filterSpec)
+      throws MetaException, NoSuchObjectException;
+  /**
    * Get partitions using an already parsed expression.
    * @param catName catalog name.
    * @param dbName database name
@@ -1509,21 +1540,21 @@ public interface RawStore extends Configurable {
   void createResourcePlan(WMResourcePlan resourcePlan, String copyFrom, int defaultPoolSize)
       throws AlreadyExistsException, MetaException, InvalidObjectException, NoSuchObjectException;
 
-  WMFullResourcePlan getResourcePlan(String name) throws NoSuchObjectException, MetaException;
+  WMFullResourcePlan getResourcePlan(String name, String string) throws NoSuchObjectException, MetaException;
 
-  List<WMResourcePlan> getAllResourcePlans() throws MetaException;
+  List<WMResourcePlan> getAllResourcePlans(String string) throws MetaException;
 
-  WMFullResourcePlan alterResourcePlan(String name, WMNullableResourcePlan resourcePlan,
+  WMFullResourcePlan alterResourcePlan(String name, String ns, WMNullableResourcePlan resourcePlan,
       boolean canActivateDisabled, boolean canDeactivate, boolean isReplace)
       throws AlreadyExistsException, NoSuchObjectException, InvalidOperationException,
           MetaException;
 
-  WMFullResourcePlan getActiveResourcePlan() throws MetaException;
+  WMFullResourcePlan getActiveResourcePlan(String ns) throws MetaException;
 
-  WMValidateResourcePlanResponse validateResourcePlan(String name)
+  WMValidateResourcePlanResponse validateResourcePlan(String name, String ns)
       throws NoSuchObjectException, InvalidObjectException, MetaException;
 
-  void dropResourcePlan(String name) throws NoSuchObjectException, MetaException;
+  void dropResourcePlan(String name, String ns) throws NoSuchObjectException, MetaException;
 
   void createWMTrigger(WMTrigger trigger)
       throws AlreadyExistsException, NoSuchObjectException, InvalidOperationException,
@@ -1532,10 +1563,10 @@ public interface RawStore extends Configurable {
   void alterWMTrigger(WMTrigger trigger)
       throws NoSuchObjectException, InvalidOperationException, MetaException;
 
-  void dropWMTrigger(String resourcePlanName, String triggerName)
+  void dropWMTrigger(String resourcePlanName, String triggerName, String ns)
       throws NoSuchObjectException, InvalidOperationException, MetaException;
 
-  List<WMTrigger> getTriggersForResourcePlan(String resourcePlanName)
+  List<WMTrigger> getTriggersForResourcePlan(String resourcePlanName, String ns)
       throws NoSuchObjectException, MetaException;
 
   void createPool(WMPool pool) throws AlreadyExistsException, NoSuchObjectException,
@@ -1544,7 +1575,7 @@ public interface RawStore extends Configurable {
   void alterPool(WMNullablePool pool, String poolPath) throws AlreadyExistsException,
       NoSuchObjectException, InvalidOperationException, MetaException;
 
-  void dropWMPool(String resourcePlanName, String poolPath)
+  void dropWMPool(String resourcePlanName, String poolPath, String ns)
       throws NoSuchObjectException, InvalidOperationException, MetaException;
 
   void createOrUpdateWMMapping(WMMapping mapping, boolean update)
@@ -1554,11 +1585,11 @@ public interface RawStore extends Configurable {
   void dropWMMapping(WMMapping mapping)
       throws NoSuchObjectException, InvalidOperationException, MetaException;
 
-  void createWMTriggerToPoolMapping(String resourcePlanName, String triggerName, String poolPath)
+  void createWMTriggerToPoolMapping(String resourcePlanName, String triggerName, String poolPath, String ns)
       throws AlreadyExistsException, NoSuchObjectException, InvalidOperationException,
           MetaException;
 
-  void dropWMTriggerToPoolMapping(String resourcePlanName, String triggerName, String poolPath)
+  void dropWMTriggerToPoolMapping(String resourcePlanName, String triggerName, String poolPath, String ns)
       throws NoSuchObjectException, InvalidOperationException, MetaException;
 
   /**

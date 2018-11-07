@@ -30,6 +30,7 @@ import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.SQLForeignKey;
 import org.apache.hadoop.hive.metastore.api.SQLPrimaryKey;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.api.NotificationEvent;
 
 import static org.junit.Assert.assertEquals;
 
@@ -82,6 +83,10 @@ public class InjectableBehaviourObjectStore extends ObjectStore {
 
   private static com.google.common.base.Function<CallerArguments, Boolean> callerVerifier = null;
 
+  private static com.google.common.base.Function<NotificationEvent, Boolean> addNotificationEventModifier = null;
+
+  private static com.google.common.base.Function<CallerArguments, Boolean> alterTableModifier = null;
+
   // Methods to set/reset getTable modifier
   public static void setGetTableBehaviour(com.google.common.base.Function<Table, Table> modifier){
     getTableModifier = (modifier == null) ? com.google.common.base.Functions.identity() : modifier;
@@ -115,6 +120,14 @@ public class InjectableBehaviourObjectStore extends ObjectStore {
     getNextNotificationModifier = (modifier == null)? com.google.common.base.Functions.identity() : modifier;
   }
 
+  public static void setAddNotificationModifier(com.google.common.base.Function<NotificationEvent, Boolean> modifier) {
+    addNotificationEventModifier = modifier;
+  }
+
+  public static void resetAddNotificationModifier() {
+    setAddNotificationModifier(null);
+  }
+
   public static void resetGetNextNotificationBehaviour(){
     setGetNextNotificationBehaviour(null);
   }
@@ -126,6 +139,13 @@ public class InjectableBehaviourObjectStore extends ObjectStore {
 
   public static void resetCallerVerifier(){
     setCallerVerifier(null);
+  }
+
+  public static void setAlterTableModifier(com.google.common.base.Function<CallerArguments, Boolean> modifier) {
+    alterTableModifier = modifier;
+  }
+  public static void resetAlterTableModifier() {
+    setAlterTableModifier(null);
   }
 
   // ObjectStore methods to be overridden with injected behavior
@@ -154,6 +174,33 @@ public class InjectableBehaviourObjectStore extends ObjectStore {
   @Override
   public NotificationEventResponse getNextNotification(NotificationEventRequest rqst) {
     return getNextNotificationModifier.apply(super.getNextNotification(rqst));
+  }
+
+  @Override
+  public Table alterTable(String catName, String dbname, String name, Table newTable, String queryValidWriteIds)
+          throws InvalidObjectException, MetaException {
+    if (alterTableModifier != null) {
+      CallerArguments args = new CallerArguments(dbname);
+      args.tblName = name;
+      Boolean success = alterTableModifier.apply(args);
+      if ((success != null) && !success) {
+        throw new MetaException("InjectableBehaviourObjectStore: Invalid alterTable operation on Catalog : " + catName +
+                " DB: " + dbname + " table: " + name);
+      }
+    }
+    return super.alterTable(catName, dbname, name, newTable, queryValidWriteIds);
+  }
+
+  @Override
+  public void addNotificationEvent(NotificationEvent entry) throws MetaException {
+    if (addNotificationEventModifier != null) {
+      Boolean success = addNotificationEventModifier.apply(entry);
+      if ((success != null) && !success) {
+        throw new MetaException("InjectableBehaviourObjectStore: Invalid addNotificationEvent operation on DB: "
+                + entry.getDbName() + " table: " + entry.getTableName() + " event : " + entry.getEventType());
+      }
+    }
+    super.addNotificationEvent(entry);
   }
 
   @Override

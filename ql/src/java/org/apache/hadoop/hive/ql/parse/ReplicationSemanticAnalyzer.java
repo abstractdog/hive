@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.ReplChangeManager;
+import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.QueryState;
@@ -40,12 +41,16 @@ import org.apache.hadoop.hive.ql.parse.repl.load.DumpMetaData;
 import org.apache.hadoop.hive.ql.plan.PlanUtils;
 
 import java.io.FileNotFoundException;
+import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.HIVEQUERYID;
 import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.REPL_DUMP_METADATA_ONLY;
+import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.REPL_ENABLE_MOVE_OPTIMIZATION;
+import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.REPL_MOVE_OPTIMIZED_FILE_SCHEMES;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_DBNAME;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_LIMIT;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_CONFIG;
@@ -216,6 +221,29 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
+  private boolean ifEnableMoveOptimization(Path filePath, org.apache.hadoop.conf.Configuration conf) throws Exception {
+    if (filePath == null) {
+      throw new HiveException("filePath cannot be null");
+    }
+
+    URI uri = filePath.toUri();
+    String scheme = uri.getScheme();
+    scheme = StringUtils.isBlank(scheme) ? FileSystem.get(uri, conf).getScheme() : scheme;
+    if (StringUtils.isBlank(scheme)) {
+      throw new HiveException("Cannot get valid scheme for " + filePath);
+    }
+
+    LOG.info("scheme is " + scheme);
+
+    String[] schmeList = conf.get(REPL_MOVE_OPTIMIZED_FILE_SCHEMES.varname).toLowerCase().split(",");
+    for (String schemeIter : schmeList) {
+      if (schemeIter.trim().equalsIgnoreCase(scheme.trim())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // REPL LOAD
   private void initReplLoad(ASTNode ast) throws SemanticException {
     path = PlanUtils.stripQuotes(ast.getChild(0).getText());
@@ -302,6 +330,18 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
         throw new FileNotFoundException(ErrorMsg.REPL_LOAD_PATH_NOT_FOUND.getMsg());
       }
 
+      // Ths config is set to make sure that in case of s3 replication, move is skipped.
+      try {
+        Warehouse wh = new Warehouse(conf);
+        Path filePath = wh.getWhRoot();
+        if (ifEnableMoveOptimization(filePath, conf)) {
+          conf.setBoolVar(REPL_ENABLE_MOVE_OPTIMIZATION, true);
+          LOG.info(" Set move optimization to true for warehouse " + filePath.toString());
+        }
+      } catch (Exception e) {
+        throw new SemanticException(e.getMessage(), e);
+      }
+
       // Now, the dumped path can be one of three things:
       // a) It can be a db dump, in which case we expect a set of dirs, each with a
       // db name, and with a _metadata file in each, and table dirs inside that.
@@ -327,21 +367,8 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
         LOG.debug("{} contains an bootstrap dump", loadPath);
       }
 
-      if ((!evDump) && (tblNameOrPattern != null) && !(tblNameOrPattern.isEmpty())) {
-        ReplLoadWork replLoadWork = new ReplLoadWork(conf, loadPath.toString(), dbNameOrPattern,
-                tblNameOrPattern, queryState.getLineageState(), false);
-        rootTasks.add(TaskFactory.get(replLoadWork, conf));
-        return;
-      }
-
-      FileStatus[] srcs = LoadSemanticAnalyzer.matchFilesOrDir(fs, loadPath);
-      if (srcs == null || (srcs.length == 0)) {
-        LOG.warn("Nothing to load at {}", loadPath.toUri().toString());
-        return;
-      }
-
       ReplLoadWork replLoadWork = new ReplLoadWork(conf, loadPath.toString(), dbNameOrPattern,
-              tblNameOrPattern, queryState.getLineageState(), evDump);
+              tblNameOrPattern, queryState.getLineageState(), evDump, dmd.getEventTo());
       rootTasks.add(TaskFactory.get(replLoadWork, conf));
     } catch (Exception e) {
       // TODO : simple wrap & rethrow for now, clean up with error codes
@@ -358,7 +385,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
         if (key.equalsIgnoreCase(HIVEQUERYID.varname)) {
           String queryTag = config.getValue();
           if (!StringUtils.isEmpty(queryTag)) {
-            QueryState.setMapReduceJobTag(conf, queryTag);
+            QueryState.setApplicationTag(conf, queryTag);
           }
           queryState.setQueryTag(queryTag);
         } else {

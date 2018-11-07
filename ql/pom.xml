@@ -448,6 +448,11 @@
       <artifactId>opencsv</artifactId>
       <version>${opencsv.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-standalone-metastore-server</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <!-- test intra-project -->
     <dependency>
       <groupId>org.apache.hive</groupId>
@@ -897,6 +902,19 @@
             </goals>
             <configuration>
               <classifier>core</classifier>
+            </configuration>
+          </execution>
+          <execution>
+            <id>fallbackauthorizer-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>fallbackauthorizer</classifier>
+              <includes>
+                <include>org/apache/hadoop/hive/ql/security/authorization/plugin/fallback/*.class</include>
+              </includes>
             </configuration>
           </execution>
         </executions>

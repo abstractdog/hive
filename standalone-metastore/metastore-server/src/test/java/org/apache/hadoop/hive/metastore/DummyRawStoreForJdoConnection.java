@@ -20,6 +20,8 @@ package org.apache.hadoop.hive.metastore;
 
 import org.apache.hadoop.hive.common.TableName;
 import org.apache.hadoop.hive.metastore.api.CreationMetadata;
+import org.apache.hadoop.hive.metastore.api.GetPartitionsFilterSpec;
+import org.apache.hadoop.hive.metastore.api.GetPartitionsProjectionSpec;
 import org.apache.hadoop.hive.metastore.api.ISchemaName;
 import org.apache.hadoop.hive.metastore.api.SchemaVersionDescriptor;
 import org.apache.hadoop.hive.metastore.api.Catalog;
@@ -376,6 +378,13 @@ public class DummyRawStoreForJdoConnection implements RawStore {
                                                String filter, short maxParts)
       throws MetaException, NoSuchObjectException {
 
+    return Collections.emptyList();
+  }
+
+  @Override
+  public List<Partition> getPartitionSpecsByFilterAndProjection(Table table,
+      GetPartitionsProjectionSpec projectSpec, GetPartitionsFilterSpec filterSpec)
+      throws MetaException, NoSuchObjectException {
     return Collections.emptyList();
   }
 
@@ -1042,36 +1051,36 @@ public class DummyRawStoreForJdoConnection implements RawStore {
   }
 
   @Override
-  public WMFullResourcePlan getResourcePlan(String name) throws NoSuchObjectException {
+  public WMFullResourcePlan getResourcePlan(String name, String ns) throws NoSuchObjectException {
     return null;
   }
 
   @Override
-  public List<WMResourcePlan> getAllResourcePlans() throws MetaException {
+  public List<WMResourcePlan> getAllResourcePlans(String ns) throws MetaException {
     return null;
   }
 
   @Override
   public WMFullResourcePlan alterResourcePlan(
-      String name, WMNullableResourcePlan resourcePlan, boolean canActivateDisabled, boolean canDeactivate,
+      String name, String ns, WMNullableResourcePlan resourcePlan, boolean canActivateDisabled, boolean canDeactivate,
       boolean isReplace)
       throws NoSuchObjectException, InvalidOperationException, MetaException {
     return null;
   }
 
   @Override
-  public WMFullResourcePlan getActiveResourcePlan() throws MetaException {
+  public WMFullResourcePlan getActiveResourcePlan(String ns) throws MetaException {
     return null;
   }
 
   @Override
-  public WMValidateResourcePlanResponse validateResourcePlan(String name)
+  public WMValidateResourcePlanResponse validateResourcePlan(String name, String ns)
       throws NoSuchObjectException, InvalidObjectException, MetaException {
     return null;
   }
 
   @Override
-  public void dropResourcePlan(String name) throws NoSuchObjectException, MetaException {
+  public void dropResourcePlan(String name, String ns) throws NoSuchObjectException, MetaException {
   }
 
   @Override
@@ -1084,12 +1093,12 @@ public class DummyRawStoreForJdoConnection implements RawStore {
   }
 
   @Override
-  public void dropWMTrigger(String resourcePlanName, String triggerName)
+  public void dropWMTrigger(String resourcePlanName, String triggerName, String ns)
       throws NoSuchObjectException, MetaException {
   }
 
   @Override
-  public List<WMTrigger> getTriggersForResourcePlan(String resourcePlanName)
+  public List<WMTrigger> getTriggersForResourcePlan(String resourcePlanName, String ns)
       throws NoSuchObjectException, MetaException {
     return null;
   }
@@ -1105,7 +1114,7 @@ public class DummyRawStoreForJdoConnection implements RawStore {
   }
 
   @Override
-  public void dropWMPool(String resourcePlanName, String poolPath)
+  public void dropWMPool(String resourcePlanName, String poolPath, String ns)
       throws NoSuchObjectException, InvalidOperationException, MetaException {
   }
 
@@ -1122,13 +1131,13 @@ public class DummyRawStoreForJdoConnection implements RawStore {
 
   @Override
   public void createWMTriggerToPoolMapping(String resourcePlanName, String triggerName,
-      String poolPath) throws AlreadyExistsException, NoSuchObjectException,
+      String poolPath, String ns) throws AlreadyExistsException, NoSuchObjectException,
       InvalidOperationException, MetaException {
   }
 
   @Override
   public void dropWMTriggerToPoolMapping(String resourcePlanName, String triggerName,
-      String poolPath) throws NoSuchObjectException, InvalidOperationException, MetaException {
+      String poolPath, String ns) throws NoSuchObjectException, InvalidOperationException, MetaException {
   }
 
   @Override

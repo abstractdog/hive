@@ -31,21 +31,21 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.CharStreams;
-import com.metamx.common.JodaUtils;
-import com.metamx.common.MapUtils;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.NoopEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.FullResponseHandler;
-import com.metamx.http.client.response.FullResponseHolder;
-import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.JodaUtils;
+import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHandler;
+import io.druid.java.util.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
@@ -672,13 +672,14 @@ public final class DruidStorageHandlerUtils {
     );
   }
 
-  public static String createScanAllQuery(String dataSourceName) throws JsonProcessingException {
+  public static String createScanAllQuery(String dataSourceName, List<String> columns) throws JsonProcessingException {
     final ScanQuery.ScanQueryBuilder scanQueryBuilder = ScanQuery.newScanQueryBuilder();
     final List<Interval> intervals = Arrays.asList(DEFAULT_INTERVAL);
     ScanQuery scanQuery = scanQueryBuilder
         .dataSource(dataSourceName)
         .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
         .intervals(new MultipleIntervalSegmentSpec(intervals))
+        .columns(columns)
         .build();
     return JSON_MAPPER.writeValueAsString(scanQuery);
   }
@@ -826,12 +827,16 @@ public final class DruidStorageHandlerUtils {
         tableProperties.getProperty(Constants.DRUID_SEGMENT_GRANULARITY) != null ?
             tableProperties.getProperty(Constants.DRUID_SEGMENT_GRANULARITY) :
             HiveConf.getVar(configuration, HiveConf.ConfVars.HIVE_DRUID_INDEXING_GRANULARITY);
+    final boolean rollup = tableProperties.getProperty(Constants.DRUID_ROLLUP) != null ?
+        Boolean.parseBoolean(tableProperties.getProperty(Constants.DRUID_SEGMENT_GRANULARITY)):
+        HiveConf.getBoolVar(configuration, HiveConf.ConfVars.HIVE_DRUID_ROLLUP);
     return new UniformGranularitySpec(
         Granularity.fromString(segmentGranularity),
         Granularity.fromString(
             tableProperties.getProperty(Constants.DRUID_QUERY_GRANULARITY) == null
                 ? "NONE"
                 : tableProperties.getProperty(Constants.DRUID_QUERY_GRANULARITY)),
+        rollup,
         null
     );
   }

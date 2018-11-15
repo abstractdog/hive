@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestUtil.FsType;
 import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
 import org.apache.hive.testutils.HiveTestEnvSetup;
@@ -241,7 +242,9 @@ public abstract class AbstractCliConfig {
     }
 
     for (String qFileName : excludedQueryFileNames) {
-      if (!isQFileSpecified()) {
+      // in case of running as ptest, exclusions should be respected,
+      // because test drivers receive every qfiles regardless of exclusions
+      if ("hiveptest".equals(System.getProperty("user.name")) || !isQFileSpecified()) {
         testFiles.remove(new File(queryDir, qFileName));
       }
     }

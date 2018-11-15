@@ -45,6 +45,8 @@ import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;;
+
 
 @Description(name = "percentile_cont", value = "_FUNC_(input, pc) - Returns the percentile of expr at pc (range: [0,1]).")
 public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
@@ -70,15 +72,16 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     case SHORT:
     case INT:
     case LONG:
-    case VOID:
       return new PercentileContLongEvaluator();
-    case TIMESTAMP:
     case FLOAT:
     case DOUBLE:
+      return new PercentileContDoubleEvaluator();
     case STRING:
+    case TIMESTAMP:
     case VARCHAR:
     case CHAR:
     case DECIMAL:
+    case VOID:
     case BOOLEAN:
     case DATE:
     default:
@@ -98,12 +101,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
   }
 
-  /**
-   * The evaluator for percentile computation based on long.
-   */
-  public static class PercentileContLongEvaluator extends GenericUDAFEvaluator {
-    PercentileCalculator calc = new PercentileContCalculator();
-
+  public abstract static class PercentileContEvaluator<T, U> extends GenericUDAFEvaluator {
     /**
      * A state class to store intermediate aggregation results.
      */
@@ -124,37 +122,19 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     DoubleWritable result;
 
     // PARTIAL2 and FINAL inputs
-    private transient StructObjectInspector soi;
-    private transient StructField countsField;
-    private transient StructField percentilesField;
-
+    protected transient StructObjectInspector soi;
+    protected transient StructField countsField;
+    protected transient StructField percentilesField;
+    
     public ObjectInspector init(Mode m, ObjectInspector[] parameters) throws HiveException {
       super.init(m, parameters);
 
-      // init inspectors...
-      if (mode == Mode.PARTIAL1 || mode == Mode.COMPLETE) {// ...for real input data
-        inputOI = (PrimitiveObjectInspector) parameters[0];
-      } else { // ...for partial result as input
-        soi = (StructObjectInspector) parameters[0];
+      initInspectors(parameters);
 
-        countsField = soi.getStructFieldRef("counts");
-        percentilesField = soi.getStructFieldRef("percentiles");
-
-        countsOI = (MapObjectInspector) countsField.getFieldObjectInspector();
-        percentilesOI = (ListObjectInspector) percentilesField.getFieldObjectInspector();
-      }
-
-      // init inspectors...
       if (mode == Mode.PARTIAL1 || mode == Mode.PARTIAL2) {// ...for partial result
         partialResult = new Object[2];
 
-        ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
-
-        foi.add(ObjectInspectorFactory.getStandardMapObjectInspector(
-            PrimitiveObjectInspectorFactory.writableLongObjectInspector,
-            PrimitiveObjectInspectorFactory.writableLongObjectInspector));
-        foi.add(ObjectInspectorFactory.getStandardListObjectInspector(
-            PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
+        ArrayList<ObjectInspector> foi = getPartialInspectors();
 
         ArrayList<String> fname = new ArrayList<String>();
         fname.add("counts");
@@ -166,7 +146,23 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
       }
     }
+    
+    protected abstract ArrayList<ObjectInspector> getPartialInspectors();
 
+    protected void initInspectors(ObjectInspector[] parameters) {
+      if (mode == Mode.PARTIAL1 || mode == Mode.COMPLETE) {// ...for real input data
+        inputOI = (PrimitiveObjectInspector) parameters[0];
+      } else { // ...for partial result as input
+        soi = (StructObjectInspector) parameters[0];
+
+        countsField = soi.getStructFieldRef("counts");
+        percentilesField = soi.getStructFieldRef("percentiles");
+
+        countsOI = (MapObjectInspector) countsField.getFieldObjectInspector();
+        percentilesOI = (ListObjectInspector) percentilesField.getFieldObjectInspector();
+      }
+    }
+    
     @Override
     public Object terminatePartial(AggregationBuffer agg) throws HiveException {
       PercentileAgg percAgg = (PercentileAgg) agg;
@@ -189,7 +185,13 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         percAgg.counts.clear();
       }
     }
-
+    
+    protected void validatePercentile(Double percentile) {
+      if (percentile < 0.0 || percentile > 1.0) {
+        throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
+      }
+    }
+    
     @Override
     public void iterate(AggregationBuffer agg, Object[] parameters) throws HiveException {
       PercentileAgg percAgg = (PercentileAgg) agg;
@@ -205,16 +207,61 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         return;
       }
 
-      Long input = PrimitiveObjectInspectorUtils.getLong(parameters[0], inputOI);
-
+      T input = getInput(parameters[0], inputOI);
+          
       if (input != null) {
-        increment(percAgg, new LongWritable(input), 1);
+        increment(percAgg, wrapInput(input), 1);
       }
     }
 
-    private void validatePercentile(Double percentile) {
-      if (percentile < 0.0 || percentile > 1.0) {
-        throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
+    protected abstract T getInput(Object object, PrimitiveObjectInspector inputOI);
+
+    protected abstract U wrapInput(T input);
+
+    protected abstract void increment(PercentileAgg s, U input, long i);
+  }
+
+  /**
+   * The evaluator for percentile computation based on long.
+   */
+  public static class PercentileContLongEvaluator
+      extends PercentileContEvaluator<Long, LongWritable> {
+    PercentileContLongCalculator calc = new PercentileContLongCalculator();
+
+    protected ArrayList<ObjectInspector> getPartialInspectors() {
+      ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
+
+      foi.add(ObjectInspectorFactory.getStandardMapObjectInspector(
+          PrimitiveObjectInspectorFactory.writableLongObjectInspector,
+          PrimitiveObjectInspectorFactory.writableLongObjectInspector));
+      foi.add(ObjectInspectorFactory.getStandardListObjectInspector(
+          PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
+      return foi;
+    }
+
+    protected Long getInput(Object parameter, PrimitiveObjectInspector inputOI) {
+      return PrimitiveObjectInspectorUtils.getLong(parameter, inputOI);
+    }
+
+    protected LongWritable wrapInput(Long input) {
+      return new LongWritable(input);
+    }
+
+    /**
+     * Increment the State object with o as the key, and i as the count.
+     */
+    protected void increment(PercentileAgg s, LongWritable input, long i) {
+      if (s.counts == null) {
+        s.counts = new HashMap<LongWritable, LongWritable>();
+      }
+      LongWritable count = s.counts.get(input);
+      if (count == null) {
+        // We have to create a new object, because the object o belongs
+        // to the code that creates it and may get its value changed.
+        LongWritable key = new LongWritable(input.get());
+        s.counts.put(key, new LongWritable(i));
+      } else {
+        count.set(count.get() + i);
       }
     }
 
@@ -292,31 +339,76 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       }
       return total;
     }
+  }
 
-    /**
-     * Increment the State object with o as the key, and i as the count.
-     */
-    void increment(PercentileAgg s, LongWritable input, long i) {
-      if (s.counts == null) {
-        s.counts = new HashMap<LongWritable, LongWritable>();
-      }
-      LongWritable count = s.counts.get(input);
-      if (count == null) {
-        // We have to create a new object, because the object o belongs
-        // to the code that creates it and may get its value changed.
-        LongWritable key = new LongWritable(input.get());
-        s.counts.put(key, new LongWritable(i));
-      } else {
-        count.set(count.get() + i);
-      }
+  
+  
+  
+  
+  
+  
+  
+  
+  /**
+   * The evaluator for percentile computation based on long.
+   */
+  public static class PercentileContDoubleEvaluator
+      extends PercentileContEvaluator<Double, DoubleWritable> {
+
+    @Override
+    protected ArrayList<ObjectInspector> getPartialInspectors() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    protected Double getInput(Object object, PrimitiveObjectInspector inputOI) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    protected DoubleWritable wrapInput(Double input) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    protected void increment(PercentileAgg s, DoubleWritable input, long i) {
+      // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge(AggregationBuffer agg, Object partial) throws HiveException {
+      // TODO Auto-generated method stub
+      
+    }
+
+    @Override
+    public Object terminate(AggregationBuffer agg) throws HiveException {
+      // TODO Auto-generated method stub
+      return null;
     }
   }
-
-  public static interface PercentileCalculator {
-    double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList, double position);
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  public static abstract class PercentileContCalculator<T> {
+    abstract double getPercentile(List<Map.Entry<LongWritable, T>> entriesList, double position);
   }
 
-  public static class PercentileContCalculator implements PercentileCalculator {
+  public static class PercentileContLongCalculator extends PercentileContCalculator<LongWritable> {
     /**
      * Get the percentile value.
      */

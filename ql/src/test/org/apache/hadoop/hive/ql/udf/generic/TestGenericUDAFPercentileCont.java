@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.udf.generic;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContDoubleEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContEvaluator.PercentileAgg;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongCalculator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongEvaluator;
@@ -83,6 +84,12 @@ public class TestGenericUDAFPercentileCont {
     checkPercentile(items, 0.72, 76.64);
   }
 
+  @Test
+  public void testDoubleNoInterpolation() throws Exception {
+    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    checkPercentile(items, 0.5, 3);
+  }
+
   @SuppressWarnings({ "unchecked", "resource" })
   private void checkPercentile(Long[] items, double percentile, double expected) throws Exception {
     PercentileContLongEvaluator eval = new GenericUDAFPercentileCont.PercentileContLongEvaluator();
@@ -94,6 +101,25 @@ public class TestGenericUDAFPercentileCont {
 
     for (int i = 0; i < items.length; i++) {
       eval.increment(agg, new LongWritable(items[i]), 1);
+    }
+
+    DoubleWritable result = (DoubleWritable) eval.terminate(agg);
+
+    Assert.assertEquals(expected, result.get(), 0.01);
+    eval.close();
+  }
+
+  @SuppressWarnings({ "unchecked", "resource" })
+  private void checkPercentile(Double[] items, double percentile, double expected) throws Exception {
+    PercentileContDoubleEvaluator eval = new GenericUDAFPercentileCont.PercentileContDoubleEvaluator();
+
+    PercentileAgg agg = new PercentileContLongEvaluator().new PercentileAgg();
+
+    agg.percentiles = new ArrayList<DoubleWritable>();
+    agg.percentiles.add(new DoubleWritable(percentile));
+
+    for (int i = 0; i < items.length; i++) {
+      eval.increment(agg, new DoubleWritable(items[i]), 1);
     }
 
     DoubleWritable result = (DoubleWritable) eval.terminate(agg);

@@ -1250,8 +1250,8 @@ public class TypeCheckProcFactory {
           }
           desc = ExprNodeGenericFuncDesc.newInstance(genericUDF, funcText,
               childrenList);
-        } else if (ctx.isFoldExpr() && canConvertIntoNvl(genericUDF, children)) {
-          // Rewrite CASE into NVL
+        } else if (ctx.isFoldExpr() && canConvertIntoCoalesce(genericUDF, children)) {
+          // Rewrite CASE into COALESCE
           desc = ExprNodeGenericFuncDesc.newInstance(new GenericUDFCoalesce(),
                   Lists.newArrayList(children.get(0), new ExprNodeConstantDesc(false)));
           if (Boolean.FALSE.equals(((ExprNodeConstantDesc) children.get(1)).getValue())) {
@@ -1427,7 +1427,7 @@ public class TypeCheckProcFactory {
       return constVal;
     }
 
-    private boolean canConvertIntoNvl(GenericUDF genericUDF, ArrayList<ExprNodeDesc> children) {
+    private boolean canConvertIntoCoalesce(GenericUDF genericUDF, ArrayList<ExprNodeDesc> children) {
       if (genericUDF instanceof GenericUDFWhen && children.size() == 3 &&
               children.get(1) instanceof ExprNodeConstantDesc &&
               children.get(2) instanceof ExprNodeConstantDesc) {

@@ -1259,8 +1259,8 @@ import com.google.common.annotations.VisibleForTesting;
     } else {
 
       // Casts to exact types including long to double etc. are needed in some special cases.
-      if (udf instanceof GenericUDFCoalesce || udf instanceof GenericUDFNvl
-          || udf instanceof GenericUDFElt || udf instanceof GenericUDFIf) {
+      if (udf instanceof GenericUDFCoalesce || udf instanceof GenericUDFElt
+          || udf instanceof GenericUDFIf) {
         GenericUDF genericUdf = getGenericUDFForCast(castType);
         List<ExprNodeDesc> children = new ArrayList<>();
         children.add(child);
@@ -2236,10 +2236,7 @@ import com.google.common.annotations.VisibleForTesting;
       ve = getWhenExpression(childExpr, mode, returnType);
     } else if (udf instanceof GenericUDFOPPositive) {
       ve = getIdentityExpression(childExpr);
-    } else if (udf instanceof GenericUDFCoalesce || udf instanceof GenericUDFNvl) {
-
-      // Coalesce is a special case because it can take variable number of arguments.
-      // Nvl is a specialization of the Coalesce.
+    } else if (udf instanceof GenericUDFCoalesce) {
       ve = getCoalesceExpression(childExpr, mode, returnType);
     } else if (udf instanceof GenericUDFElt) {
 

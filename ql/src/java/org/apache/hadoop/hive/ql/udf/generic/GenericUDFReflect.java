@@ -105,13 +105,13 @@ public class GenericUDFReflect extends AbstractGenericUDFReflect {
       try {
         c = JavaUtils.loadClass(classNameString);
       } catch (ClassNotFoundException ex) {
-        throw new HiveException("UDFReflect evaluate ", ex);
+        throw new HiveException(String.format("UDFReflect evaluate error while loading class %s", classNameString), ex);
       }
       try {
         o = null;
         o = ReflectionUtils.newInstance(c, null);
       } catch (Exception e) {
-        // ignored
+        throw new HiveException(String.format("UDFReflect evaluate error while instantiating class %s", classNameString), e);
       }
       classNameChanged = true;
     }

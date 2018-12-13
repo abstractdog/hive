@@ -7,7 +7,7 @@ set hive.query.results.cache.nontransactional.tables.enabled=true;
 set hive.fetch.task.conversion=more;
 -- Start polling the notification events
 set hive.notification.event.poll.interval=2s;
-select reflect('org.apache.hadoop.hive.ql.QTestUtil', 'initEventNotificationPoll');
+select reflect('org.apache.hadoop.hive.ql.metadata.events.NotificationEventPoll', 'initEventNotificationPoll');
 
 create table tab1 stored as textfile as select * from src;
 insert into tab1 select * from src;

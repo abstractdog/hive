@@ -1,8 +1,8 @@
-PREHOOK: query: select reflect('org.apache.hadoop.hive.ql.metadata.events.NotificationEventPoll', 'initEventNotificationPoll')
+PREHOOK: query: select reflect('org.apache.hadoop.hive.ql.QTestUtil', 'initEventNotificationPoll')
 PREHOOK: type: QUERY
 PREHOOK: Input: _dummy_database@_dummy_table
 #### A masked pattern was here ####
-POSTHOOK: query: select reflect('org.apache.hadoop.hive.ql.metadata.events.NotificationEventPoll', 'initEventNotificationPoll')
+POSTHOOK: query: select reflect('org.apache.hadoop.hive.ql.QTestUtil', 'initEventNotificationPoll')
 POSTHOOK: type: QUERY
 POSTHOOK: Input: _dummy_database@_dummy_table
 #### A masked pattern was here ####

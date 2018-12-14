@@ -32,7 +32,6 @@ import org.apache.hadoop.hive.common.JavaUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.NotificationEvent;
 import org.apache.hadoop.hive.ql.metadata.Hive;
-import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -50,14 +49,6 @@ public class NotificationEventPoll {
   List<EventConsumer> eventConsumers = new ArrayList<>();
   ScheduledFuture<?> pollFuture;
   long lastCheckedEventId;
-
-  // only for test (e.g. using reflect udf)
-  private NotificationEventPoll() throws Exception{}
-
-  // only for test (e.g. using reflect udf)
-  public static void initEventNotificationPoll() throws Exception {
-    initialize(SessionState.get().getConf());
-  }
 
   public static void initialize(Configuration conf) throws Exception {
     if (!inited.getAndSet(true)) {

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -51,12 +52,19 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
 
   private static final Comparator<LongWritable> LONG_COMPARATOR;
   private static final Comparator<DoubleWritable> DOUBLE_COMPARATOR;
+  private static final Comparator<HiveDecimalWritable> DECIMAL_COMPARATOR;
 
   static {
     LONG_COMPARATOR = ShimLoader.getHadoopShims().getLongComparator();
     DOUBLE_COMPARATOR = new Comparator<DoubleWritable>() {
       @Override
       public int compare(DoubleWritable o1, DoubleWritable o2) {
+        return o1.compareTo(o2);
+      }
+    };
+    DECIMAL_COMPARATOR = new Comparator<HiveDecimalWritable>() {
+      @Override
+      public int compare(HiveDecimalWritable o1, HiveDecimalWritable o2) {
         return o1.compareTo(o2);
       }
     };
@@ -81,12 +89,12 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     case FLOAT:
     case DOUBLE:
       return new PercentileContDoubleEvaluator();
+    case DECIMAL:
+      return new PercentileContDecimalEvaluator();
     case STRING:
     case TIMESTAMP:
     case VARCHAR:
     case CHAR:
-    case DECIMAL:
-    case VOID:
     case BOOLEAN:
     case DATE:
     default:
@@ -112,6 +120,13 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     public int compare(Map.Entry<DoubleWritable, LongWritable> o1,
         Map.Entry<DoubleWritable, LongWritable> o2) {
       return DOUBLE_COMPARATOR.compare(o1.getKey(), o2.getKey());
+    }
+  }
+
+  public static class DecimalComparator implements Comparator<Map.Entry<HiveDecimalWritable, LongWritable>> {
+    @Override
+    public int compare(Map.Entry<HiveDecimalWritable, LongWritable> o1, Map.Entry<HiveDecimalWritable, LongWritable> o2) {
+      return DECIMAL_COMPARATOR.compare(o1.getKey(), o2.getKey());
     }
   }
 
@@ -476,6 +491,128 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
   }
 
+
+  /**
+   * The evaluator for percentile computation based on double.
+   */
+  public static class PercentileContDecimalEvaluator
+      extends PercentileContEvaluator<HiveDecimal, HiveDecimalWritable> {
+    PercentileContDecimalCalculator calc = new PercentileContDecimalCalculator();
+
+    @Override
+    protected ArrayList<ObjectInspector> getPartialInspectors() {
+      ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
+
+      foi.add(ObjectInspectorFactory.getStandardMapObjectInspector(
+          PrimitiveObjectInspectorFactory.writableHiveDecimalObjectInspector,
+          PrimitiveObjectInspectorFactory.writableLongObjectInspector));
+      foi.add(ObjectInspectorFactory.getStandardListObjectInspector(
+          PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
+      return foi;
+    }
+
+    @Override
+    protected HiveDecimal getInput(Object parameter, PrimitiveObjectInspector inputOI) {
+      return PrimitiveObjectInspectorUtils.getHiveDecimal(parameter, inputOI);
+    }
+
+    @Override
+    protected HiveDecimalWritable wrapInput(HiveDecimal input) {
+      return new HiveDecimalWritable(input);
+    }
+
+    @Override
+    protected void increment(PercentileAgg s, HiveDecimalWritable input, long i) {
+      if (s.counts == null) {
+        s.counts = new HashMap<HiveDecimalWritable, LongWritable>();
+      }
+      LongWritable count = s.counts.get(input);
+      if (count == null) {
+        // We have to create a new object, because the object o belongs
+        // to the code that creates it and may get its value changed.
+        HiveDecimalWritable key = new HiveDecimalWritable(input.getHiveDecimal());
+        s.counts.put(key, new LongWritable(i));
+      } else {
+        count.set(count.get() + i);
+      }
+    }
+
+    @Override
+    public void merge(AggregationBuffer agg, Object partial) throws HiveException {
+      if (partial == null) {
+        return;
+      }
+
+      Object objCounts = soi.getStructFieldData(partial, countsField);
+      Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
+
+      Map<HiveDecimalWritable, LongWritable> counts =
+          (Map<HiveDecimalWritable, LongWritable>) countsOI.getMap(objCounts);
+      List<DoubleWritable> percentiles =
+          (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
+
+      if (counts == null || percentiles == null) {
+        return;
+      }
+
+      PercentileAgg percAgg = (PercentileAgg) agg;
+
+      if (percAgg.percentiles == null) {
+        percAgg.percentiles = new ArrayList<DoubleWritable>(percentiles);
+      }
+
+      for (Map.Entry<HiveDecimalWritable, LongWritable> e : counts.entrySet()) {
+        increment(percAgg, e.getKey(), e.getValue().get());
+      }
+    }
+
+    @Override
+    public Object terminate(AggregationBuffer agg) throws HiveException {
+      PercentileAgg percAgg = (PercentileAgg) agg;
+
+      // No input data.
+      if (percAgg.counts == null || percAgg.counts.size() == 0) {
+        return null;
+      }
+
+      // Get all items into an array and sort them.
+      Set<Map.Entry<HiveDecimalWritable, LongWritable>> entries = percAgg.counts.entrySet();
+      List<Map.Entry<HiveDecimalWritable, LongWritable>> entriesList =
+          new ArrayList<Map.Entry<HiveDecimalWritable, LongWritable>>(entries);
+      Collections.sort(entriesList, new DecimalComparator());
+
+      // Accumulate the counts.
+      long total = getTotal(entriesList);
+
+      // Initialize the result.
+      if (result == null) {
+        result = new DoubleWritable();
+      }
+
+      calculatePercentile(percAgg, entriesList, total);
+
+      return result;
+    }
+
+    protected void calculatePercentile(PercentileAgg percAgg,
+        List<Map.Entry<HiveDecimalWritable, LongWritable>> entriesList, long total) {
+      // maxPosition is the 1.0 percentile
+      long maxPosition = total - 1;
+      double position = maxPosition * percAgg.percentiles.get(0).get();
+      result.set(calc.getPercentile(entriesList, position));
+    }
+
+    public static long getTotal(List<Map.Entry<HiveDecimalWritable, LongWritable>> entriesList) {
+      long total = 0;
+      for (int i = 0; i < entriesList.size(); i++) {
+        LongWritable count = entriesList.get(i).getValue();
+        total += count.get();
+        count.set(total);
+      }
+      return total;
+    }
+  }
+
   /**
    * continuous percentile calculators
    */
@@ -550,6 +687,35 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       }
 
       return (higher - position) * lowerKey + (position - lower) * higherKey;
+    }
+  }
+
+  public static class PercentileContDecimalCalculator extends PercentileContCalculator<HiveDecimalWritable> {
+
+    public double getPercentile(List<Map.Entry<HiveDecimalWritable, LongWritable>> entriesList, double position) {
+      long lower = (long) Math.floor(position);
+      long higher = (long) Math.ceil(position);
+
+      int i = 0;
+      while (entriesList.get(i).getValue().get() < lower + 1) {
+        i++;
+      }
+
+      HiveDecimal lowerKey = entriesList.get(i).getKey().getHiveDecimal();
+      if (higher == lower) {
+        return lowerKey.doubleValue();
+      }
+
+      if (entriesList.get(i).getValue().get() < higher + 1) {
+        i++;
+      }
+      HiveDecimal higherKey = entriesList.get(i).getKey().getHiveDecimal();
+
+      if (higherKey == lowerKey) {
+        return lowerKey.doubleValue();
+      }
+
+      return (higher - position) * lowerKey.doubleValue() + (position - lower) * higherKey.doubleValue();
     }
   }
 }

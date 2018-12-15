@@ -53,13 +53,6 @@ GROUP BY CAST(key AS INT) DIV 10;
 set hive.map.aggr = true;
 set hive.groupby.skewindata = false;
 
--- test null handling
-SELECT CAST(key AS INT) DIV 10,
-       percentile_cont(NULL, 0.0)
-FROM src
-GROUP BY CAST(key AS INT) DIV 10;
-
-
 -- test empty array handling
 SELECT CAST(key AS INT) DIV 10,
        percentile_cont(IF(CAST(key AS INT) DIV 10 < 5, 1, NULL), 0.5)

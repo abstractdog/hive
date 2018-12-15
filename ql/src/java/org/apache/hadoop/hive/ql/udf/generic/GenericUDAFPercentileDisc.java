@@ -3,12 +3,10 @@ package org.apache.hadoop.hive.ql.udf.generic;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.exec.Description;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
-import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
@@ -32,12 +30,12 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
     case SHORT:
     case INT:
     case LONG:
+    case VOID:
       return new PercentileDiscLongEvaluator();
     case FLOAT:
     case DOUBLE:
-      return new PercentileDiscDoubleEvaluator();
     case DECIMAL:
-      return new PercentileDiscDecimalEvaluator();
+      return new PercentileDiscDoubleEvaluator();
     case STRING:
     case TIMESTAMP:
     case VARCHAR:
@@ -75,22 +73,6 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
     @Override
     protected void calculatePercentile(PercentileAgg percAgg,
         List<Map.Entry<DoubleWritable, LongWritable>> entriesList, long total) {
-      // maxPosition is the 1.0 percentile
-      long maxPosition = total - 1;
-      double position = maxPosition * percAgg.percentiles.get(0).get();
-      result.set(calc.getPercentile(entriesList, position));
-    }
-  }
-
-  /**
-   * The evaluator for discrete percentile computation based on decimal.
-   */
-  public static class PercentileDiscDecimalEvaluator extends PercentileContDecimalEvaluator {
-    PercentileDiscDecimalCalculator calc = new PercentileDiscDecimalCalculator();
-
-    @Override
-    protected void calculatePercentile(PercentileAgg percAgg,
-        List<Map.Entry<HiveDecimalWritable, LongWritable>> entriesList, long total) {
       // maxPosition is the 1.0 percentile
       long maxPosition = total - 1;
       double position = maxPosition * percAgg.percentiles.get(0).get();
@@ -154,28 +136,6 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
         i++;
       }
       return entriesList.get(i).getKey().get();
-    }
-  }
-
-  public static class PercentileDiscDecimalCalculator extends PercentileDiscCalculator<HiveDecimalWritable> {
-    public double getPercentile(List<Map.Entry<HiveDecimalWritable, LongWritable>> entriesList, double position) {
-      long lower = (long) Math.floor(position);
-      long higher = (long) Math.ceil(position);
-
-      int i = 0;
-      while (entriesList.get(i).getValue().get() < lower + 1) {
-        i++;
-      }
-
-      HiveDecimal lowerKey = entriesList.get(i).getKey().getHiveDecimal();
-      if (higher == lower) {
-        return lowerKey.doubleValue();
-      }
-
-      if (entriesList.get(i).getValue().get() < higher + 1) {
-        i++;
-      }
-      return entriesList.get(i).getKey().getHiveDecimal().doubleValue();
     }
   }
 }

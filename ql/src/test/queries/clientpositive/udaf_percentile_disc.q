@@ -11,7 +11,7 @@ set hive.groupby.skewindata = false;
 SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
        percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10;
 
@@ -22,7 +22,7 @@ set hive.groupby.skewindata = false;
 SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
        percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10;
 
@@ -34,7 +34,7 @@ set hive.groupby.skewindata = true;
 SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
        percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10;
 
@@ -45,7 +45,7 @@ set hive.groupby.skewindata = true;
 SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
        percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10;
 

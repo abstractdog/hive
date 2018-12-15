@@ -12,8 +12,8 @@ Function class:org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileDisc
 Function type:BUILTIN
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -21,8 +21,8 @@ PREHOOK: Input: default@src
 #### A masked pattern was here ####
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -80,8 +80,8 @@ POSTHOOK: Input: default@src
 9	90.0	95.0	98.0
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -89,8 +89,8 @@ PREHOOK: Input: default@src
 #### A masked pattern was here ####
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -148,8 +148,8 @@ POSTHOOK: Input: default@src
 9	90.0	95.0	98.0
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -157,8 +157,8 @@ PREHOOK: Input: default@src
 #### A masked pattern was here ####
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -216,8 +216,8 @@ POSTHOOK: Input: default@src
 9	90.0	95.0	98.0
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -225,8 +225,8 @@ PREHOOK: Input: default@src
 #### A masked pattern was here ####
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_disc(CAST(substr(value, 5) AS INT), 0.0),
-       percentile_disc(CAST(substr(value, 5) AS INT), 0.5),
-       percentile_disc(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_disc(CAST(substr(value, 5) AS DOUBLE), 0.5),
+       percentile_disc(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY

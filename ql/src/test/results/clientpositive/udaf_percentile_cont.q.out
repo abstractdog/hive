@@ -13,7 +13,7 @@ Function type:BUILTIN
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -22,7 +22,7 @@ PREHOOK: Input: default@src
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -81,7 +81,7 @@ POSTHOOK: Input: default@src
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -90,7 +90,7 @@ PREHOOK: Input: default@src
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -149,7 +149,7 @@ POSTHOOK: Input: default@src
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -158,7 +158,7 @@ PREHOOK: Input: default@src
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -217,7 +217,7 @@ POSTHOOK: Input: default@src
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 PREHOOK: type: QUERY
@@ -226,7 +226,7 @@ PREHOOK: Input: default@src
 POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(CAST(substr(value, 5) AS INT), 0.0),
        percentile_cont(CAST(substr(value, 5) AS DOUBLE), 0.5),
-       percentile_cont(CAST(substr(value, 5) AS INT), 1.0)
+       percentile_cont(CAST(substr(value, 5) AS DECIMAL), 1.0)
 FROM src
 GROUP BY CAST(key AS INT) DIV 10
 POSTHOOK: type: QUERY
@@ -282,6 +282,70 @@ POSTHOOK: Input: default@src
 7	70.0	73.0	78.0
 8	80.0	84.0	87.0
 9	90.0	95.0	98.0
+PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
+       percentile_cont(NULL, 0.0)
+FROM src
+GROUP BY CAST(key AS INT) DIV 10
+PREHOOK: type: QUERY
+PREHOOK: Input: default@src
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT CAST(key AS INT) DIV 10,
+       percentile_cont(NULL, 0.0)
+FROM src
+GROUP BY CAST(key AS INT) DIV 10
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@src
+#### A masked pattern was here ####
+0	NULL
+1	NULL
+10	NULL
+11	NULL
+12	NULL
+13	NULL
+14	NULL
+15	NULL
+16	NULL
+17	NULL
+18	NULL
+19	NULL
+2	NULL
+20	NULL
+21	NULL
+22	NULL
+23	NULL
+24	NULL
+25	NULL
+26	NULL
+27	NULL
+28	NULL
+29	NULL
+3	NULL
+30	NULL
+31	NULL
+32	NULL
+33	NULL
+34	NULL
+35	NULL
+36	NULL
+37	NULL
+38	NULL
+39	NULL
+4	NULL
+40	NULL
+41	NULL
+42	NULL
+43	NULL
+44	NULL
+45	NULL
+46	NULL
+47	NULL
+48	NULL
+49	NULL
+5	NULL
+6	NULL
+7	NULL
+8	NULL
+9	NULL
 PREHOOK: query: SELECT CAST(key AS INT) DIV 10,
        percentile_cont(IF(CAST(key AS INT) DIV 10 < 5, 1, NULL), 0.5)
 FROM src

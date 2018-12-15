@@ -367,8 +367,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
 
       foi.add(ObjectInspectorFactory.getStandardMapObjectInspector(
-          PrimitiveObjectInspectorFactory.writableLongObjectInspector,
-          PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
+          PrimitiveObjectInspectorFactory.writableDoubleObjectInspector,
+          PrimitiveObjectInspectorFactory.writableLongObjectInspector));
       foi.add(ObjectInspectorFactory.getStandardListObjectInspector(
           PrimitiveObjectInspectorFactory.writableDoubleObjectInspector));
       return foi;

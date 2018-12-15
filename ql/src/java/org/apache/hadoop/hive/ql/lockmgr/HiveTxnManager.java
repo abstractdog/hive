@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql.lockmgr;
 
 import org.apache.hadoop.hive.common.ValidTxnList;
 import org.apache.hadoop.hive.common.ValidTxnWriteIdList;
+import org.apache.hadoop.hive.common.ValidWriteIdList;
 import org.apache.hadoop.hive.metastore.api.CommitTxnRequest;
 import org.apache.hadoop.hive.metastore.api.LockResponse;
 import org.apache.hadoop.hive.metastore.api.TxnToWriteId;
@@ -261,7 +262,7 @@ public interface HiveTxnManager {
 
   /**
    * For resources that support MVCC, the state of the DB must be recorded for the duration of the
-   * operation/transaction.  Returns {@code true} if current statment needs to do this.
+   * operation/transaction.  Returns {@code true} if current statement needs to do this.
    */
   boolean recordSnapshot(QueryPlan queryPlan);
 
@@ -278,7 +279,18 @@ public interface HiveTxnManager {
    */
   long getTableWriteId(String dbName, String tableName) throws LockException;
 
-  /**
+ /**
+  * if {@code isTxnOpen()}, returns the already allocated table write ID of the table with
+  * the given "dbName.tableName" for the current active transaction.
+  * If not allocated, then returns 0.
+  * @param dbName
+  * @param tableName
+  * @return 0 if not yet allocated
+  * @throws LockException
+  */
+ public long getAllocatedTableWriteId(String dbName, String tableName) throws LockException;
+
+ /**
    * Allocates write id for each transaction in the list.
    * @param dbName database name
    * @param tableName the name of the table to allocate the write id

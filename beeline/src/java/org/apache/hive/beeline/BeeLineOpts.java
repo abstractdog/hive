@@ -114,6 +114,7 @@ public class BeeLineOpts implements Completer {
   private Map<String, String> hiveVariables = new HashMap<String, String>();
   private Map<String, String> hiveConfVariables = new HashMap<String, String>();
   private boolean helpAsked;
+  private boolean beelineSiteUrlsAsked;
 
   private String lastConnectedUrl = null;
 
@@ -503,11 +504,12 @@ public class BeeLineOpts implements Completer {
   public boolean getEscapeCRLF() {
     if (beeLine.isBeeLine()) {
       return escapeCRLF;
-    } else {
-      boolean flag;
-      HiveConf conf = beeLine.getCommands().getHiveConf(true);
-      flag = HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_ESCAPE_CRLF);
-      return flag;
+    } else { //hive cli
+      if(conf != null) {
+        return HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_ESCAPE_CRLF);
+      } else {
+        return false;
+      }
     }
   }
 
@@ -678,7 +680,16 @@ public class BeeLineOpts implements Completer {
   public boolean isHelpAsked() {
     return helpAsked;
   }
+  
+  public void setBeelineSiteUrlsAsked(boolean beelineSiteUrlsAsked) {
+    this.beelineSiteUrlsAsked = beelineSiteUrlsAsked;
+  }
 
+  public boolean isBeelineSiteUrlsAsked() {
+    return beelineSiteUrlsAsked;
+  }
+
+  
   public String getLastConnectedUrl(){
     return lastConnectedUrl;
   }

@@ -18,7 +18,11 @@
 
 package org.apache.hive.jdbc;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.net.MalformedURLException;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -30,12 +34,17 @@ import java.util.Collections;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.ql.processors.ErasureProcessor;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.HadoopShims.HdfsErasureCodingShim;
 import org.apache.hadoop.hive.shims.HadoopShims.MiniDFSShim;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hive.jdbc.miniHS2.MiniHS2;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.WriterAppender;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -55,19 +64,17 @@ public class TestJdbcWithMiniHS2ErasureCoding {
   private static HiveConf conf;
   private Connection hs2Conn = null;
 
-  private static HiveConf createHiveOnSparkConf() {
+  private static HiveConf createHiveOnSparkConf() throws MalformedURLException {
+    String confDir = "../../data/conf/spark/standalone/hive-site.xml";
+    HiveConf.setHiveSiteLocation(new File(confDir).toURI().toURL());
     HiveConf hiveConf = new HiveConf();
     // Tell dfs not to consider load when choosing a datanode as this can cause failure as
     // in a test we do not have spare datanode capacity.
     hiveConf.setBoolean("dfs.namenode.redundancy.considerLoad", false);
-    hiveConf.set("hive.execution.engine", "spark");
-    hiveConf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
-    hiveConf.set("spark.master", "local-cluster[2,2,1024]");
     hiveConf.set("hive.spark.client.connect.timeout", "30000ms");
     hiveConf.set("spark.local.dir",
         Paths.get(System.getProperty("test.tmp.dir"), "TestJdbcWithMiniHS2ErasureCoding-local-dir")
             .toString());
-    hiveConf.setBoolVar(ConfVars.HIVE_SUPPORT_CONCURRENCY, false); // avoid ZK errors
     return hiveConf;
   }
 
@@ -171,6 +178,53 @@ public class TestJdbcWithMiniHS2ErasureCoding {
       assertMatchAndCount(description, "numFilesErasureCoded=8", 1);
       assertMatchAndCount(description, "numPartitions=2", 1);
     }
+  }
+
+  /**
+   * Test MR stats.
+   */
+  @Test
+  public void testMapRedStats() throws Exception {
+    // Do log4j magic to save log output
+    StringWriter writer = new StringWriter();
+    Appender appender = addAppender(writer, "testMapRedStats");
+    try (Statement stmt = hs2Conn.createStatement()) {
+      String table = "mapredstats";
+      stmt.execute("set hive.execution.engine=mr");
+      stmt.execute(" CREATE TABLE " + table + " (a int) STORED AS PARQUET");
+      stmt.execute("INSERT INTO TABLE " + table + " VALUES (3)");
+      try (ResultSet rs = stmt.executeQuery("select a from " + table + " order by a")) {
+        while (rs.next()) {
+          int val = rs.getInt(1);
+          assertEquals(3, val);
+        }
+      }
+    }
+    String output = writer.toString();
+    // check for standard stats
+    assertTrue(output.contains("HDFS Read:"));
+    assertTrue(output.contains("HDFS Write:"));
+
+    // check for erasure coding stat
+    HadoopShims.HdfsErasureCodingShim erasureShim = ErasureProcessor.getErasureShim(conf);
+    if (erasureShim.isMapReduceStatAvailable()) {
+      assertTrue(output.contains("HDFS EC Read:"));
+    }
+  }
+
+  /**
+   * Add an appender to log4j.
+   * http://logging.apache.org/log4j/2.x/manual/customconfig.html#AddingToCurrent
+   */
+  private Appender addAppender(final Writer writer, final String writerName) {
+    final LoggerContext context = LoggerContext.getContext(false);
+    final Configuration config = context.getConfiguration();
+    final PatternLayout layout = PatternLayout.createDefaultLayout(config);
+    final Appender appender =
+        WriterAppender.createAppender(layout, null, writer, writerName, false, true);
+    appender.start();
+    config.getRootLogger().addAppender(appender, null, null);
+    return appender;
   }
 
   /**

@@ -86,8 +86,12 @@ POSTHOOK: Input: default@parquet_complex_types
 1023
 PREHOOK: query: explain vectorization expression select l1, l1[0], l1[1], l1[listIndex], listIndex from parquet_complex_types limit 10
 PREHOOK: type: QUERY
+PREHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 POSTHOOK: query: explain vectorization expression select l1, l1[0], l1[1], l1[listIndex], listIndex from parquet_complex_types limit 10
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 PLAN VECTORIZATION:
   enabled: true
   enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
@@ -167,8 +171,12 @@ POSTHOOK: Input: default@parquet_complex_types
 [118,119]	118	119	119	1
 PREHOOK: query: explain vectorization expression select sum(l1[0]), l1[1] from parquet_complex_types where l1[0] > 1000 group by l1[1] order by l1[1] limit 10
 PREHOOK: type: QUERY
+PREHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 POSTHOOK: query: explain vectorization expression select sum(l1[0]), l1[1] from parquet_complex_types where l1[0] > 1000 group by l1[1] order by l1[1] limit 10
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 PLAN VECTORIZATION:
   enabled: true
   enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
@@ -201,16 +209,16 @@ STAGE PLANS:
                 Select Vectorization:
                     className: VectorSelectOperator
                     native: true
-                    projectedOutputColumnNums: [6, 7]
-                    selectExpressions: ListIndexColScalar(col 2:array<int>, col 1:int) -> 6:int, ListIndexColScalar(col 2:array<int>, col 0:int) -> 7:int
+                    projectedOutputColumnNums: [7, 8]
+                    selectExpressions: ListIndexColScalar(col 2:array<int>, col 1:int) -> 7:int, ListIndexColScalar(col 2:array<int>, col 0:int) -> 8:int
                 Statistics: Num rows: 341 Data size: 1705 Basic stats: COMPLETE Column stats: NONE
                 Group By Operator
                   aggregations: sum(_col1)
                   Group By Vectorization:
-                      aggregators: VectorUDAFSumLong(col 7:int) -> bigint
+                      aggregators: VectorUDAFSumLong(col 8:int) -> bigint
                       className: VectorGroupByOperator
                       groupByMode: HASH
-                      keyExpressions: col 6:int
+                      keyExpressions: col 7:int
                       native: false
                       vectorProcessingMode: HASH
                       projectedOutputColumnNums: [0]
@@ -359,8 +367,12 @@ POSTHOOK: Input: default@parquet_complex_types
 1024
 PREHOOK: query: explain vectorization expression select l1, l1[0], l1[1], l1[listIndex], listIndex from parquet_complex_types limit 10
 PREHOOK: type: QUERY
+PREHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 POSTHOOK: query: explain vectorization expression select l1, l1[0], l1[1], l1[listIndex], listIndex from parquet_complex_types limit 10
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 PLAN VECTORIZATION:
   enabled: true
   enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
@@ -440,8 +452,12 @@ POSTHOOK: Input: default@parquet_complex_types
 [118,119]	118	119	119	1
 PREHOOK: query: explain vectorization expression select sum(l1[0]), l1[1] from parquet_complex_types where l1[0] > 1000 group by l1[1] order by l1[1] limit 10
 PREHOOK: type: QUERY
+PREHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 POSTHOOK: query: explain vectorization expression select sum(l1[0]), l1[1] from parquet_complex_types where l1[0] > 1000 group by l1[1] order by l1[1] limit 10
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 PLAN VECTORIZATION:
   enabled: true
   enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
@@ -474,16 +490,16 @@ STAGE PLANS:
                 Select Vectorization:
                     className: VectorSelectOperator
                     native: true
-                    projectedOutputColumnNums: [6, 7]
-                    selectExpressions: ListIndexColScalar(col 2:array<int>, col 1:int) -> 6:int, ListIndexColScalar(col 2:array<int>, col 0:int) -> 7:int
+                    projectedOutputColumnNums: [7, 8]
+                    selectExpressions: ListIndexColScalar(col 2:array<int>, col 1:int) -> 7:int, ListIndexColScalar(col 2:array<int>, col 0:int) -> 8:int
                 Statistics: Num rows: 341 Data size: 1705 Basic stats: COMPLETE Column stats: NONE
                 Group By Operator
                   aggregations: sum(_col1)
                   Group By Vectorization:
-                      aggregators: VectorUDAFSumLong(col 7:int) -> bigint
+                      aggregators: VectorUDAFSumLong(col 8:int) -> bigint
                       className: VectorGroupByOperator
                       groupByMode: HASH
-                      keyExpressions: col 6:int
+                      keyExpressions: col 7:int
                       native: false
                       vectorProcessingMode: HASH
                       projectedOutputColumnNums: [0]
@@ -632,8 +648,12 @@ POSTHOOK: Input: default@parquet_complex_types
 1025
 PREHOOK: query: explain vectorization expression select l1, l1[0], l1[1], l1[listIndex], listIndex from parquet_complex_types limit 10
 PREHOOK: type: QUERY
+PREHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 POSTHOOK: query: explain vectorization expression select l1, l1[0], l1[1], l1[listIndex], listIndex from parquet_complex_types limit 10
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 PLAN VECTORIZATION:
   enabled: true
   enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
@@ -713,8 +733,12 @@ POSTHOOK: Input: default@parquet_complex_types
 [118,119]	118	119	119	1
 PREHOOK: query: explain vectorization expression select sum(l1[0]), l1[1] from parquet_complex_types where l1[0] > 1000 group by l1[1] order by l1[1] limit 10
 PREHOOK: type: QUERY
+PREHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 POSTHOOK: query: explain vectorization expression select sum(l1[0]), l1[1] from parquet_complex_types where l1[0] > 1000 group by l1[1] order by l1[1] limit 10
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@parquet_complex_types
+#### A masked pattern was here ####
 PLAN VECTORIZATION:
   enabled: true
   enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
@@ -747,16 +771,16 @@ STAGE PLANS:
                 Select Vectorization:
                     className: VectorSelectOperator
                     native: true
-                    projectedOutputColumnNums: [6, 7]
-                    selectExpressions: ListIndexColScalar(col 2:array<int>, col 1:int) -> 6:int, ListIndexColScalar(col 2:array<int>, col 0:int) -> 7:int
+                    projectedOutputColumnNums: [7, 8]
+                    selectExpressions: ListIndexColScalar(col 2:array<int>, col 1:int) -> 7:int, ListIndexColScalar(col 2:array<int>, col 0:int) -> 8:int
                 Statistics: Num rows: 341 Data size: 1705 Basic stats: COMPLETE Column stats: NONE
                 Group By Operator
                   aggregations: sum(_col1)
                   Group By Vectorization:
-                      aggregators: VectorUDAFSumLong(col 7:int) -> bigint
+                      aggregators: VectorUDAFSumLong(col 8:int) -> bigint
                       className: VectorGroupByOperator
                       groupByMode: HASH
-                      keyExpressions: col 6:int
+                      keyExpressions: col 7:int
                       native: false
                       vectorProcessingMode: HASH
                       projectedOutputColumnNums: [0]

@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql.parse.repl.dump;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.common.ValidTxnList;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.NotificationEvent;
@@ -75,7 +76,7 @@ public class Utils {
     }
   }
 
-  public static Iterable<? extends String> matchesDb(Hive db, String dbPattern) throws HiveException {
+  public static Iterable<String> matchesDb(Hive db, String dbPattern) throws HiveException {
     if (dbPattern == null) {
       return db.getAllDatabases();
     } else {
@@ -83,7 +84,7 @@ public class Utils {
     }
   }
 
-  public static Iterable<? extends String> matchesTbl(Hive db, String dbName, String tblPattern)
+  public static Iterable<String> matchesTbl(Hive db, String dbName, String tblPattern)
       throws HiveException {
     if (tblPattern == null) {
       return getAllTables(db, dbName);
@@ -209,6 +210,7 @@ public class Utils {
           throws IOException {
     if (replicationSpec.isTransactionalTableDump()) {
       try {
+        conf.set(ValidTxnList.VALID_TXNS_KEY, replicationSpec.getValidTxnList());
         return AcidUtils.getValidDataPaths(fromPath, conf, replicationSpec.getValidWriteIdList());
       } catch (FileNotFoundException e) {
         throw new IOException(ErrorMsg.FILE_NOT_FOUND.format(e.getMessage()), e);

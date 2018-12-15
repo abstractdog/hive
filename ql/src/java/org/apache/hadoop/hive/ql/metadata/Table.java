@@ -50,6 +50,7 @@ import org.apache.hadoop.hive.metastore.api.SerDeInfo;
 import org.apache.hadoop.hive.metastore.api.SkewedInfo;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.io.HiveFileFormatUtils;
@@ -104,6 +105,10 @@ public class Table implements Serializable {
   private transient TableSpec tableSpec;
 
   private transient boolean materializedTable;
+
+  /** Note: This is set only for describe table purposes, it cannot be used to verify whether
+   * a materialization is up-to-date or not. */
+  private transient Boolean outdatedForRewritingMaterializedView;
 
   /**
    * Used only for serialization.
@@ -1069,7 +1074,7 @@ public class Table implements Serializable {
   }
 
   private static String normalize(String colName) throws HiveException {
-    if (!MetaStoreUtils.validateColumnName(colName)) {
+    if (!MetaStoreServerUtils.validateColumnName(colName)) {
       throw new HiveException("Invalid column name '" + colName
           + "' in the table definition");
     }
@@ -1086,5 +1091,19 @@ public class Table implements Serializable {
 
   public boolean hasDeserializer() {
     return deserializer != null;
+  }
+
+  public String getCatalogName() {
+    return this.tTable.getCatName();
+  }
+
+  public void setOutdatedForRewriting(Boolean validForRewritingMaterializedView) {
+    this.outdatedForRewritingMaterializedView = validForRewritingMaterializedView;
+  }
+
+  /** Note: This is set only for describe table purposes, it cannot be used to verify whether
+   * a materialization is up-to-date or not. */
+  public Boolean isOutdatedForRewriting() {
+    return outdatedForRewritingMaterializedView;
   }
 };

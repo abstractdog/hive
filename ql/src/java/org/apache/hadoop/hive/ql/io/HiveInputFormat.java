@@ -58,6 +58,7 @@ import org.apache.hadoop.hive.ql.exec.spark.SparkDynamicPartitionPruner;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.MapWork;
 import org.apache.hadoop.hive.ql.plan.OperatorDesc;
@@ -274,7 +275,7 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
       if (part == null) {
         if (isCacheOnly) {
           LOG.info("Using cache only because there's no partition spec for SerDe-based IF");
-          injectLlapCaches(inputFormat, llapIo);
+          injectLlapCaches(inputFormat, llapIo, conf);
         } else {
           LOG.info("Not using LLAP IO because there's no partition spec for SerDe-based IF");
         }
@@ -294,7 +295,7 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
       }
     }
     if (isCacheOnly) {
-      injectLlapCaches(inputFormat, llapIo);
+      injectLlapCaches(inputFormat, llapIo, conf);
     }
     return inputFormat;
   }
@@ -320,8 +321,9 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
   }
 
   public static void injectLlapCaches(InputFormat<WritableComparable, Writable> inputFormat,
-      LlapIo<VectorizedRowBatch> llapIo) {
+      LlapIo<VectorizedRowBatch> llapIo, Configuration conf) {
     LOG.info("Injecting LLAP caches into " + inputFormat.getClass().getCanonicalName());
+    conf.setInt("parquet.read.allocation.size", 1024*1024*1024); // Disable buffer splitting for now.
     llapIo.initCacheOnlyInputFormat(inputFormat);
   }
 
@@ -431,18 +433,6 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
       } else {
         mrwork = Utilities.getMapWork(job);
       }
-
-      // Prune partitions
-      if (HiveConf.getVar(job, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("spark")
-          && HiveConf.isSparkDPPAny(job)) {
-        SparkDynamicPartitionPruner pruner = new SparkDynamicPartitionPruner();
-        try {
-          pruner.prune(mrwork, job);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
-
       pathToPartitionInfo = mrwork.getPathToPartitionInfo();
     }
   }
@@ -463,6 +453,7 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
     ValidWriteIdList validMmWriteIdList = getMmValidWriteIds(conf, table, validWriteIdList);
 
     try {
+      Utilities.copyJobSecretToTableProperties(table);
       Utilities.copyTablePropertiesToConf(table, conf);
       if (tableScan != null) {
         AcidUtils.setAcidOperationalProperties(conf, tableScan.getConf().isTranscationalTable(),
@@ -833,10 +824,12 @@ public class HiveInputFormat<K extends WritableComparable, V extends Writable>
       return;
     }
 
-    // disable filter pushdown for mapreduce when there are more than one table aliases,
+    // disable filter pushdown for mapreduce(except for storage handlers) when there are more than one table aliases,
     // since we don't clone jobConf per alias
-    if (mrwork != null && mrwork.getAliases() != null && mrwork.getAliases().size() > 1 &&
-      jobConf.get(ConfVars.HIVE_EXECUTION_ENGINE.varname).equals("mr")) {
+    if (mrwork != null && mrwork.getAliases() != null && mrwork.getAliases().size() > 1
+        && jobConf.get(ConfVars.HIVE_EXECUTION_ENGINE.varname).equals("mr")
+        && (scanDesc.getTableMetadata() == null
+            || !(scanDesc.getTableMetadata().getStorageHandler() instanceof HiveStoragePredicateHandler))) {
       return;
     }
 

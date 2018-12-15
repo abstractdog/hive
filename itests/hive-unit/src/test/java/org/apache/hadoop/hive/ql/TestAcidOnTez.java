@@ -608,11 +608,16 @@ ekoifman:apache-hive-3.0.0-SNAPSHOT-bin ekoifman$ tree  ~/dev/hiverwgit/itests/h
       LOG.warn(s);
     }
     String[][] expected2 = {
-       {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":0}\t1\t2", "warehouse/t/base_-9223372036854775808/bucket_00000"},
-      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":1}\t3\t4", "warehouse/t/base_-9223372036854775808/bucket_00000"},
-      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":2}\t5\t6", "warehouse/t/base_-9223372036854775808/bucket_00000"},
-      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":3}\t7\t8", "warehouse/t/base_-9223372036854775808/bucket_00000"},
-      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":4}\t9\t10", "warehouse/t/base_-9223372036854775808/bucket_00000"}
+       {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":0}\t1\t2",
+           "warehouse/t/base_-9223372036854775808_v0000024/bucket_00000"},
+      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":1}\t3\t4",
+          "warehouse/t/base_-9223372036854775808_v0000024/bucket_00000"},
+      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":2}\t5\t6",
+          "warehouse/t/base_-9223372036854775808_v0000024/bucket_00000"},
+      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":3}\t7\t8",
+          "warehouse/t/base_-9223372036854775808_v0000024/bucket_00000"},
+      {"{\"writeid\":0,\"bucketid\":536870912,\"rowid\":4}\t9\t10",
+          "warehouse/t/base_-9223372036854775808_v0000024/bucket_00000"}
     };
     Assert.assertEquals("Unexpected row count after major compact", expected2.length, rs.size());
     for(int i = 0; i < expected2.length; i++) {
@@ -770,6 +775,51 @@ ekoifman:apache-hive-3.0.0-SNAPSHOT-bin ekoifman$ tree  ~/dev/hiverwgit/itests/h
       // Done in the finally block to make sure we free up the locks; otherwise
       // the cleanup in tearDown() will get stuck waiting on the lock held here on ACIDTBL.
       restartSessionAndDriver(hiveConf);
+    }
+
+    // Lock should be freed up now.
+    ShowLocksResponse slr = txnHandler.showLocks(new ShowLocksRequest());
+    assertEquals(0, slr.getLocksSize());
+
+    List<String> rows = runStatementOnDriver("show transactions");
+    // Transactions should be committed.
+    // No transactions - just the header row
+    assertEquals(1, rows.size());
+  }
+
+  @Test
+  public void testGetSplitsLocksWithMaterializedView() throws Exception {
+    // Need to test this with LLAP settings, which requires some additional configurations set.
+    HiveConf modConf = new HiveConf(hiveConf);
+    setupTez(modConf);
+    modConf.setVar(ConfVars.HIVE_EXECUTION_ENGINE, "tez");
+    modConf.setVar(ConfVars.HIVEFETCHTASKCONVERSION, "more");
+    modConf.setVar(HiveConf.ConfVars.LLAP_DAEMON_SERVICE_HOSTS, "localhost");
+
+    // SessionState/Driver needs to be restarted with the Tez conf settings.
+    restartSessionAndDriver(modConf);
+    TxnStore txnHandler = TxnUtils.getTxnStore(modConf);
+    String mvName = "mv_acidTbl";
+    try {
+      runStatementOnDriver("create materialized view " + mvName + " as select a from " + Table.ACIDTBL + " where a > 5");
+
+      // Request LLAP splits for a table.
+      String queryParam = "select a from " + Table.ACIDTBL + " where a > 5";
+      runStatementOnDriver("select get_splits(\"" + queryParam + "\", 1)");
+
+      // The get_splits call should have resulted in a lock on ACIDTBL and materialized view mv_acidTbl
+      ShowLocksResponse slr = txnHandler.showLocks(new ShowLocksRequest());
+      TestDbTxnManager2.checkLock(LockType.SHARED_READ, LockState.ACQUIRED,
+              "default", Table.ACIDTBL.name, null, slr.getLocks());
+      TestDbTxnManager2.checkLock(LockType.SHARED_READ, LockState.ACQUIRED,
+              "default", mvName, null, slr.getLocks());
+      assertEquals(2, slr.getLocksSize());
+    } finally {
+      // Close the session which should free up the TxnHandler/locks held by the session.
+      // Done in the finally block to make sure we free up the locks; otherwise
+      // the cleanup in tearDown() will get stuck waiting on the lock held here on ACIDTBL.
+      restartSessionAndDriver(hiveConf);
+      runStatementOnDriver("drop materialized view if exists " + mvName);
     }
 
     // Lock should be freed up now.

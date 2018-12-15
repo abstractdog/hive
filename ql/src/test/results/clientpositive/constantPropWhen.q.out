@@ -22,8 +22,12 @@ POSTHOOK: Lineage: test_1_n4.id SCRIPT []
 POSTHOOK: Lineage: test_1_n4.id2 SCRIPT []
 PREHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -36,7 +40,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: (not NVL((id = id2),false)) (type: boolean)
+              expressions: (not COALESCE((id = id2),false)) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -68,8 +72,12 @@ true
 false
 PREHOOK: query: explain SELECT cast(CASE id when id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE id when id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -82,7 +90,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: (not NVL((id = id2),false)) (type: boolean)
+              expressions: (not COALESCE((id = id2),false)) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -114,8 +122,12 @@ true
 false
 PREHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -128,7 +140,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: NVL((id = id2),false) (type: boolean)
+              expressions: COALESCE((id = id2),false) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -160,8 +172,12 @@ false
 true
 PREHOOK: query: explain SELECT cast(CASE id when id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE id when id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -174,7 +190,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: NVL((id = id2),false) (type: boolean)
+              expressions: COALESCE((id = id2),false) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -206,8 +222,12 @@ false
 true
 PREHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -220,7 +240,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: (not NVL((id = id2),false)) (type: boolean)
+              expressions: (not COALESCE((id = id2),false)) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -252,8 +272,12 @@ true
 false
 PREHOOK: query: explain SELECT cast(CASE id when id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE id when id2 THEN FALSE ELSE TRUE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -266,7 +290,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: (not NVL((id = id2),false)) (type: boolean)
+              expressions: (not COALESCE((id = id2),false)) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -298,8 +322,12 @@ true
 false
 PREHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE WHEN id = id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -312,7 +340,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: NVL((id = id2),false) (type: boolean)
+              expressions: COALESCE((id = id2),false) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator
@@ -344,8 +372,12 @@ false
 true
 PREHOOK: query: explain SELECT cast(CASE id when id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 PREHOOK: type: QUERY
+PREHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 POSTHOOK: query: explain SELECT cast(CASE id when id2 THEN TRUE ELSE FALSE END AS BOOLEAN) AS b FROM test_1_n4
 POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_1_n4
+#### A masked pattern was here ####
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
   Stage-0 depends on stages: Stage-1
@@ -358,7 +390,7 @@ STAGE PLANS:
             alias: test_1_n4
             Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
             Select Operator
-              expressions: NVL((id = id2),false) (type: boolean)
+              expressions: COALESCE((id = id2),false) (type: boolean)
               outputColumnNames: _col0
               Statistics: Num rows: 4 Data size: 24 Basic stats: COMPLETE Column stats: NONE
               File Output Operator

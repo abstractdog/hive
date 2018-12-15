@@ -72,6 +72,12 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
 
   @Override
   protected int execute(DriverContext driverContext) {
+    Task<? extends Serializable> rootTask = work.getRootTask();
+    if (rootTask != null) {
+      rootTask.setChildTasks(null);
+    }
+    work.setRootTask(this);
+    this.parentTasks = null;
     if (work.isIncrementalLoad()) {
       return executeIncrementalLoad(driverContext);
     } else {
@@ -120,6 +126,10 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
           loadTaskTracker.update(dbTracker);
           if (work.hasDbState()) {
             loadTaskTracker.update(updateDatabaseLastReplID(maxTasks, context, scope));
+          }  else {
+            // Scope might have set to database in some previous iteration of loop, so reset it to false if database
+            // tracker has no tasks.
+            scope.database = false;
           }
           work.updateDbEventState(dbEvent.toState());
           if (dbTracker.hasTasks()) {
@@ -145,7 +155,12 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
           if (!scope.database && tableTracker.hasTasks()) {
             scope.rootTasks.addAll(tableTracker.tasks());
             scope.table = true;
+          } else {
+            // Scope might have set to table in some previous iteration of loop, so reset it to false if table
+            // tracker has no tasks.
+            scope.table = false;
           }
+
           /*
             for table replication if we reach the max number of tasks then for the next run we will
             try to reload the same table again, this is mainly for ease of understanding the code
@@ -329,11 +344,7 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
   private int executeIncrementalLoad(DriverContext driverContext) {
     try {
       IncrementalLoadTasksBuilder load = work.getIncrementalLoadTaskBuilder();
-      this.childTasks = Collections.singletonList(load.build(driverContext, getHive(), LOG));
-      if (work.getIncrementalIterator().hasNext()) {
-        // attach a load task at the tail of task list to start the next iteration.
-        createBuilderTask(this.childTasks);
-      }
+      this.childTasks = Collections.singletonList(load.build(driverContext, getHive(), LOG, work));
       return 0;
     } catch (Exception e) {
       LOG.error("failed replication", e);

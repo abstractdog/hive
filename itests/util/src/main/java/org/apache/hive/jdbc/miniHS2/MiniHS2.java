@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hive.llap.daemon.MiniLlapCluster;
 import org.apache.hadoop.hive.metastore.MetaStoreTestUtils;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.exec.Utilities;
-import org.apache.hadoop.hive.ql.util.ZooKeeperHiveHelper;
 import org.apache.hadoop.hive.shims.HadoopShims.MiniDFSShim;
 import org.apache.hadoop.hive.shims.HadoopShims.MiniMrShim;
 import org.apache.hadoop.hive.shims.ShimLoader;
@@ -177,6 +177,11 @@ public class MiniHS2 extends AbstractHiveService {
     public MiniHS2 build() throws Exception {
       if (miniClusterType == MiniClusterType.MR && useMiniKdc) {
         throw new IOException("Can't create secure miniMr ... yet");
+      }
+      Iterator<Map.Entry<String, String>> iter = hiveConf.iterator();
+      while (iter.hasNext()) {
+        String key = iter.next().getKey();
+        hiveConf.set(key, hiveConf.get(key));
       }
       if (isHTTPTransMode) {
         hiveConf.setVar(ConfVars.HIVE_SERVER2_TRANSPORT_MODE, HS2_HTTP_MODE);
@@ -566,7 +571,7 @@ public class MiniHS2 extends AbstractHiveService {
   private String getZKBaseJdbcURL() throws Exception {
     HiveConf hiveConf = getServerConf();
     if (hiveConf != null) {
-      String zkEnsemble =  ZooKeeperHiveHelper.getQuorumServers(hiveConf);
+      String zkEnsemble =  hiveConf.getZKConfig().getQuorumServers();
       return "jdbc:hive2://" + zkEnsemble + "/";
     }
     throw new Exception("Server's HiveConf is null. Unable to read ZooKeeper configs.");
@@ -621,6 +626,10 @@ public class MiniHS2 extends AbstractHiveService {
          */
         sessionHandle = hs2Client.openSession("foo", "bar", sessionConf);
       } catch (Exception e) {
+        if (e.getMessage().contains("Cannot open sessions on an inactive HS2")) {
+          // Passive HS2 has started. TODO: seems fragile
+          return;
+        }
         // service not started yet
         continue;
       }

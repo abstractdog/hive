@@ -43,6 +43,7 @@ import org.apache.hadoop.hive.ql.lockmgr.HiveLock;
 import org.apache.hadoop.hive.ql.lockmgr.HiveLockManager;
 import org.apache.hadoop.hive.ql.lockmgr.HiveLockObj;
 import org.apache.hadoop.hive.ql.lockmgr.LockException;
+import org.apache.hadoop.hive.ql.exec.repl.util.ReplUtils;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -322,6 +323,7 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
           }
         }
       }
+
       // Multi-file load is for dynamic partitions when some partitions do not
       // need to merge and they can simply be moved to the target directory.
       // This is also used for MM table conversion.
@@ -332,6 +334,9 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
         for (int i = 0; i <lmfd.getSourceDirs().size(); ++i) {
           Path srcPath = lmfd.getSourceDirs().get(i);
           Path destPath = lmfd.getTargetDirs().get(i);
+          if (destPath.equals(srcPath)) {
+            continue;
+          }
           String filePrefix = targetPrefixes == null ? null : targetPrefixes.get(i);
           FileSystem destFs = destPath.getFileSystem(conf);
           if (filePrefix == null) {
@@ -370,6 +375,17 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
         Table table = db.getTable(tbd.getTable().getTableName());
 
         checkFileFormats(db, tbd, table);
+
+        // for transactional table if write id is not set during replication from a cluster with STRICT_MANAGED set
+        // to false then set it now.
+        if (tbd.getWriteId() <= 0 && AcidUtils.isTransactionalTable(table.getParameters())) {
+          String writeId = conf.get(ReplUtils.REPL_CURRENT_TBL_WRITE_ID);
+          if (writeId == null) {
+            throw new HiveException("MoveTask : Write id is not set in the config by open txn task for migration");
+          }
+          tbd.setWriteId(Long.parseLong(writeId));
+          tbd.setStmtId(driverContext.getCtx().getHiveTxnManager().getStmtIdAndIncrement());
+        }
 
         boolean isFullAcidOp = work.getLoadTableWork().getWriteType() != AcidUtils.Operation.NOT_ACID
             && !tbd.isMmTable(); //it seems that LoadTableDesc has Operation.INSERT only for CTAS...
@@ -482,7 +498,7 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
 
     db.loadPartition(tbd.getSourcePath(), db.getTable(tbd.getTable().getTableName()),
         tbd.getPartitionSpec(), tbd.getLoadFileType(), tbd.getInheritTableSpecs(),
-        isSkewedStoredAsDirs(tbd), work.isSrcLocal(),
+        tbd.getInheritLocation(), isSkewedStoredAsDirs(tbd), work.isSrcLocal(),
          work.getLoadTableWork().getWriteType() != AcidUtils.Operation.NOT_ACID &&
             !tbd.isMmTable(),
          hasFollowingStatsTask(),
@@ -797,7 +813,8 @@ public class MoveTask extends Task<MoveWork> implements Serializable {
     }
 
     if (updateBucketCols || updateSortCols) {
-      db.alterPartition(table.getDbName(), table.getTableName(), partn, null);
+      db.alterPartition(table.getCatalogName(), table.getDbName(), table.getTableName(),
+          partn, null, true);
     }
   }
 

@@ -18,15 +18,25 @@
 package org.apache.hadoop.hive.ql.txn.compactor;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hive.common.JavaUtils;
+import org.apache.hadoop.hive.common.ValidCompactorWriteIdList;
+import org.apache.hadoop.hive.common.ValidTxnList;
+import org.apache.hadoop.hive.metastore.api.AbortTxnRequest;
+import org.apache.hadoop.hive.metastore.api.CommitTxnRequest;
 import org.apache.hadoop.hive.metastore.api.GetValidWriteIdsRequest;
+import org.apache.hadoop.hive.metastore.api.HeartbeatRequest;
 import org.apache.hadoop.hive.metastore.api.MetaException;
+import org.apache.hadoop.hive.metastore.api.OpenTxnRequest;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+import org.apache.hadoop.hive.metastore.txn.TxnCommonUtils;
+import org.apache.hadoop.hive.metastore.txn.TxnStore;
+import org.apache.hadoop.hive.ql.lockmgr.HiveTxnManager;
 import org.apache.hadoop.mapred.JobConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hive.common.ValidWriteIdList;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.txn.CompactionInfo;
@@ -46,6 +56,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -58,7 +69,7 @@ public class Worker extends CompactorThread {
   static final private long SLEEP_TIME = 5000;
   static final private int baseThreadNum = 10002;
 
-  private String name;
+  private String workerName;
   private JobConf mrJob; // the MR job for compaction
 
   /**
@@ -82,8 +93,9 @@ public class Worker extends CompactorThread {
       boolean launchedJob = false;
       // Make sure nothing escapes this run method and kills the metastore at large,
       // so wrap it in a big catch Throwable statement.
+      CompactionHeartbeater heartbeater = null;
       try {
-        final CompactionInfo ci = txnHandler.findNextToCompact(name);
+        final CompactionInfo ci = txnHandler.findNextToCompact(workerName);
         LOG.debug("Processing compaction request " + ci);
 
         if (ci == null && !stop.get()) {
@@ -144,14 +156,6 @@ public class Worker extends CompactorThread {
         // Compaction doesn't work under a transaction and hence pass 0 for current txn Id
         // The response will have one entry per table and hence we get only one OpenWriteIds
         String fullTableName = TxnUtils.getFullTableName(t.getDbName(), t.getTableName());
-        GetValidWriteIdsRequest rqst = new GetValidWriteIdsRequest(Collections.singletonList(fullTableName), null);
-        final ValidWriteIdList tblValidWriteIds =
-                TxnUtils.createValidCompactWriteIdList(txnHandler.getValidWriteIds(rqst).getTblValidWriteIds().get(0));
-        LOG.debug("ValidCompactWriteIdList: " + tblValidWriteIds.writeToString());
-        txnHandler.setCompactionHighestWriteId(ci, tblValidWriteIds.getHighWatermark());
-        final StringBuilder jobName = new StringBuilder(name);
-        jobName.append("-compactor-");
-        jobName.append(ci.getFullPartitionName());
 
         // Determine who to run as
         String runAs;
@@ -162,9 +166,40 @@ public class Worker extends CompactorThread {
           runAs = ci.runAs;
         }
 
-        LOG.info("Starting " + ci.type.toString() + " compaction for " +
-            ci.getFullPartitionName());
+        /**
+         * HIVE-20942: We need a transaction.  could call txnHandler directly but then we'd have to set up a hearbeat
+         * but using {@link HiveTxnManager} creates a Thrift connection to the HMS
+         * will this cause security checks that could fail?
+         * on the other hand we run SQL via Driver which certainly uses {@link HiveTxnManager}
+         final HiveTxnManager txnMgr = TxnManagerFactory.getTxnManagerFactory().getTxnManager(conf);
+         * openTxn requires Context() which is set up based on query parse/plan....
+         long txnid = txnMgr.openTxn(null, null);
+         */
+        OpenTxnRequest otReq = new OpenTxnRequest(1, runAs, hostname());
+        otReq.setAgentInfo(getName());//ThreadName
+        long compactorTxnId = txnHandler.openTxns(otReq).getTxn_ids().get(0);
+        //todo: now we can update compaction_queue entry with this id
+        //also make sure to write to TXN_COMPONENTS so that if txn aborts, we don't delete the metadata about it from TXNS!!!!
 
+        heartbeater = new CompactionHeartbeater(txnHandler, compactorTxnId, fullTableName, conf);
+        heartbeater.start();
+
+        ValidTxnList validTxnList = TxnCommonUtils.createValidReadTxnList(txnHandler.getOpenTxns(), compactorTxnId);
+        GetValidWriteIdsRequest rqst = new GetValidWriteIdsRequest(Collections.singletonList(fullTableName));
+        //with this ValidWriteIdList is capped at whatever HWM validTxnList has
+        rqst.setValidTxnList(validTxnList.writeToString());
+        final ValidCompactorWriteIdList tblValidWriteIds =
+                TxnUtils.createValidCompactWriteIdList(txnHandler.getValidWriteIds(rqst).getTblValidWriteIds().get(0));
+        LOG.debug("ValidCompactWriteIdList: " + tblValidWriteIds.writeToString());
+        conf.set(ValidTxnList.VALID_TXNS_KEY, validTxnList.writeToString());
+
+        //todo: this is a RDBMS call - so is setRunAs() above - could combine into 1
+        txnHandler.setCompactionHighestWriteId(ci, tblValidWriteIds.getHighWatermark());
+        final StringBuilder jobName = new StringBuilder(workerName);
+        jobName.append("-compactor-");
+        jobName.append(ci.getFullPartitionName());
+
+        LOG.info("Starting " + ci.type.toString() + " compaction for " + ci.getFullPartitionName() + " in " + JavaUtils.txnIdToString(compactorTxnId));
         final StatsUpdater su = StatsUpdater.init(ci, txnHandler.findColumnsWithStats(ci), conf,
           runJobAsSelf(runAs) ? runAs : t.getOwner());
         final CompactorMR mr = new CompactorMR();
@@ -190,7 +225,9 @@ public class Worker extends CompactorThread {
                   ci.getFullPartitionName(), exception);
             }
           }
+          heartbeater.cancel();
           txnHandler.markCompacted(ci);
+          txnHandler.commitTxn(new CommitTxnRequest(compactorTxnId));
           if (conf.getBoolVar(HiveConf.ConfVars.HIVE_IN_TEST)) {
             mrJob = mr.getMrJob();
           }
@@ -198,10 +235,15 @@ public class Worker extends CompactorThread {
           LOG.error("Caught exception while trying to compact " + ci +
               ".  Marking failed to avoid repeated failures, " + StringUtils.stringifyException(e));
           txnHandler.markFailed(ci);
+          txnHandler.abortTxn(new AbortTxnRequest(compactorTxnId));
         }
       } catch (Throwable t) {
-        LOG.error("Caught an exception in the main loop of compactor worker " + name + ", " +
+        LOG.error("Caught an exception in the main loop of compactor worker " + workerName + ", " +
             StringUtils.stringifyException(t));
+      } finally {
+        if(heartbeater != null) {
+          heartbeater.cancel();
+        }
       }
 
       // If we didn't try to launch a job it either means there was no work to do or we got
@@ -223,7 +265,7 @@ public class Worker extends CompactorThread {
     StringBuilder name = new StringBuilder(hostname());
     name.append("-");
     name.append(getId());
-    this.name = name.toString();
+    this.workerName = name.toString();
     setName(name.toString());
   }
 
@@ -250,7 +292,9 @@ public class Worker extends CompactorThread {
 
     private StatsUpdater(CompactionInfo ci, List<String> columnListForStats,
         HiveConf conf, String userName) {
-      this.conf = conf;
+      this.conf = new HiveConf(conf);
+      //so that Driver doesn't think it's arleady in a transaction
+      this.conf.unset(ValidTxnList.VALID_TXNS_KEY);
       this.userName = userName;
       this.ci = ci;
       if (!ci.isMajorCompaction() || columnListForStats == null || columnListForStats.isEmpty()) {
@@ -297,6 +341,9 @@ public class Worker extends CompactorThread {
         }
         sb.setLength(sb.length() - 1); //remove trailing ,
         LOG.info(ci + ": running '" + sb.toString() + "'");
+        conf.setVar(HiveConf.ConfVars.METASTOREURIS,"");
+
+        //todo: use DriverUtils.runOnDriver() here
         Driver d = new Driver(new QueryState.Builder().withGenerateNewQueryId(true).withHiveConf(conf).build(), userName);
         SessionState localSession = null;
         try {
@@ -320,6 +367,50 @@ public class Worker extends CompactorThread {
       } catch (Throwable t) {
         LOG.error(ci + ": gatherStats(" + ci.dbname + "," + ci.tableName + "," + ci.partName +
                       ") failed due to: " + t.getMessage(), t);
+      }
+    }
+  }
+
+  static final class CompactionHeartbeater extends Thread {
+    static final private Logger LOG = LoggerFactory.getLogger(CompactionHeartbeater.class);
+    private final TxnStore txnHandler;
+    private final AtomicBoolean stop = new AtomicBoolean();
+    private final long compactorTxnId;
+    private final String tableName;
+    private final HiveConf conf;
+    private final long interval;
+    public CompactionHeartbeater(TxnStore txnHandler, long compactorTxnId, String tableName, HiveConf conf) {
+      this.txnHandler = txnHandler;
+      this.tableName = tableName;
+      this.compactorTxnId = compactorTxnId;
+      this.conf = conf;
+      this.interval =
+          MetastoreConf.getTimeVar(conf, MetastoreConf.ConfVars.TXN_TIMEOUT, TimeUnit.MILLISECONDS) / 2;
+      setDaemon(true);
+      setPriority(MIN_PRIORITY);
+      setName("CompactionHeartbeater-" + compactorTxnId);
+    }
+    @Override
+    public void run() {
+      try {
+        LOG.debug("Heartbeating compaction transaction id {} for table: {}", compactorTxnId, tableName);
+        HeartbeatRequest heartbeatRequest = new HeartbeatRequest();
+
+        heartbeatRequest.setTxnid(compactorTxnId);
+        heartbeatRequest.setLockid(0);
+        while(!stop.get()) {
+          txnHandler.heartbeat(heartbeatRequest);
+          Thread.sleep(interval);
+        }
+      } catch (Exception e) {
+        LOG.error("Error while heartbeating txn {} in {}, error: ", compactorTxnId, Thread.currentThread().getName(), e.getMessage());
+      }
+    }
+
+    public void cancel() {
+      if(!this.stop.get()) {
+        LOG.debug("Successfully stop the heartbeating the transaction {}", this.compactorTxnId);
+        this.stop.set(true);
       }
     }
   }

@@ -26,6 +26,7 @@ add_months
 aes_decrypt
 aes_encrypt
 and
+approx_distinct
 array
 array_contains
 ascii
@@ -39,6 +40,7 @@ between
 bin
 bloom_filter
 bround
+bucket_number
 cardinality_violation
 case
 cbrt
@@ -130,6 +132,7 @@ isnottrue
 isnull
 istrue
 java_method
+json_read
 json_tuple
 lag
 last_day
@@ -252,6 +255,7 @@ substr
 substring
 substring_index
 sum
+surrogate_key
 tan
 to_date
 to_epoch_milli
@@ -260,6 +264,7 @@ to_utc_timestamp
 translate
 trim
 trunc
+tumbling_window
 ucase
 udftoboolean
 udftobyte
@@ -268,7 +273,6 @@ udftofloat
 udftointeger
 udftolong
 udftoshort
-udftostring
 unbase64
 unhex
 unix_timestamp

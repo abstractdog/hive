@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.ql.log.LogDivertAppender;
 import org.apache.hadoop.hive.ql.log.LogDivertAppenderForTest;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.OperationLog;
+import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hive.service.cli.FetchOrientation;
 import org.apache.hive.service.cli.HiveSQLException;
 import org.apache.hive.service.cli.OperationHandle;
@@ -60,7 +61,7 @@ public abstract class Operation {
   private final OperationHandle opHandle;
   public static final FetchOrientation DEFAULT_FETCH_ORIENTATION = FetchOrientation.FETCH_NEXT;
   public static final Logger LOG = LoggerFactory.getLogger(Operation.class.getName());
-  protected boolean hasResultSet;
+  protected Boolean hasResultSet = null;
   protected volatile HiveSQLException operationException;
   protected volatile Future<?> backgroundHandle;
   protected OperationLog operationLog;
@@ -142,7 +143,7 @@ public abstract class Operation {
   }
 
   public boolean hasResultSet() {
-    return hasResultSet;
+    return hasResultSet == null ? false : hasResultSet;
   }
 
   protected void setHasResultSet(boolean hasResultSet) {
@@ -223,6 +224,7 @@ public abstract class Operation {
    * Set up some preconditions, or configurations.
    */
   protected void beforeRun() {
+    ShimLoader.getHadoopShims().setHadoopQueryContext(queryState.getQueryId());
     createOperationLog();
     LogUtils.registerLoggingContext(queryState.getConf());
   }
@@ -233,6 +235,8 @@ public abstract class Operation {
    */
   protected void afterRun() {
     LogUtils.unregisterLoggingContext();
+    // Reset back to session context after the query is done
+    ShimLoader.getHadoopShims().setHadoopSessionContext(parentSession.getSessionState().getSessionId());
   }
 
   /**
@@ -412,5 +416,13 @@ public abstract class Operation {
 
   protected void markOperationCompletedTime() {
     operationComplete = System.currentTimeMillis();
+  }
+
+  public String getQueryTag() {
+    return queryState.getQueryTag();
+  }
+
+  public String getQueryId() {
+    return queryState.getQueryId();
   }
 }

@@ -19,12 +19,13 @@ package org.apache.hadoop.hive.ql.parse;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+import org.apache.hadoop.hive.metastore.messaging.json.gzip.GzipJSONMessageEncoder;
 import org.apache.hadoop.hive.ql.exec.repl.util.ReplUtils;
 import org.apache.hadoop.hive.ql.parse.repl.PathBuilder;
 import org.apache.hadoop.hive.ql.util.DependencyResolver;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hive.metastore.InjectableBehaviourObjectStore.Behaviour
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.api.NotificationEvent;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -42,16 +44,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.ql.exec.repl.incremental.IncrementalLoadTasksBuilder;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,33 +71,40 @@ import static org.junit.Assert.assertTrue;
 import static org.apache.hadoop.hive.metastore.ReplChangeManager.SOURCE_OF_REPLICATION;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.junit.Assert;
 
 public class TestReplicationScenariosAcrossInstances {
   @Rule
   public final TestName testName = new TestName();
 
-  @Rule
-  public TestRule replV1BackwardCompat;
-
   protected static final Logger LOG = LoggerFactory.getLogger(TestReplicationScenarios.class);
-  private static WarehouseInstance primary, replica;
+  static WarehouseInstance primary;
+  private static WarehouseInstance replica;
   private String primaryDbName, replicatedDbName;
   private static HiveConf conf;
 
   @BeforeClass
   public static void classLevelSetup() throws Exception {
-    conf = new HiveConf(TestReplicationScenarios.class);
+    HashMap<String, String> overrides = new HashMap<>();
+    overrides.put(MetastoreConf.ConfVars.EVENT_MESSAGE_FACTORY.getHiveName(),
+        GzipJSONMessageEncoder.class.getCanonicalName());
+
+    internalBeforeClassSetup(overrides, TestReplicationScenarios.class);
+  }
+
+  static void internalBeforeClassSetup(Map<String, String> overrides, Class clazz)
+      throws Exception {
+    conf = new HiveConf(clazz);
     conf.set("dfs.client.use.datanode.hostname", "true");
     conf.set("hadoop.proxyuser." + Utils.getUGI().getShortUserName() + ".hosts", "*");
     MiniDFSCluster miniDFSCluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
-    HashMap<String, String> overridesForHiveConf = new HashMap<String, String>() {{
+    Map<String, String> localOverrides = new HashMap<String, String>() {{
       put("fs.defaultFS", miniDFSCluster.getFileSystem().getUri().toString());
       put(HiveConf.ConfVars.HIVE_IN_TEST_REPL.varname, "true");
     }};
-    primary = new WarehouseInstance(LOG, miniDFSCluster, overridesForHiveConf);
-    replica = new WarehouseInstance(LOG, miniDFSCluster, overridesForHiveConf);
+    localOverrides.putAll(overrides);
+    primary = new WarehouseInstance(LOG, miniDFSCluster, localOverrides);
+    replica = new WarehouseInstance(LOG, miniDFSCluster, localOverrides);
   }
 
   @AfterClass
@@ -107,7 +115,6 @@ public class TestReplicationScenariosAcrossInstances {
 
   @Before
   public void setup() throws Throwable {
-    replV1BackwardCompat = primary.getReplivationV1CompatRule(new ArrayList<>());
     primaryDbName = testName.getMethodName() + "_" + +System.currentTimeMillis();
     replicatedDbName = "replicated_" + primaryDbName;
     primary.run("create database " + primaryDbName + " WITH DBPROPERTIES ( '" +
@@ -145,6 +152,91 @@ public class TestReplicationScenariosAcrossInstances {
         .verifyResult(incrementalDump.lastReplicationId)
         .run("SHOW FUNCTIONS LIKE '" + replicatedDbName + "*'")
         .verifyResult(replicatedDbName + ".testFunctionOne");
+  }
+
+  @Test
+  public void testBootstrapReplLoadRetryAfterFailureForFunctions() throws Throwable {
+    String funcName1 = "f1";
+    String funcName2 = "f2";
+    WarehouseInstance.Tuple tuple = primary.run("use " + primaryDbName)
+            .run("CREATE FUNCTION " + primaryDbName + "." + funcName1 +
+                    " as 'hivemall.tools.string.StopwordUDF' " +
+                    "using jar  'ivy://io.github.myui:hivemall:0.4.0-2'")
+            .run("CREATE FUNCTION " + primaryDbName + "." + funcName2 +
+                    " as 'hivemall.tools.string.SplitWordsUDF' "+
+                    "using jar  'ivy://io.github.myui:hivemall:0.4.0-1'")
+            .dump(primaryDbName, null);
+
+    // Allow create function only on f1. Create should fail for the second function.
+    BehaviourInjection<CallerArguments, Boolean> callerVerifier
+            = new BehaviourInjection<CallerArguments, Boolean>() {
+              @Override
+              public Boolean apply(CallerArguments args) {
+                injectionPathCalled = true;
+                if (!args.dbName.equalsIgnoreCase(replicatedDbName)) {
+                  LOG.warn("Verifier - DB: " + String.valueOf(args.dbName));
+                  return false;
+                }
+                if (args.funcName != null) {
+                  LOG.debug("Verifier - Function: " + String.valueOf(args.funcName));
+                  return args.funcName.equals(funcName1);
+                }
+                return true;
+              }
+            };
+    InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
+
+    // Trigger bootstrap dump which just creates function f1 but not f2
+    List<String> withConfigs = Arrays.asList("'hive.repl.approx.max.load.tasks'='1'",
+            "'hive.in.repl.test.files.sorted'='true'");
+    try {
+      replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
+
+    // Verify that only f1 got loaded
+    replica.run("use " + replicatedDbName)
+            .run("repl status " + replicatedDbName)
+            .verifyResult("null")
+            .run("show functions like '" + replicatedDbName + "*'")
+            .verifyResult(replicatedDbName + "." + funcName1);
+
+    // Verify no calls to load f1 only f2.
+    callerVerifier = new BehaviourInjection<CallerArguments, Boolean>() {
+      @Override
+      public Boolean apply(CallerArguments args) {
+        injectionPathCalled = true;
+        if (!args.dbName.equalsIgnoreCase(replicatedDbName)) {
+          LOG.warn("Verifier - DB: " + String.valueOf(args.dbName));
+          return false;
+        }
+        if (args.funcName != null) {
+          LOG.debug("Verifier - Function: " + String.valueOf(args.funcName));
+          return args.funcName.equals(funcName2);
+        }
+        return true;
+      }
+    };
+    InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
+
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it completes by adding just the function f2
+      replica.load(replicatedDbName, tuple.dumpLocation);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
+
+    // Verify that both the functions are available.
+    replica.run("use " + replicatedDbName)
+            .run("repl status " + replicatedDbName)
+            .verifyResult(tuple.lastReplicationId)
+            .run("show functions like '" + replicatedDbName +"*'")
+            .verifyResults(new String[] {replicatedDbName + "." + funcName1,
+                                         replicatedDbName +"." +funcName2});
   }
 
   @Test
@@ -321,7 +413,8 @@ public class TestReplicationScenariosAcrossInstances {
             "clustered by(key) into 2 buckets stored as orc tblproperties ('transactional'='true')")
         .run("create table table1 (i int, j int)")
         .run("insert into table1 values (1,2)")
-        .dump(primaryDbName, null, Arrays.asList("'hive.repl.dump.metadata.only'='true'"));
+        .dump(primaryDbName, null,
+            Collections.singletonList("'hive.repl.dump.metadata.only'='true'"));
 
     replica.load(replicatedDbName, tuple.dumpLocation)
         .run("use " + replicatedDbName)
@@ -403,7 +496,7 @@ public class TestReplicationScenariosAcrossInstances {
         })
         .run("show tblproperties table3('custom.property')")
         .verifyResults(new String[] {
-            "custom.value\t "
+            "custom.property\tcustom.value"
         });
   }
 
@@ -417,7 +510,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("create table table2 (a int, city string) partitioned by (country string)")
             .run("create table table3 (i int, j int)")
             .run("insert into table1 values (1,2)")
-            .dump(dbName, null, Arrays.asList("'hive.repl.dump.metadata.only'='true'"));
+        .dump(dbName, null, Collections.singletonList("'hive.repl.dump.metadata.only'='true'"));
 
     replica.load(replicatedDbName, tuple.dumpLocation)
             .run("use " + replicatedDbName)
@@ -431,7 +524,8 @@ public class TestReplicationScenariosAcrossInstances {
             .run("alter table table1 rename to renamed_table1")
             .run("insert into table2 partition(country='india') values (1,'mumbai') ")
             .run("create table table4 (i int, j int)")
-            .dump(dbName, tuple.lastReplicationId, Arrays.asList("'hive.repl.dump.metadata.only'='true'"));
+        .dump(dbName, tuple.lastReplicationId,
+            Collections.singletonList("'hive.repl.dump.metadata.only'='true'"));
 
     replica.load(replicatedDbName, tuple.dumpLocation)
             .run("use " + replicatedDbName)
@@ -465,7 +559,7 @@ public class TestReplicationScenariosAcrossInstances {
                 SOURCE_OF_REPLICATION + "' = '1,2,3')")
         .run("use " + dbTwo)
         .run("create table t1 (i int, j int)")
-        .dump("`*`", null, Arrays.asList("'hive.repl.dump.metadata.only'='true'"));
+        .dump("`*`", null, Collections.singletonList("'hive.repl.dump.metadata.only'='true'"));
 
     /*
       Due to the limitation that we can only have one instance of Persistence Manager Factory in a JVM
@@ -524,7 +618,7 @@ public class TestReplicationScenariosAcrossInstances {
         .run("use " + dbOne)
         .run("create table t1 (i int, j int) partitioned by (load_date date) "
             + "clustered by(i) into 2 buckets stored as orc tblproperties ('transactional'='true') ")
-        .dump("`*`", null, Arrays.asList("'hive.repl.dump.metadata.only'='true'"));
+        .dump("`*`", null, Collections.singletonList("'hive.repl.dump.metadata.only'='true'"));
 
     String dbTwo = primaryDbName + randomTwo;
     WarehouseInstance.Tuple incrementalTuple = primary
@@ -675,7 +769,7 @@ public class TestReplicationScenariosAcrossInstances {
                     "country             \tstring              \t                    ",
             })
             .run("show tblproperties table3('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " })
+            .verifyResults(new String[] { "custom.property\tcustom.value" })
             .run("select id from table2 order by id")
             .verifyResults(new String[] { "1" })
             .run("select * from table3")
@@ -877,6 +971,51 @@ public class TestReplicationScenariosAcrossInstances {
   }
 
   @Test
+  public void testIncrementalDumpEmptyDumpDirectory() throws Throwable {
+    WarehouseInstance.Tuple tuple = primary.dump(primaryDbName, null);
+
+    replica.load(replicatedDbName, tuple.dumpLocation)
+            .status(replicatedDbName)
+            .verifyResult(tuple.lastReplicationId);
+
+    tuple = primary.dump(primaryDbName, tuple.lastReplicationId);
+
+    replica.load(replicatedDbName, tuple.dumpLocation)
+            .status(replicatedDbName)
+            .verifyResult(tuple.lastReplicationId);
+
+    // create events for some other database and then dump the primaryDbName to dump an empty directory.
+    String testDbName = primaryDbName + "_test";
+    tuple = primary.run(" create database " + testDbName)
+            .run("create table " + testDbName + ".tbl (fld int)")
+            .dump(primaryDbName, tuple.lastReplicationId);
+
+    // Incremental load to existing database with empty dump directory should set the repl id to the last event at src.
+    replica.load(replicatedDbName, tuple.dumpLocation)
+            .status(replicatedDbName)
+            .verifyResult(tuple.lastReplicationId);
+
+    // Incremental load to non existing db should return database not exist error.
+    tuple = primary.dump("someJunkDB", tuple.lastReplicationId);
+    CommandProcessorResponse response =
+        replica.runCommand("REPL LOAD someJunkDB from '" + tuple.dumpLocation + "'");
+    assertTrue(response.getErrorMessage().toLowerCase()
+        .contains("org.apache.hadoop.hive.ql.exec.DDLTask. Database does not exist: someJunkDB"
+            .toLowerCase()));
+
+    // Bootstrap load from an empty dump directory should return empty load directory error.
+    tuple = primary.dump("someJunkDB", null);
+    response = replica.runCommand("REPL LOAD someJunkDB from '" + tuple.dumpLocation+"'");
+    assertTrue(response.getErrorMessage().toLowerCase()
+        .contains(
+            "semanticException no data to load in path"
+                .toLowerCase())
+    );
+
+    primary.run(" drop database if exists " + testDbName + " cascade");
+  }
+
+  @Test
   public void testIncrementalDumpMultiIteration() throws Throwable {
     WarehouseInstance.Tuple bootstrapTuple = primary.dump(primaryDbName, null);
 
@@ -893,7 +1032,8 @@ public class TestReplicationScenariosAcrossInstances {
             .run("insert into table3 partition(country='india') values(3)")
             .dump(primaryDbName, bootstrapTuple.lastReplicationId);
 
-    replica.load(replicatedDbName, incremental.dumpLocation, Arrays.asList("'hive.repl.approx.max.load.tasks'='10'"))
+    replica.load(replicatedDbName, incremental.dumpLocation,
+        Collections.singletonList("'hive.repl.approx.max.load.tasks'='10'"))
             .status(replicatedDbName)
             .verifyResult(incremental.lastReplicationId)
             .run("use " + replicatedDbName)
@@ -917,7 +1057,8 @@ public class TestReplicationScenariosAcrossInstances {
     FileStatus[] fileStatus = fs.listStatus(path);
     int numEvents = fileStatus.length - 1; //one is metadata file
 
-    replica.load(replicatedDbName, incremental.dumpLocation, Arrays.asList("'hive.repl.approx.max.load.tasks'='1'"))
+    replica.load(replicatedDbName, incremental.dumpLocation,
+        Collections.singletonList("'hive.repl.approx.max.load.tasks'='1'"))
             .run("use " + replicatedDbName)
             .run("show tables")
             .verifyResults(new String[] {"table1", "table2", "table3", "table4", "table5" })
@@ -940,7 +1081,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("repl status " + replicatedDbName)
             .verifyResult(tuplePrimary.lastReplicationId)
             .run("show tblproperties t1('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " })
+            .verifyResults(new String[] { "custom.property\tcustom.value" })
             .dumpFailure(replicatedDbName, null)
             .run("alter database " + replicatedDbName
                     + " set dbproperties ('" + SOURCE_OF_REPLICATION + "' = '1, 2, 3')")
@@ -957,7 +1098,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("select country from t1")
             .verifyResults(Arrays.asList("india"))
             .run("show tblproperties t1('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " });
+            .verifyResults(new String[] { "custom.property\tcustom.value" });
 
     // Check if DB/table/partition in C doesn't have repl.source.for props. Also ensure, ckpt property
     // is set to bootstrap dump location used in C.
@@ -996,7 +1137,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("repl status " + replDbFromReplica)
             .verifyResult(tupleReplicaInc.lastReplicationId)
             .run("show tblproperties t1('custom.property')")
-            .verifyResults(new String[] { "custom.value\t " });
+            .verifyResults(new String[] { "custom.property\tcustom.value" });
 
     // Check if DB/table/partition in C doesn't have repl.source.for props. Also ensure, ckpt property
     // in DB is set to bootstrap dump location used in C but for table/partition, it is missing.
@@ -1070,7 +1211,7 @@ public class TestReplicationScenariosAcrossInstances {
             .run("show tables")
             .verifyResults(new String[] { "t1", "t2" })
             .run("select id from t1")
-            .verifyResults(Arrays.asList("10"))
+        .verifyResults(Collections.singletonList("10"))
             .run("select country from t2 order by country")
             .verifyResults(Arrays.asList("india", "uk", "us"));
     verifyIfCkptSet(replica, replicatedDbName, tuple.dumpLocation);
@@ -1112,9 +1253,8 @@ public class TestReplicationScenariosAcrossInstances {
     // also not loaded.
     BehaviourInjection<CallerArguments, Boolean> callerVerifier
             = new BehaviourInjection<CallerArguments, Boolean>() {
-      @Nullable
       @Override
-      public Boolean apply(@Nullable CallerArguments args) {
+      public Boolean apply(CallerArguments args) {
         injectionPathCalled = true;
         if (!args.dbName.equalsIgnoreCase(replicatedDbName) || (args.constraintTblName != null)) {
           LOG.warn("Verifier - DB: " + String.valueOf(args.dbName)
@@ -1132,9 +1272,12 @@ public class TestReplicationScenariosAcrossInstances {
 
     // Trigger bootstrap dump which just creates table t1 and other tables (t2, t3) and constraints not loaded.
     List<String> withConfigs = Arrays.asList("'hive.repl.approx.max.load.tasks'='1'");
-    replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(true, false);
+    try {
+      replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1152,9 +1295,8 @@ public class TestReplicationScenariosAcrossInstances {
     // Verify if create table is not called on table t1 but called for t2 and t3.
     // Also, allow constraint creation only on t1 and t3. Foreign key creation on t2 fails.
     callerVerifier = new BehaviourInjection<CallerArguments, Boolean>() {
-      @Nullable
       @Override
-      public Boolean apply(@Nullable CallerArguments args) {
+      public Boolean apply(CallerArguments args) {
         injectionPathCalled = true;
         if (!args.dbName.equalsIgnoreCase(replicatedDbName) || (args.funcName != null)) {
           LOG.warn("Verifier - DB: " + String.valueOf(args.dbName) + " Func: " + String.valueOf(args.funcName));
@@ -1169,11 +1311,14 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
 
-    // Retry with same dump with which it was already loaded should resume the bootstrap load.
-    // This time, it fails when try to load the foreign key constraints. All other constraints are loaded.
-    replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(true, false);
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it fails when try to load the foreign key constraints. All other constraints are loaded.
+      replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1187,9 +1332,8 @@ public class TestReplicationScenariosAcrossInstances {
 
     // Verify if no create table/function calls. Only add foreign key constraints on table t2.
     callerVerifier = new BehaviourInjection<CallerArguments, Boolean>() {
-      @Nullable
       @Override
-      public Boolean apply(@Nullable CallerArguments args) {
+      public Boolean apply(CallerArguments args) {
         injectionPathCalled = true;
         if (!args.dbName.equalsIgnoreCase(replicatedDbName) || (args.tblName != null)) {
           LOG.warn("Verifier - DB: " + String.valueOf(args.dbName)
@@ -1205,11 +1349,14 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
 
-    // Retry with same dump with which it was already loaded should resume the bootstrap load.
-    // This time, it completes by adding just foreign key constraints for table t2.
-    replica.load(replicatedDbName, tuple.dumpLocation);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(true, false);
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it completes by adding just foreign key constraints for table t2.
+      replica.load(replicatedDbName, tuple.dumpLocation);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1256,7 +1403,9 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setGetPartitionBehaviour(getPartitionStub);
 
-    List<String> withConfigs = Arrays.asList("'hive.repl.approx.max.load.tasks'='1'");
+    // Make sure that there's some order in which the objects are loaded.
+    List<String> withConfigs = Arrays.asList("'hive.repl.approx.max.load.tasks'='1'",
+            "'hive.in.repl.test.files.sorted'='true'");
     replica.loadFailure(replicatedDbName, tuple.dumpLocation, withConfigs);
     InjectableBehaviourObjectStore.resetGetPartitionBehaviour(); // reset the behaviour
     getPartitionStub.assertInjectionsPerformed(true, false);
@@ -1267,24 +1416,21 @@ public class TestReplicationScenariosAcrossInstances {
             .run("show tables")
             .verifyResults(new String[] {"t2" })
             .run("select country from t2 order by country")
-            .verifyResults(Arrays.asList("india"))
-            .run("show functions like '" + replicatedDbName + "*'")
-            .verifyResult(replicatedDbName + ".testFunctionOne");
+            .verifyResults(Collections.singletonList("india"));
 
     // Retry with different dump should fail.
     replica.loadFailure(replicatedDbName, tuple2.dumpLocation);
 
-    // Verify if no create table/function calls. Only add partitions.
+    // Verify if no create table calls. Add partitions and create function calls expected.
     BehaviourInjection<CallerArguments, Boolean> callerVerifier
             = new BehaviourInjection<CallerArguments, Boolean>() {
       @Nullable
       @Override
       public Boolean apply(@Nullable CallerArguments args) {
-        if (!args.dbName.equalsIgnoreCase(replicatedDbName) || (args.tblName != null) || (args.funcName != null)) {
+        if (!args.dbName.equalsIgnoreCase(replicatedDbName) || (args.tblName != null)) {
           injectionPathCalled = true;
           LOG.warn("Verifier - DB: " + String.valueOf(args.dbName)
-                  + " Table: " + String.valueOf(args.tblName)
-                  + " Func: " + String.valueOf(args.funcName));
+                  + " Table: " + String.valueOf(args.tblName));
           return false;
         }
         return true;
@@ -1292,11 +1438,14 @@ public class TestReplicationScenariosAcrossInstances {
     };
     InjectableBehaviourObjectStore.setCallerVerifier(callerVerifier);
 
-    // Retry with same dump with which it was already loaded should resume the bootstrap load.
-    // This time, it completes by adding remaining partitions.
-    replica.load(replicatedDbName, tuple.dumpLocation);
-    InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
-    callerVerifier.assertInjectionsPerformed(false, false);
+    try {
+      // Retry with same dump with which it was already loaded should resume the bootstrap load.
+      // This time, it completes by adding remaining partitions and function.
+      replica.load(replicatedDbName, tuple.dumpLocation);
+      callerVerifier.assertInjectionsPerformed(false, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetCallerVerifier(); // reset the behaviour
+    }
 
     replica.run("use " + replicatedDbName)
             .run("repl status " + replicatedDbName)
@@ -1307,6 +1456,116 @@ public class TestReplicationScenariosAcrossInstances {
             .verifyResults(Arrays.asList("india", "uk", "us"))
             .run("show functions like '" + replicatedDbName + "*'")
             .verifyResult(replicatedDbName + ".testFunctionOne");
+  }
+
+  @Test
+  public void testMoveOptimizationBootstrapReplLoadRetryAfterFailure() throws Throwable {
+    String replicatedDbName_CM = replicatedDbName + "_CM";
+    WarehouseInstance.Tuple tuple = primary
+            .run("use " + primaryDbName)
+            .run("create table t2 (place string) partitioned by (country string)")
+            .run("insert into table t2 partition(country='india') values ('bangalore')")
+            .dump(primaryDbName, null);
+
+    testMoveOptimization(primaryDbName, replicatedDbName, replicatedDbName_CM, "t2",
+            "ADD_PARTITION", tuple);
+  }
+
+  @Test
+  public void testMoveOptimizationIncrementalFailureAfterCopyReplace() throws Throwable {
+    List<String> withConfigs =
+        Collections.singletonList("'hive.repl.enable.move.optimization'='true'");
+    String replicatedDbName_CM = replicatedDbName + "_CM";
+    WarehouseInstance.Tuple tuple = primary.run("use " + primaryDbName)
+            .run("create table t2 (place string) partitioned by (country string)")
+            .run("insert into table t2 partition(country='india') values ('bangalore')")
+            .run("create table t1 (place string) partitioned by (country string)")
+            .dump(primaryDbName, null);
+    replica.load(replicatedDbName, tuple.dumpLocation, withConfigs);
+    replica.load(replicatedDbName_CM, tuple.dumpLocation, withConfigs);
+    replica.run("alter database " + replicatedDbName + " set DBPROPERTIES ('" + SOURCE_OF_REPLICATION + "' = '1,2,3')")
+        .run("alter database " + replicatedDbName_CM + " set DBPROPERTIES ('" + SOURCE_OF_REPLICATION + "' = '1,2,3')");
+
+    tuple = primary.run("use " + primaryDbName)
+            .run("insert overwrite table t1 select * from t2")
+            .dump(primaryDbName, tuple.lastReplicationId);
+
+    testMoveOptimization(primaryDbName, replicatedDbName, replicatedDbName_CM, "t1", "ADD_PARTITION", tuple);
+  }
+
+  @Test
+  public void testMoveOptimizationIncrementalFailureAfterCopy() throws Throwable {
+    List<String> withConfigs =
+        Collections.singletonList("'hive.repl.enable.move.optimization'='true'");
+    String replicatedDbName_CM = replicatedDbName + "_CM";
+    WarehouseInstance.Tuple tuple = primary.run("use " + primaryDbName)
+            .run("create table t2 (place string) partitioned by (country string)")
+            .run("ALTER TABLE t2 ADD PARTITION (country='india')")
+            .dump(primaryDbName, null);
+    replica.load(replicatedDbName, tuple.dumpLocation, withConfigs);
+    replica.load(replicatedDbName_CM, tuple.dumpLocation, withConfigs);
+    replica.run("alter database " + replicatedDbName + " set DBPROPERTIES ('" + SOURCE_OF_REPLICATION + "' = '1,2,3')")
+        .run("alter database " + replicatedDbName_CM + " set DBPROPERTIES ('" + SOURCE_OF_REPLICATION + "' = '1,2,3')");
+
+    tuple = primary.run("use " + primaryDbName)
+            .run("insert into table t2 partition(country='india') values ('bangalore')")
+            .dump(primaryDbName, tuple.lastReplicationId);
+
+    testMoveOptimization(primaryDbName, replicatedDbName, replicatedDbName_CM, "t2", "INSERT", tuple);
+  }
+
+  private void testMoveOptimization(String primaryDb, String replicaDb, String replicatedDbName_CM,
+                                    String tbl,  String eventType, WarehouseInstance.Tuple tuple) throws Throwable {
+    List<String> withConfigs =
+        Collections.singletonList("'hive.repl.enable.move.optimization'='true'");
+
+    // fail add notification for given event type.
+    BehaviourInjection<NotificationEvent, Boolean> callerVerifier
+            = new BehaviourInjection<NotificationEvent, Boolean>() {
+      @Override
+      public Boolean apply(NotificationEvent entry) {
+        if (entry.getEventType().equalsIgnoreCase(eventType) && entry.getTableName().equalsIgnoreCase(tbl)) {
+          injectionPathCalled = true;
+          LOG.warn("Verifier - DB: " + String.valueOf(entry.getDbName())
+                  + " Table: " + String.valueOf(entry.getTableName())
+                  + " Event: " + String.valueOf(entry.getEventType()));
+          return false;
+        }
+        return true;
+      }
+    };
+
+    InjectableBehaviourObjectStore.setAddNotificationModifier(callerVerifier);
+    try {
+      replica.loadFailure(replicaDb, tuple.dumpLocation, withConfigs);
+    } finally {
+      InjectableBehaviourObjectStore.resetAddNotificationModifier();
+    }
+
+    callerVerifier.assertInjectionsPerformed(true, false);
+    replica.load(replicaDb, tuple.dumpLocation, withConfigs);
+
+    replica.run("use " + replicaDb)
+            .run("select country from " + tbl + " where country == 'india'")
+            .verifyResults(Arrays.asList("india"));
+
+    primary.run("use " + primaryDb)
+            .run("drop table " + tbl);
+
+    InjectableBehaviourObjectStore.setAddNotificationModifier(callerVerifier);
+    try {
+      replica.loadFailure(replicatedDbName_CM, tuple.dumpLocation, withConfigs);
+    } finally {
+      InjectableBehaviourObjectStore.resetAddNotificationModifier();
+    }
+
+    callerVerifier.assertInjectionsPerformed(true, false);
+    replica.load(replicatedDbName_CM, tuple.dumpLocation, withConfigs);
+
+    replica.run("use " + replicatedDbName_CM)
+            .run("select country from " + tbl + " where country == 'india'")
+            .verifyResults(Arrays.asList("india"))
+            .run(" drop database if exists " + replicatedDbName_CM + " cascade");
   }
 
   @Test
@@ -1375,6 +1634,7 @@ public class TestReplicationScenariosAcrossInstances {
     tuple = primary.run("use " + primaryDbName)
             .run("create external table t3 (id int)")
             .run("insert into table t3 values (10)")
+            .run("create external table t4 as select id from t3")
             .dump("repl dump " + primaryDbName + " from " + tuple.lastReplicationId
                     + " with ('hive.repl.include.external.tables'='true')");
 
@@ -1383,6 +1643,80 @@ public class TestReplicationScenariosAcrossInstances {
             .run("show tables like 't3'")
             .verifyResult("t3")
             .run("select id from t3")
-            .verifyResult("10");
+            .verifyResult("10")
+            .run("select id from t4")
+            .verifyResult(null); // Returns null as create table event doesn't list files
+  }
+
+  @Test
+  public void testDumpExternalTableWithAddPartitionEvent() throws Throwable {
+    WarehouseInstance.Tuple tuple = primary.dump("repl dump " + primaryDbName);
+
+    replica.load(replicatedDbName, tuple.dumpLocation);
+
+    tuple = primary.run("use " + primaryDbName)
+            .run("create external table t1 (place string) partitioned by (country string)")
+            .run("alter table t1 add partition(country='india')")
+            .run("alter table t1 add partition(country='us')")
+            .dump("repl dump " + primaryDbName + " from " + tuple.lastReplicationId
+                    + " with ('hive.repl.include.external.tables'='true')");
+
+    replica.load(replicatedDbName, tuple.dumpLocation)
+            .run("use " + replicatedDbName)
+            .run("show tables like 't1'")
+            .verifyResult("t1")
+            .run("show partitions t1")
+            .verifyResults(new String[] { "country=india", "country=us" });
+  }
+
+  // This requires the tables are loaded in a fixed sorted order.
+  @Test
+  public void testBootstrapLoadRetryAfterFailureForAlterTable() throws Throwable {
+    WarehouseInstance.Tuple tuple = primary
+            .run("use " + primaryDbName)
+            .run("create table t1 (place string)")
+            .run("insert into table t1 values ('testCheck')")
+            .run("create table t2 (place string) partitioned by (country string)")
+            .run("insert into table t2 partition(country='china') values ('shenzhen')")
+            .run("insert into table t2 partition(country='india') values ('banaglore')")
+            .dump(primaryDbName, null);
+
+    // fail setting ckpt directory property for table t1.
+    BehaviourInjection<CallerArguments, Boolean> callerVerifier
+            = new BehaviourInjection<CallerArguments, Boolean>() {
+      @Nullable
+      @Override
+      public Boolean apply(@Nullable CallerArguments args) {
+        if (args.tblName.equalsIgnoreCase("t1") && args.dbName.equalsIgnoreCase(replicatedDbName)) {
+          injectionPathCalled = true;
+          LOG.warn("Verifier - DB : " + args.dbName + " TABLE : " + args.tblName);
+          return false;
+        }
+        return true;
+      }
+    };
+
+    // Fail repl load before the ckpt proeprty is set for t1 and after it is set for t2. So in the next run, for
+    // t2 it goes directly to partion load with no task for table tracker and for t1 it loads the table
+    // again from start.
+    InjectableBehaviourObjectStore.setAlterTableModifier(callerVerifier);
+    try {
+      replica.loadFailure(replicatedDbName, tuple.dumpLocation);
+      callerVerifier.assertInjectionsPerformed(true, false);
+    } finally {
+      InjectableBehaviourObjectStore.resetAlterTableModifier();
+    }
+
+    // Retry with same dump with which it was already loaded should resume the bootstrap load. Make sure that table t1,
+    // is loaded before t2. So that scope is set to table in first iteration for table t1. In the next iteration, it
+    // loads only remaining partitions of t2, so that the table tracker has no tasks.
+    List<String> withConfigs = Arrays.asList("'hive.in.repl.test.files.sorted'='true'");
+    replica.load(replicatedDbName, tuple.dumpLocation, withConfigs);
+
+    replica.run("use " + replicatedDbName)
+            .run("repl status " + replicatedDbName)
+            .verifyResult(tuple.lastReplicationId)
+            .run("select country from t2 order by country")
+            .verifyResults(Arrays.asList("china", "india"));
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.udf.generic;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -46,7 +47,11 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.LongWritable;
 
-@Description(name = "percentile_cont", value = "_FUNC_(input, pc) - Returns the percentile of expr at pc (range: [0,1]).")
+/**
+ * GenericUDAFPercentileCont.
+ */
+@Description(name = "percentile_cont", value = "_FUNC_(input, pc) "
+    + "- Returns the percentile of expr at pc (range: [0,1]).")
 public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
 
   private static final Comparator<LongWritable> LONG_COMPARATOR;
@@ -96,18 +101,21 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
   }
 
   /**
-   * A comparators to sort the entries in order.
+   * A comparator to sort the entries in order - Long.
    */
-  public static class LongComparator implements Comparator<Map.Entry<LongWritable, LongWritable>> {
+  @SuppressWarnings("serial")
+  public static class LongComparator implements Comparator<Map.Entry<LongWritable, LongWritable>>, Serializable {
     @Override
-    public int compare(Map.Entry<LongWritable, LongWritable> o1,
-        Map.Entry<LongWritable, LongWritable> o2) {
+    public int compare(Map.Entry<LongWritable, LongWritable> o1, Map.Entry<LongWritable, LongWritable> o2) {
       return LONG_COMPARATOR.compare(o1.getKey(), o2.getKey());
     }
   }
 
-  public static class DoubleComparator
-      implements Comparator<Map.Entry<DoubleWritable, LongWritable>> {
+  /**
+   * A comparator to sort the entries in order - Double.
+   */
+  @SuppressWarnings("serial")
+  public static class DoubleComparator implements Comparator<Map.Entry<DoubleWritable, LongWritable>>, Serializable {
     @Override
     public int compare(Map.Entry<DoubleWritable, LongWritable> o1,
         Map.Entry<DoubleWritable, LongWritable> o2) {
@@ -115,6 +123,9 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
   }
 
+  /**
+   * An abstract class to hold the generic udf functions for calculating percentile.
+   */
   public abstract static class PercentileContEvaluator<T, U> extends GenericUDAFEvaluator {
     /**
      * A state class to store intermediate aggregation results.
@@ -479,7 +490,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
   /**
    * continuous percentile calculators
    */
-  public static abstract class PercentileContCalculator<T> {
+  public abstract static class PercentileContCalculator<T> {
     abstract double getPercentile(List<Map.Entry<T, LongWritable>> entriesList, double position);
   }
 

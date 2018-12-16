@@ -29,37 +29,40 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Test class for GenericUDAFPercentileCont.
+ */
 public class TestGenericUDAFPercentileCont {
   PercentileContLongCalculator calc = new PercentileContLongCalculator();
 
   // Long type tests
   @Test
   public void testNoInterpolation() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    Long[] items = new Long[] {1L, 2L, 3L, 4L, 5L };
     checkPercentile(items, 0.5, 3);
   }
 
   @Test
   public void testInterpolateLower() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    Long[] items = new Long[] {1L, 2L, 3L, 4L, 5L };
     checkPercentile(items, 0.49, 2.96);
   }
 
   @Test
   public void testInterpolateHigher() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    Long[] items = new Long[] {1L, 2L, 3L, 4L, 5L };
     checkPercentile(items, 0.51, 3.04);
   }
 
   @Test
   public void testSingleItem50() throws Exception {
-    Long[] items = new Long[] { 1L };
+    Long[] items = new Long[] {1L };
     checkPercentile(items, 0.5, 1);
   }
 
   @Test
   public void testSingleItem100() throws Exception {
-    Long[] items = new Long[] { 1L };
+    Long[] items = new Long[] {1L };
     checkPercentile(items, 1, 1);
   }
 
@@ -70,7 +73,7 @@ public class TestGenericUDAFPercentileCont {
    */
   @Test
   public void testPostresRefExample() throws Exception {
-    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
     checkPercentile(items, 0.5, 54);
   }
 
@@ -81,38 +84,38 @@ public class TestGenericUDAFPercentileCont {
    */
   @Test
   public void testPostresRefExample2() throws Exception {
-    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
     checkPercentile(items, 0.72, 76.64);
   }
 
   // Double type tests
   @Test
   public void testDoubleNoInterpolation() throws Exception {
-    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    Double[] items = new Double[] {1.0, 2.0, 3.0, 4.0, 5.0 };
     checkPercentile(items, 0.5, 3);
   }
 
   @Test
   public void testDoubleInterpolateLower() throws Exception {
-    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    Double[] items = new Double[] {1.0, 2.0, 3.0, 4.0, 5.0 };
     checkPercentile(items, 0.49, 2.96);
   }
 
   @Test
   public void testDoubleInterpolateHigher() throws Exception {
-    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    Double[] items = new Double[] {1.0, 2.0, 3.0, 4.0, 5.0 };
     checkPercentile(items, 0.51, 3.04);
   }
 
   @Test
   public void testDoubleSingleItem50() throws Exception {
-    Double[] items = new Double[] { 1.0 };
+    Double[] items = new Double[] {1.0 };
     checkPercentile(items, 0.5, 1);
   }
 
   @Test
   public void testDoubleSingleItem100() throws Exception {
-    Double[] items = new Double[] { 1.0 };
+    Double[] items = new Double[] {1.0 };
     checkPercentile(items, 1, 1);
   }
 
@@ -123,7 +126,7 @@ public class TestGenericUDAFPercentileCont {
    */
   @Test
   public void testDoublePostresRefExample() throws Exception {
-    Double[] items = new Double[] { 54.0, 35.0, 15.0, 15.0, 76.0, 87.0, 78.0 };
+    Double[] items = new Double[] {54.0, 35.0, 15.0, 15.0, 76.0, 87.0, 78.0 };
     checkPercentile(items, 0.5, 54);
   }
 
@@ -134,7 +137,7 @@ public class TestGenericUDAFPercentileCont {
    */
   @Test
   public void testDoublePostresRefExample2() throws Exception {
-    Double[] items = new Double[] { 54.5, 35.3, 15.7, 15.7, 76.8, 87.34, 78.0 };
+    Double[] items = new Double[] {54.5, 35.3, 15.7, 15.7, 76.8, 87.34, 78.0 };
     checkPercentile(items, 0.72, 77.184);
   }
 
@@ -158,10 +161,8 @@ public class TestGenericUDAFPercentileCont {
   }
 
   @SuppressWarnings({ "unchecked", "resource" })
-  private void checkPercentile(Double[] items, double percentile, double expected)
-      throws Exception {
-    PercentileContDoubleEvaluator eval =
-        new GenericUDAFPercentileCont.PercentileContDoubleEvaluator();
+  private void checkPercentile(Double[] items, double percentile, double expected) throws Exception {
+    PercentileContDoubleEvaluator eval = new GenericUDAFPercentileCont.PercentileContDoubleEvaluator();
 
     PercentileAgg agg = new PercentileContLongEvaluator().new PercentileAgg();
 

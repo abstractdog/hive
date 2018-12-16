@@ -21,7 +21,6 @@ package org.apache.hadoop.hive.ql.udf.generic;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContEvaluator.PercentileAgg;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContDoubleEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContLongEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileDisc.PercentileDiscDoubleEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileDisc.PercentileDiscLongCalculator;
@@ -30,37 +29,40 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Test class for GenericUDAFPercentileDisc.
+ */
 public class TestGenericUDAFPercentileDisc {
   PercentileDiscLongCalculator calc = new PercentileDiscLongCalculator();
 
   // Long type tests
   @Test
   public void testNoInterpolation() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    Long[] items = new Long[] {1L, 2L, 3L, 4L, 5L };
     checkPercentile(items, 0.5, 3);
   }
 
   @Test
   public void testInterpolateLower() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    Long[] items = new Long[] {1L, 2L, 3L, 4L, 5L };
     checkPercentile(items, 0.49, 3.0);
   }
 
   @Test
   public void testInterpolateHigher() throws Exception {
-    Long[] items = new Long[] { 1L, 2L, 3L, 4L, 5L };
+    Long[] items = new Long[] {1L, 2L, 3L, 4L, 5L };
     checkPercentile(items, 0.51, 4.0);
   }
 
   @Test
   public void testSingleItem50() throws Exception {
-    Long[] items = new Long[] { 1L };
+    Long[] items = new Long[] {1L };
     checkPercentile(items, 0.5, 1);
   }
 
   @Test
   public void testSingleItem100() throws Exception {
-    Long[] items = new Long[] { 1L };
+    Long[] items = new Long[] {1L };
     checkPercentile(items, 1, 1);
   }
 
@@ -71,7 +73,7 @@ public class TestGenericUDAFPercentileDisc {
    */
   @Test
   public void testPostresRefExample() throws Exception {
-    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
     checkPercentile(items, 0.5, 54);
   }
 
@@ -82,38 +84,38 @@ public class TestGenericUDAFPercentileDisc {
    */
   @Test
   public void testPostresRefExample2() throws Exception {
-    Long[] items = new Long[] { 54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
     checkPercentile(items, 0.72, 78);
   }
 
   // Long type tests
   @Test
   public void testDoubleNoInterpolation() throws Exception {
-    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    Double[] items = new Double[] {1.0, 2.0, 3.0, 4.0, 5.0 };
     checkPercentile(items, 0.5, 3);
   }
 
   @Test
   public void testDoubleInterpolateLower() throws Exception {
-    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    Double[] items = new Double[] {1.0, 2.0, 3.0, 4.0, 5.0 };
     checkPercentile(items, 0.49, 3.0);
   }
 
   @Test
   public void testDoubleInterpolateHigher() throws Exception {
-    Double[] items = new Double[] { 1.0, 2.0, 3.0, 4.0, 5.0 };
+    Double[] items = new Double[] {1.0, 2.0, 3.0, 4.0, 5.0 };
     checkPercentile(items, 0.51, 4.0);
   }
 
   @Test
   public void testDoubleSingleItem50() throws Exception {
-    Double[] items = new Double[] { 1.0 };
+    Double[] items = new Double[] {1.0 };
     checkPercentile(items, 0.5, 1);
   }
 
   @Test
   public void testDoubleSingleItem100() throws Exception {
-    Double[] items = new Double[] { 1.0 };
+    Double[] items = new Double[] {1.0 };
     checkPercentile(items, 1, 1);
   }
 
@@ -124,7 +126,7 @@ public class TestGenericUDAFPercentileDisc {
    */
   @Test
   public void testDoublePostresRefExample() throws Exception {
-    Double[] items = new Double[] { 54.0, 35.0, 15.0, 15.0, 76.0, 87.0, 78.0 };
+    Double[] items = new Double[] {54.0, 35.0, 15.0, 15.0, 76.0, 87.0, 78.0 };
     checkPercentile(items, 0.5, 54);
   }
 
@@ -135,7 +137,7 @@ public class TestGenericUDAFPercentileDisc {
    */
   @Test
   public void testDoublePostresRefExample2() throws Exception {
-    Double[] items = new Double[] { 54.5, 35.3, 15.7, 15.7, 76.8, 87.34, 78.0 };
+    Double[] items = new Double[] {54.5, 35.3, 15.7, 15.7, 76.8, 87.34, 78.0 };
     checkPercentile(items, 0.72, 78.0);
   }
 

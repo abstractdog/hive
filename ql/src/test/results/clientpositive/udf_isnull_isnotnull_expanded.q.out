@@ -1,0 +1,27 @@
+PREHOOK: query: create table expanded_null_predicate (x int, y int, z int)
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@expanded_null_predicate
+POSTHOOK: query: create table expanded_null_predicate (x int, y int, z int)
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@expanded_null_predicate
+PREHOOK: query: insert into expanded_null_predicate values (null, 1, null), (2, 2, 2), (null, 3, null), (4, null, null), (null, null, null)
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@expanded_null_predicate
+POSTHOOK: query: insert into expanded_null_predicate values (null, 1, null), (2, 2, 2), (null, 3, null), (4, null, null), (null, null, null)
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@expanded_null_predicate
+POSTHOOK: Lineage: expanded_null_predicate.x SCRIPT []
+POSTHOOK: Lineage: expanded_null_predicate.y SCRIPT []
+POSTHOOK: Lineage: expanded_null_predicate.z SCRIPT []
+PREHOOK: query: select * from expanded_null_predicate where (x, z) is null
+PREHOOK: type: QUERY
+PREHOOK: Input: default@expanded_null_predicate
+#### A masked pattern was here ####
+POSTHOOK: query: select * from expanded_null_predicate where (x, z) is null
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@expanded_null_predicate
+#### A masked pattern was here ####

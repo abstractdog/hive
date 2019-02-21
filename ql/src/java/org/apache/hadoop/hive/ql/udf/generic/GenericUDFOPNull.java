@@ -28,6 +28,8 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
 import org.apache.hadoop.io.BooleanWritable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * GenericUDFOPNull.
@@ -35,30 +37,31 @@ import org.apache.hadoop.io.BooleanWritable;
  */
 @Description(name = "isnull", value = "_FUNC_ a - Returns true if a is NULL and false otherwise")
 @VectorizedExpressions({IsNull.class, SelectColumnIsNull.class})
-@NDV(maxNdv = 2)
 public class GenericUDFOPNull extends GenericUDF {
+  static final Logger LOG = LoggerFactory.getLogger(GenericUDFOPNull.class.getName());
   private final BooleanWritable result = new BooleanWritable();
 
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments)
       throws UDFArgumentException {
-    if (arguments.length != 1) {
-      throw new UDFArgumentLengthException(
-          "The operator 'IS NULL' only accepts 1 argument.");
-    }
     return PrimitiveObjectInspectorFactory.writableBooleanObjectInspector;
   }
 
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
-    result.set(arguments[0].get() == null);
+    for (int i = 0; i < arguments.length; i++) {
+      if (arguments[i].get() != null) {
+        result.set(false);
+        return result;
+      }
+    }
+    result.set(true);
     return result;
   }
 
   @Override
   public String getDisplayString(String[] children) {
-    assert (children.length == 1);
-    return children[0] + " is null";
+    return getStandardDisplayString("IS NULL", children, ",");
   }
 
   @Override

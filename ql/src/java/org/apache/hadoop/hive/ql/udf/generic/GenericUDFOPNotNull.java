@@ -34,31 +34,32 @@ import org.apache.hadoop.io.BooleanWritable;
  *
  */
 @Description(name = "isnotnull",
-    value = "_FUNC_ a - Returns true if a is not NULL and false otherwise")
+    value = "_FUNC_ a - Returns true if all of the arguments are not NULL and false otherwise")
 @VectorizedExpressions({IsNotNull.class, SelectColumnIsNotNull.class})
-@NDV(maxNdv = 2)
 public class GenericUDFOPNotNull extends GenericUDF {
   private final BooleanWritable result = new BooleanWritable();
 
   @Override
   public ObjectInspector initialize(ObjectInspector[] arguments) throws UDFArgumentException {
-    if (arguments.length != 1) {
-      throw new UDFArgumentLengthException(
-          "The operator 'IS NOT NULL' only accepts 1 argument.");
-    }
     return PrimitiveObjectInspectorFactory.writableBooleanObjectInspector;
   }
 
   @Override
   public Object evaluate(DeferredObject[] arguments) throws HiveException {
-    result.set(arguments[0].get() != null);
+    
+    for (int i = 0; i < arguments.length; i++) {
+      if (arguments[i].get() == null) {
+        result.set(false);
+        return result;
+      }
+    }
+    result.set(true);
     return result;
   }
 
   @Override
   public String getDisplayString(String[] children) {
-    assert (children.length == 1);
-    return children[0] + " is not null";
+    return getStandardDisplayString("IS NOT NULL", children, ",");
   }
 
   @Override

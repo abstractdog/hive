@@ -55,6 +55,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -112,11 +113,10 @@ public class HiveConf extends Configuration {
   }
 
   public static class URLEncoderDecoder implements EncoderDecoder<String, String> {
-    private static final String UTF_8 = "UTF-8";
     @Override
     public String encode(String key) {
       try {
-        return URLEncoder.encode(key, UTF_8);
+        return URLEncoder.encode(key, StandardCharsets.UTF_8.name());
       } catch (UnsupportedEncodingException e) {
         return key;
       }
@@ -125,7 +125,7 @@ public class HiveConf extends Configuration {
     @Override
     public String decode(String value) {
       try {
-        return URLDecoder.decode(value, UTF_8);
+        return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
       } catch (UnsupportedEncodingException e) {
         return value;
       }
@@ -489,7 +489,16 @@ public class HiveConf extends Configuration {
         "Indicates if repl dump should include information about external tables. It should be \n"
           + "used in conjunction with 'hive.repl.dump.metadata.only' set to false. if 'hive.repl.dump.metadata.only' \n"
           + " is set to true then this config parameter has no effect as external table meta data is flushed \n"
-          + " always by default."),
+          + " always by default. If this config parameter is enabled on an on-going replication policy which is in\n"
+          + " incremental phase, then need to set 'hive.repl.bootstrap.external.tables' to true for the first \n"
+          + " repl dump to bootstrap all external tables."),
+    REPL_BOOTSTRAP_EXTERNAL_TABLES("hive.repl.bootstrap.external.tables", false,
+        "Indicates if repl dump should bootstrap the information about external tables along with incremental \n"
+          + "dump for replication. It is recommended to keep this config parameter as false always and should be \n"
+          + "set to true only via WITH clause of REPL DUMP command. It should be used in conjunction with \n"
+          + "'hive.repl.include.external.tables' when sets to true. If 'hive.repl.include.external.tables' is \n"
+          + "set to false, then this config parameter has no effect. It should be set to true only once for \n"
+          + "incremental repl dump on each existing replication policy after enabling external tables replication."),
     REPL_ENABLE_MOVE_OPTIMIZATION("hive.repl.enable.move.optimization", false,
           "If its set to true, REPL LOAD copies data files directly to the target table/partition location \n"
           + "instead of copying to staging directory first and then move to target location. This optimizes \n"
@@ -502,6 +511,10 @@ public class HiveConf extends Configuration {
         + " Schemes of the file system which does not support atomic move (rename) can be specified here to \n "
         + " speed up the repl load operation. In file system like HDFS where move operation is atomic, this \n"
         + " optimization should not be enabled as it may lead to inconsistent data read for non acid tables."),
+    REPL_EXTERNAL_TABLE_BASE_DIR("hive.repl.replica.external.table.base.dir", "/",
+        "This is the base directory on the target/replica warehouse under which data for "
+            + "external tables is stored. This is relative base path and hence prefixed to the source "
+            + "external table path on target cluster."),
     LOCALSCRATCHDIR("hive.exec.local.scratchdir",
         "${system:java.io.tmpdir}" + File.separator + "${system:user.name}",
         "Local scratch space for Hive jobs"),
@@ -1621,6 +1634,10 @@ public class HiveConf extends Configuration {
         + "the evaluation of certain joins, since we will not be emitting rows which are thrown away by "
         + "a Filter operator straight away. However, currently vectorization does not support them, thus "
         + "enabling it is only recommended when vectorization is disabled."),
+    HIVE_PTF_RANGECACHE_SIZE("hive.ptf.rangecache.size", 10000,
+        "Size of the cache used on reducer side, that stores boundaries of ranges within a PTF " +
+        "partition. Used if a query specifies a RANGE type window including an orderby clause." +
+        "Set this to 0 to disable this cache."),
 
     // CBO related
     HIVE_CBO_ENABLED("hive.cbo.enable", true, "Flag to control enabling Cost Based Optimizations using Calcite framework."),
@@ -2448,7 +2465,7 @@ public class HiveConf extends Configuration {
         "entries/values can be specified using this config."),
     // statistics annotation fetches column statistics for all required columns which can
     // be very expensive sometimes
-    HIVE_STATS_FETCH_COLUMN_STATS("hive.stats.fetch.column.stats", false,
+    HIVE_STATS_FETCH_COLUMN_STATS("hive.stats.fetch.column.stats", true,
         "Annotation of operator tree with statistics information requires column statistics.\n" +
         "Column statistics are fetched from metastore. Fetching column statistics for each needed column\n" +
         "can be expensive when the number of columns is high. This flag can be used to disable fetching\n" +
@@ -2692,6 +2709,13 @@ public class HiveConf extends Configuration {
 
     HIVE_COMPACTOR_COMPACT_MM("hive.compactor.compact.insert.only", true,
         "Whether the compactor should compact insert-only tables. A safety switch."),
+    COMPACTOR_CRUD_QUERY_BASED("hive.compactor.crud.query.based", false,
+        "Means Major compaction on full CRUD tables is done as a query, "
+        + "and minor compaction will be disabled."),
+    SPLIT_GROUPING_MODE("hive.split.grouping.mode", "query", new StringSet("query", "compactor"), 
+        "This is set to compactor from within the query based compactor. This enables the Tez SplitGrouper "
+        + "to group splits based on their bucket number, so that all rows from different bucket files "
+        + " for the same bucket number can end up in the same bucket file after the compaction."),
     /**
      * @deprecated Use MetastoreConf.COMPACTOR_HISTORY_RETENTION_SUCCEEDED
      */
@@ -2741,6 +2765,11 @@ public class HiveConf extends Configuration {
     MERGE_CARDINALITY_VIOLATION_CHECK("hive.merge.cardinality.check", true,
       "Set to true to ensure that each SQL Merge statement ensures that for each row in the target\n" +
         "table there is at most 1 matching row in the source table per SQL Specification."),
+    MERGE_SPLIT_UPDATE("hive.merge.split.update", false,
+        "If true, SQL Merge statement will handle WHEN MATCHED UPDATE by splitting it into 2\n" +
+            "branches of a multi-insert, representing delete of existing row and an insert of\n" +
+            "the new version of the row.  Updating bucketing and partitioning columns should\n" +
+            "only be permitted if this is true."),
     OPTIMIZE_ACID_META_COLUMNS("hive.optimize.acid.meta.columns", true,
         "If true, don't decode Acid metadata columns from storage unless" +
         " they are needed."),
@@ -3474,6 +3503,16 @@ public class HiveConf extends Configuration {
         "For example: (&(objectClass=group)(objectClass=top)(instanceType=4)(cn=Domain*)) \n" +
         "(&(objectClass=person)(|(sAMAccountName=admin)(|(memberOf=CN=Domain Admins,CN=Users,DC=domain,DC=com)" +
         "(memberOf=CN=Administrators,CN=Builtin,DC=domain,DC=com))))"),
+    HIVE_SERVER2_PLAIN_LDAP_BIND_USER("hive.server2.authentication.ldap.binddn", null,
+        "The user with which to bind to the LDAP server, and search for the full domain name " +
+        "of the user being authenticated.\n" +
+        "This should be the full domain name of the user, and should have search access across all " +
+        "users in the LDAP tree.\n" +
+        "If not specified, then the user being authenticated will be used as the bind user.\n" +
+        "For example: CN=bindUser,CN=Users,DC=subdomain,DC=domain,DC=com"),
+    HIVE_SERVER2_PLAIN_LDAP_BIND_PASSWORD("hive.server2.authentication.ldap.bindpw", null,
+        "The password for the bind user, to be used to search for the full name of the user being authenticated.\n" +
+        "If the username is specified, this parameter must also be specified."),
     HIVE_SERVER2_CUSTOM_AUTHENTICATION_CLASS("hive.server2.custom.authentication.class", null,
         "Custom authentication class. Used when property\n" +
         "'hive.server2.authentication' is set to 'CUSTOM'. Provided class\n" +
@@ -4130,6 +4169,8 @@ public class HiveConf extends Configuration {
     LLAP_DAEMON_RPC_NUM_HANDLERS("hive.llap.daemon.rpc.num.handlers", 5,
       "Number of RPC handlers for LLAP daemon.", "llap.daemon.rpc.num.handlers"),
 
+    LLAP_PLUGIN_RPC_PORT("hive.llap.plugin.rpc.port", 0,
+      "Port to use for LLAP plugin rpc server"),
     LLAP_PLUGIN_RPC_NUM_HANDLERS("hive.llap.plugin.rpc.num.handlers", 1,
       "Number of RPC handlers for AM LLAP plugin endpoint."),
     LLAP_DAEMON_WORK_DIRS("hive.llap.daemon.work.dirs", "",
@@ -4303,15 +4344,17 @@ public class HiveConf extends Configuration {
       "Sleep duration (in milliseconds) to wait before retrying on error when obtaining a\n" +
       "connection to LLAP daemon from Tez AM.",
       "llap.task.communicator.connection.sleep-between-retries-millis"),
+    LLAP_TASK_UMBILICAL_SERVER_PORT("hive.llap.daemon.umbilical.port", 0,
+      "LLAP task umbilical server RPC port"),
     LLAP_DAEMON_WEB_PORT("hive.llap.daemon.web.port", 15002, "LLAP daemon web UI port.",
       "llap.daemon.service.port"),
     LLAP_DAEMON_WEB_SSL("hive.llap.daemon.web.ssl", false,
       "Whether LLAP daemon web UI should use SSL.", "llap.daemon.service.ssl"),
     LLAP_CLIENT_CONSISTENT_SPLITS("hive.llap.client.consistent.splits", true,
         "Whether to setup split locations to match nodes on which llap daemons are running, " +
-        "instead of using the locations provided by the split itself. If there is no llap daemon " +
-        "running, fall back to locations provided by the split. This is effective only if " +
-        "hive.execution.mode is llap"),
+        "preferring one of the locations provided by the split itself. If there is no llap daemon " +
+        "running on any of those locations (or on the cloud), fall back to a cache affinity to" + 
+        " an LLAP node. This is effective only if hive.execution.mode is llap."),
     LLAP_VALIDATE_ACLS("hive.llap.validate.acls", true,
         "Whether LLAP should reject permissive ACLs in some cases (e.g. its own management\n" +
         "protocol or ZK paths), similar to how ssh refuses a key with bad access permissions."),
@@ -4430,7 +4473,7 @@ public class HiveConf extends Configuration {
             "How frequently to check for idle Spark sessions. Minimum value is 60 seconds."),
     NWAYJOINREORDER("hive.reorder.nway.joins", true,
       "Runs reordering of tables within single n-way join (i.e.: picks streamtable)"),
-    HIVE_MERGE_NWAY_JOINS("hive.merge.nway.joins", true,
+    HIVE_MERGE_NWAY_JOINS("hive.merge.nway.joins", false,
       "Merge adjacent joins into a single n-way join"),
     HIVE_LOG_N_RECORDS("hive.log.every.n.records", 0L, new RangeValidator(0L, null),
       "If value is greater than 0 logs in fixed intervals of size n rather than exponentially."),

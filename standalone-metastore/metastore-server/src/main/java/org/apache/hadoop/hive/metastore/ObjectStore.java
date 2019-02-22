@@ -127,6 +127,13 @@ public class ObjectStore implements RawStore, Configurable {
     NO_STATE, OPEN, COMMITED, ROLLBACK
   }
 
+  /**
+   * Java system properties for configuring SSL to the database store
+   */
+  public static final String TRUSTSTORE_PATH_KEY = "javax.net.ssl.trustStore";
+  public static final String TRUSTSTORE_PASSWORD_KEY = "javax.net.ssl.trustStorePassword";
+  public static final String TRUSTSTORE_TYPE_KEY = "javax.net.ssl.trustStoreType";
+
   private static final Map<String, Class<?>> PINCLASSMAP;
   private static final String HOSTNAME;
   private static final String USER;
@@ -322,14 +329,79 @@ public class ObjectStore implements RawStore, Configurable {
   }
 
   /**
-   * Configure the SSL properties of the connection from provided config
-   * @param conf
+   * Configure SSL encryption to the database store.
+   *
+   * The following properties must be set correctly to enable encryption:
+   *
+   * 1. {@link MetastoreConf.ConfVars#DBACCESS_USE_SSL}
+   * 2. {@link MetastoreConf.ConfVars#CONNECT_URL_KEY}
+   * 3. {@link MetastoreConf.ConfVars#DBACCESS_SSL_TRUSTSTORE_PATH}
+   * 4. {@link MetastoreConf.ConfVars#DBACCESS_SSL_TRUSTSTORE_PASSWORD}
+   * 5. {@link MetastoreConf.ConfVars#DBACCESS_SSL_TRUSTSTORE_TYPE}
+   *
+   * The last three properties directly map to JSSE (Java) system properties. The Java layer will handle enabling
+   * encryption once these properties are set.
+   *
+   * Additionally, {@link MetastoreConf.ConfVars#CONNECT_URL_KEY} must have the database-specific SSL flag in the connection URL.
+   *
+   * @param conf configuration values
    */
   private static void configureSSL(Configuration conf) {
+    configureSSLDeprecated(conf); // TODO: Deprecate this method
+
+    boolean useSSL = MetastoreConf.getBoolVar(conf, ConfVars.DBACCESS_USE_SSL);
+
+    if (useSSL) {
+      try {
+        LOG.info("Setting SSL properties to connect to the database store");
+        String trustStorePath = MetastoreConf.getVar(conf, ConfVars.DBACCESS_SSL_TRUSTSTORE_PATH).trim();
+        // Specifying a truststore path is not necessary. If one is not provided, then the default Java truststore path will be used instead.
+        if (!trustStorePath.isEmpty()) {
+          System.setProperty(TRUSTSTORE_PATH_KEY, trustStorePath);
+        } else {
+          LOG.info(ConfVars.DBACCESS_SSL_TRUSTSTORE_PATH.toString() + " has not been set. Defaulting to jssecacerts, if it exists. Otherwise, cacerts.");
+        }
+        // If the truststore password has been configured and redacted properly using the Hadoop CredentialProvider API, then
+        // MetastoreConf.getPassword() will securely decrypt it. Otherwise, it will default to being read in from the
+        // configuration file in plain text.
+        String trustStorePassword = MetastoreConf.getPassword(conf, ConfVars.DBACCESS_SSL_TRUSTSTORE_PASSWORD);
+        if (!trustStorePassword.isEmpty()) {
+          System.setProperty(TRUSTSTORE_PASSWORD_KEY, trustStorePassword);
+        } else {
+          LOG.info(ConfVars.DBACCESS_SSL_TRUSTSTORE_PASSWORD.toString() + " has not been set. Using default Java truststore password.");
+        }
+        // Already validated in MetaStoreConf
+        String trustStoreType = MetastoreConf.getVar(conf, ConfVars.DBACCESS_SSL_TRUSTSTORE_TYPE);
+        System.setProperty(TRUSTSTORE_TYPE_KEY, trustStoreType);
+      } catch (IOException e) {
+        throw new RuntimeException("Failed to set the SSL properties to connect to the database store.", e);
+      }
+    }
+  }
+
+  /**
+   * Configure the SSL properties of the connection from provided config
+   *
+   * This method was kept for backwards compatibility purposes.
+   *
+   * The property {@link MetastoreConf.ConfVars#DBACCESS_SSL_PROPS} was deprecated in HIVE-20992 in favor of more
+   * transparent and user-friendly properties.
+   *
+   * Please use the MetastoreConf.ConfVars#DBACCESS_SSL_* instead. Setting those properties will overwrite the values
+   * of the deprecated property.
+   *
+   * The process of completely removing this property and its functionality is being tracked in HIVE-21024.
+   *
+   * @param conf configuration values
+   */
+  @Deprecated
+  private static void configureSSLDeprecated(Configuration conf) {
     // SSL support
     String sslPropString = MetastoreConf.getVar(conf, ConfVars.DBACCESS_SSL_PROPS);
     if (org.apache.commons.lang.StringUtils.isNotEmpty(sslPropString)) {
-      LOG.info("Metastore setting SSL properties of the connection to backed DB");
+      LOG.warn("Configuring SSL using a deprecated key " + ConfVars.DBACCESS_SSL_PROPS.toString() +
+              ". This may be removed in the future. See HIVE-20992 for more details.");
+      LOG.info("Metastore setting SSL properties of the connection to backend DB");
       for (String sslProp : sslPropString.split(",")) {
         String[] pair = sslProp.trim().split("=");
         if (pair != null && pair.length == 2) {
@@ -575,6 +647,7 @@ public class ObjectStore implements RawStore, Configurable {
       mCat.setDescription(cat.getDescription());
     }
     mCat.setLocationUri(cat.getLocationUri());
+    mCat.setCreateTime(cat.getCreateTime());
     return mCat;
   }
 
@@ -583,6 +656,7 @@ public class ObjectStore implements RawStore, Configurable {
     if (mCat.getDescription() != null) {
       cat.setDescription(mCat.getDescription());
     }
+    cat.setCreateTime(mCat.getCreateTime());
     return cat;
   }
 
@@ -600,6 +674,7 @@ public class ObjectStore implements RawStore, Configurable {
     mdb.setOwnerName(db.getOwnerName());
     PrincipalType ownerType = db.getOwnerType();
     mdb.setOwnerType((null == ownerType ? PrincipalType.USER.name() : ownerType.name()));
+    mdb.setCreateTime(db.getCreateTime());
     try {
       openTransaction();
       pm.makePersistent(mdb);
@@ -693,6 +768,7 @@ public class ObjectStore implements RawStore, Configurable {
     PrincipalType principalType = (type == null) ? null : PrincipalType.valueOf(type);
     db.setOwnerType(principalType);
     db.setCatalogName(catName);
+    db.setCreateTime(mdb.getCreateTime());
     return db;
   }
 
@@ -1168,8 +1244,7 @@ public class ObjectStore implements RawStore, Configurable {
   }
 
   @Override
-  public Table getTable(String catName, String dbName, String tableName,
-                        String writeIdList)
+  public Table getTable(String catName, String dbName, String tableName, String writeIdList)
       throws MetaException {
     boolean commited = false;
     Table tbl = null;
@@ -1209,6 +1284,7 @@ public class ObjectStore implements RawStore, Configurable {
         rollbackTransaction();
       }
     }
+
     return tbl;
   }
 
@@ -4162,7 +4238,7 @@ public class ObjectStore implements RawStore, Configurable {
    * Verifies that the stats JSON string is unchanged for alter table (txn stats).
    * @return Error message with the details of the change, or null if the value has not changed.
    */
-  private static String verifyStatsChangeCtx(Map<String, String> oldP, Map<String, String> newP,
+  public static String verifyStatsChangeCtx(Map<String, String> oldP, Map<String, String> newP,
       long writeId, String validWriteIds, boolean isColStatsChange) {
     if (validWriteIds != null && writeId > 0) return null; // We have txn context.
     String oldVal = oldP == null ? null : oldP.get(StatsSetupConst.COLUMN_STATS_ACCURATE);
@@ -8553,7 +8629,7 @@ public class ObjectStore implements RawStore, Configurable {
             // Make sure we set the flag to invalid regardless of the current value.
             StatsSetupConst.setBasicStatsState(newParams, StatsSetupConst.FALSE);
             LOG.info("Removed COLUMN_STATS_ACCURATE from the parameters of the partition "
-                + statsDesc.getDbName() + "." + statsDesc.getTableName() + "." + statsDesc.getPartName());
+                    + statsDesc.getDbName() + "." + statsDesc.getTableName() + "." + statsDesc.getPartName());
           }
           mPartition.setWriteId(writeId);
         }
@@ -8732,7 +8808,7 @@ public class ObjectStore implements RawStore, Configurable {
       List<String> partNames, List<String> colNames,
       String writeIdList)
       throws MetaException, NoSuchObjectException {
-    if (partNames == null && partNames.isEmpty()) {
+    if (partNames == null || partNames.isEmpty()) {
       return null;
     }
     List<ColumnStatistics> allStats = getPartitionColumnStatisticsInternal(
@@ -8819,7 +8895,7 @@ public class ObjectStore implements RawStore, Configurable {
     // If the current stats in the metastore doesn't comply with
     // the isolation level of the query, return null.
     if (writeIdList != null) {
-      if (partNames == null && partNames.isEmpty()) {
+      if (partNames == null || partNames.isEmpty()) {
         return null;
       }
 
@@ -9785,13 +9861,25 @@ public class ObjectStore implements RawStore, Configurable {
     try {
       openTransaction();
       long lastEvent = rqst.getLastEvent();
-      query = pm.newQuery(MNotificationLog.class, "eventId > lastEvent");
-      query.declareParameters("java.lang.Long lastEvent");
+      List<Object> parameterVals = new ArrayList<>();
+      parameterVals.add(lastEvent);
+      StringBuilder filterBuilder = new StringBuilder("eventId > para" + parameterVals.size());
+      StringBuilder parameterBuilder = new StringBuilder("java.lang.Long para" + parameterVals.size());
+      if (rqst.isSetEventTypeSkipList()) {
+        for (String eventType : rqst.getEventTypeSkipList()) {
+          parameterVals.add(eventType);
+          parameterBuilder.append(", java.lang.String para" + parameterVals.size());
+          filterBuilder.append(" && eventType != para" + parameterVals.size());
+        }
+      }
+      query = pm.newQuery(MNotificationLog.class, filterBuilder.toString());
+      query.declareParameters(parameterBuilder.toString());
       query.setOrdering("eventId ascending");
       int maxEventResponse = MetastoreConf.getIntVar(conf, ConfVars.METASTORE_MAX_EVENT_RESPONSE);
       int maxEvents = (rqst.getMaxEvents() < maxEventResponse && rqst.getMaxEvents() > 0) ? rqst.getMaxEvents() : maxEventResponse;
       query.setRange(0, maxEvents);
-      Collection<MNotificationLog> events = (Collection) query.execute(lastEvent);
+      Collection<MNotificationLog> events =
+              (Collection) query.executeWithArray(parameterVals.toArray(new Object[parameterVals.size()]));
       commited = commitTransaction();
       if (events == null) {
         return result;
@@ -9992,6 +10080,11 @@ public class ObjectStore implements RawStore, Configurable {
       int tooOld = (tmp > Integer.MAX_VALUE) ? 0 : (int) tmp;
       query = pm.newQuery(MNotificationLog.class, "eventTime < tooOld");
       query.declareParameters("java.lang.Integer tooOld");
+
+      int max_events = MetastoreConf.getIntVar(conf, MetastoreConf.ConfVars.EVENT_CLEAN_MAX_EVENTS);
+      max_events = max_events > 0 ? max_events : Integer.MAX_VALUE;
+      query.setRange(0, max_events);
+
       Collection<MNotificationLog> toBeRemoved = (Collection) query.execute(tooOld);
       if (CollectionUtils.isNotEmpty(toBeRemoved)) {
         pm.deletePersistentAll(toBeRemoved);
@@ -12391,7 +12484,7 @@ public class ObjectStore implements RawStore, Configurable {
    */
   private boolean isCurrentStatsValidForTheQuery(MTable tbl, String queryValidWriteIdList,
       boolean isCompleteStatsWriter) throws MetaException {
-    return isCurrentStatsValidForTheQuery(conf, tbl.getParameters(), tbl.getWriteId(),
+    return isCurrentStatsValidForTheQuery(tbl.getParameters(), tbl.getWriteId(),
         queryValidWriteIdList, isCompleteStatsWriter);
   }
 
@@ -12411,19 +12504,19 @@ public class ObjectStore implements RawStore, Configurable {
   private boolean isCurrentStatsValidForTheQuery(MPartition part,
       String queryValidWriteIdList, boolean isCompleteStatsWriter)
       throws MetaException {
-    return isCurrentStatsValidForTheQuery(conf, part.getParameters(), part.getWriteId(),
+    return isCurrentStatsValidForTheQuery(part.getParameters(), part.getWriteId(),
         queryValidWriteIdList, isCompleteStatsWriter);
   }
 
   private boolean isCurrentStatsValidForTheQuery(Partition part, long partWriteId,
       String queryValidWriteIdList, boolean isCompleteStatsWriter)
       throws MetaException {
-    return isCurrentStatsValidForTheQuery(conf, part.getParameters(), partWriteId,
+    return isCurrentStatsValidForTheQuery(part.getParameters(), partWriteId,
         queryValidWriteIdList, isCompleteStatsWriter);
   }
 
   // TODO: move to somewhere else
-  public static boolean isCurrentStatsValidForTheQuery(Configuration conf,
+  public static boolean isCurrentStatsValidForTheQuery(
       Map<String, String> statsParams, long statsWriteId, String queryValidWriteIdList,
       boolean isCompleteStatsWriter) throws MetaException {
 

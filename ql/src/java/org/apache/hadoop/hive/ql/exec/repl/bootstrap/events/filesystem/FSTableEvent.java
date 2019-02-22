@@ -18,12 +18,13 @@
 package org.apache.hadoop.hive.ql.exec.repl.bootstrap.events.filesystem;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
+import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsDesc;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.ql.exec.repl.bootstrap.events.TableEvent;
@@ -72,34 +73,56 @@ public class FSTableEvent implements TableEvent {
     return fromPath;
   }
 
+  /**
+   * To determine if the tableDesc is for an external table,
+   * use {@link ImportTableDesc#isExternal()}
+   * and not {@link ImportTableDesc#tableType()} method.
+   */
   @Override
   public ImportTableDesc tableDesc(String dbName) throws SemanticException {
     try {
       Table table = new Table(metadata.getTable());
+      boolean externalTableOnSource = TableType.EXTERNAL_TABLE.equals(table.getTableType());
       // The table can be non acid in case of replication from 2.6 cluster.
       if (!AcidUtils.isTransactionalTable(table)
               && hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_STRICT_MANAGED_TABLES)
               && (table.getTableType() == TableType.MANAGED_TABLE)) {
         Hive hiveDb = Hive.get(hiveConf);
         //TODO : dump metadata should be read to make sure that migration is required.
-        HiveStrictManagedMigration.TableMigrationOption migrationOption
-                = HiveStrictManagedMigration.determineMigrationTypeAutomatically(table.getTTable(),
-                table.getTableType(),null, (Configuration)hiveConf,
-                hiveDb.getMSC(),true);
+        HiveStrictManagedMigration.TableMigrationOption migrationOption =
+            HiveStrictManagedMigration.determineMigrationTypeAutomatically(table.getTTable(),
+                table.getTableType(), null, hiveConf,
+                hiveDb.getMSC(), true);
         HiveStrictManagedMigration.migrateTable(table.getTTable(), table.getTableType(),
                 migrationOption, false,
-                getHiveUpdater(hiveConf), hiveDb.getMSC(), (Configuration)hiveConf);
+                getHiveUpdater(hiveConf), hiveDb.getMSC(), hiveConf);
         // If the conversion is from non transactional to transactional table
         if (AcidUtils.isTransactionalTable(table)) {
           replicationSpec().setMigratingToTxnTable();
+          // There won't be any writeId associated with statistics on source non-transactional
+          // table. We will need to associate a cooked up writeId on target for those. But that's
+          // not done yet. Till then we don't replicate statistics for ACID table even if it's
+          // available on the source.
+          table.getTTable().unsetColStats();
+        }
+        if (TableType.EXTERNAL_TABLE.equals(table.getTableType())) {
+          // since we have converted to an external table now after applying the migration rules the
+          // table location has to be set to null so that the location on the target is picked up
+          // based on default configuration
+          table.setDataLocation(null);
+          if(!externalTableOnSource) {
+            replicationSpec().setMigratingToExternalTable();
+          }
         }
       }
       ImportTableDesc tableDesc
               = new ImportTableDesc(StringUtils.isBlank(dbName) ? table.getDbName() : dbName, table);
-      tableDesc.setReplicationSpec(replicationSpec());
-      if (table.getTableType() == TableType.EXTERNAL_TABLE) {
+      if (TableType.EXTERNAL_TABLE.equals(table.getTableType())) {
+        tableDesc.setLocation(
+            table.getDataLocation() == null ? null : table.getDataLocation().toString());
         tableDesc.setExternal(true);
       }
+      tableDesc.setReplicationSpec(replicationSpec());
       return tableDesc;
     } catch (Exception e) {
       throw new SemanticException(e);
@@ -150,9 +173,29 @@ public class FSTableEvent implements TableEvent {
       partDesc.setSerdeParams(partition.getSd().getSerdeInfo().getParameters());
       partDesc.setBucketCols(partition.getSd().getBucketCols());
       partDesc.setSortCols(partition.getSd().getSortCols());
-      partDesc.setLocation(new Path(fromPath,
-          Warehouse.makePartName(tblDesc.getPartCols(), partition.getValues())).toString());
+      if (tblDesc.isExternal() && !replicationSpec().isMigratingToExternalTable()) {
+        // we have to provide the source location so target location can be derived.
+        partDesc.setLocation(partition.getSd().getLocation());
+      } else {
+        /**
+         * this is required for file listing of all files in a partition for managed table as described in
+         * {@link org.apache.hadoop.hive.ql.exec.repl.bootstrap.events.filesystem.BootstrapEventsIterator}
+         */
+        partDesc.setLocation(new Path(fromPath,
+            Warehouse.makePartName(tblDesc.getPartCols(), partition.getValues())).toString());
+      }
       partsDesc.setReplicationSpec(replicationSpec());
+
+      // Right now, we do not have a way of associating a writeId with statistics for a table
+      // converted to a transactional table if it was non-transactional on the source. So, do not
+      // update statistics for converted tables even if available on the source.
+      if (partition.isSetColStats() && !replicationSpec().isMigratingToTxnTable()) {
+        ColumnStatistics colStats = partition.getColStats();
+        ColumnStatisticsDesc colStatsDesc = new ColumnStatisticsDesc(colStats.getStatsDesc());
+        colStatsDesc.setTableName(tblDesc.getTableName());
+        colStatsDesc.setDbName(tblDesc.getDatabaseName());
+        partDesc.setColStats(new ColumnStatistics(colStatsDesc, colStats.getStatsObj()));
+      }
       return partsDesc;
     } catch (Exception e) {
       throw new SemanticException(e);

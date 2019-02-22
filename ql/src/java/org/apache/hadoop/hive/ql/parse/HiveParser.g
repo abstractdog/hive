@@ -805,7 +805,7 @@ explainOption
     : KW_EXTENDED
     | KW_FORMATTED
     | KW_DEPENDENCY
-    | KW_CBO KW_EXTENDED?
+    | KW_CBO (KW_COST | KW_JOINCOST)?
     | KW_LOGICAL
     | KW_AUTHORIZATION
     | KW_ANALYZE
@@ -2298,7 +2298,7 @@ pkUkConstraint
 checkConstraint
 @init { pushMsg("CHECK constraint", state); }
 @after { popMsg(state); }
-    : KW_CHECK expression
+    : KW_CHECK LPAREN expression RPAREN
     -> ^(TOK_CHECK_CONSTRAINT expression)
     ;
 

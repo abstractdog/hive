@@ -91,6 +91,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -393,7 +394,8 @@ public class TestReplicationScenarios {
     HiveConf confTemp = new HiveConf();
     confTemp.set("hive.repl.enable.move.optimization", "true");
     ReplLoadWork replLoadWork = new ReplLoadWork(confTemp, tuple.dumpLocation, replicadb,
-            null, null, isIncrementalDump, Long.valueOf(tuple.lastReplId));
+            null, null, isIncrementalDump, Long.valueOf(tuple.lastReplId),
+        Collections.emptyList());
     Task replLoadTask = TaskFactory.get(replLoadWork, confTemp);
     replLoadTask.initialize(null, null, new DriverContext(driver.getContext()), null);
     replLoadTask.executeTask(null);
@@ -421,10 +423,11 @@ public class TestReplicationScenarios {
     run("insert into table " + dbName + ".t2 partition(country='india') values ('delhi')", driver);
     dump = replDumpDb(dbName, dump.lastReplId, null, null);
 
-    //no partition task should be added as the operation is inserting into an existing partition
+    // Partition level statistics gets updated as part of the INSERT above. So we see a partition
+    // task corresponding to an ALTER_PARTITION event.
     task = getReplLoadRootTask(dbNameReplica, true, dump);
     assertEquals(true, hasMoveTask(task));
-    assertEquals(false, hasPartitionTask(task));
+    assertEquals(true, hasPartitionTask(task));
 
     loadAndVerify(dbNameReplica, dump.dumpLocation, dump.lastReplId);
 
@@ -568,6 +571,7 @@ public class TestReplicationScenarios {
       @Nullable
       @Override
       public Table apply(@Nullable Table table) {
+        LOG.info("Performing injection on table " + table.getTableName());
         if (table.getTableName().equalsIgnoreCase("ptned")){
           injectionPathCalled = true;
           return null;

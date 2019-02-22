@@ -22,10 +22,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.messaging.json.gzip.GzipJSONMessageEncoder;
 import org.apache.hadoop.hive.shims.Utils;
-import org.apache.hadoop.hive.ql.parse.WarehouseInstance;
 import static org.apache.hadoop.hive.metastore.ReplChangeManager.SOURCE_OF_REPLICATION;
-import org.apache.hadoop.hive.ql.parse.ReplicationTestUtils;
-
 import org.junit.rules.TestName;
 
 import org.slf4j.Logger;
@@ -84,6 +81,7 @@ public class TestReplicationScenariosIncrementalLoadAcidTables {
         put("hive.mapred.mode", "nonstrict");
         put("mapred.input.dir.recursive", "true");
         put("hive.metastore.disallow.incompatible.col.type.changes", "false");
+        put("hive.stats.autogather", "false");
     }};
 
     acidConfs.putAll(overrides);
@@ -94,6 +92,7 @@ public class TestReplicationScenariosIncrementalLoadAcidTables {
         put("hive.support.concurrency", "false");
         put("hive.txn.manager", "org.apache.hadoop.hive.ql.lockmgr.DummyTxnManager");
         put("hive.metastore.client.capability.check", "false");
+        put("hive.stats.autogather", "false");
     }};
     replicaNonAcid = new WarehouseInstance(LOG, miniDFSCluster, overridesForHiveConf1);
   }

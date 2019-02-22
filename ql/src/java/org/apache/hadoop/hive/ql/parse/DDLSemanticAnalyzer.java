@@ -243,14 +243,8 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       typeName = varcharTypeInfo.getQualifiedName();
       break;
     case HiveParser.TOK_TIMESTAMPLOCALTZ:
-      HiveConf conf;
-      try {
-        conf = Hive.get().getConf();
-      } catch (HiveException e) {
-        throw new SemanticException(e);
-      }
-      TimestampLocalTZTypeInfo timestampLocalTZTypeInfo = TypeInfoFactory.getTimestampTZTypeInfo(
-          conf.getLocalTimeZone());
+      TimestampLocalTZTypeInfo timestampLocalTZTypeInfo =
+          TypeInfoFactory.getTimestampTZTypeInfo(null);
       typeName = timestampLocalTZTypeInfo.getQualifiedName();
       break;
     case HiveParser.TOK_DECIMAL:
@@ -2203,6 +2197,12 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
 
     String type = unescapeSQLString(ast.getChild(0).getText()).toLowerCase();
 
+    if (type.equalsIgnoreCase("minor") && HiveConf.getBoolVar(conf, ConfVars.COMPACTOR_CRUD_QUERY_BASED)) {
+      throw new SemanticException(
+          "Minor compaction is not currently supported for query based compaction (enabled by setting: "
+              + ConfVars.COMPACTOR_CRUD_QUERY_BASED + " to true).");
+    }
+
     if (!type.equals("minor") && !type.equals("major")) {
       throw new SemanticException(ErrorMsg.INVALID_COMPACTION_TYPE.getMsg());
     }
@@ -3599,7 +3599,9 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
       // Compile internal query to capture underlying table partition dependencies
       StringBuilder cmd = new StringBuilder();
       cmd.append("SELECT * FROM ");
-      cmd.append(HiveUtils.unparseIdentifier(getDotName(qualified)));
+      cmd.append(HiveUtils.unparseIdentifier(qualified[0]));
+      cmd.append(".");
+      cmd.append(HiveUtils.unparseIdentifier(qualified[1]));
       cmd.append(" WHERE ");
       boolean firstOr = true;
       for (int i = 0; i < addPartitionDesc.getPartitionCount(); ++i) {
@@ -3651,6 +3653,7 @@ public class DDLSemanticAnalyzer extends BaseSemanticAnalyzer {
     for (int index = 0; index < addPartitionDesc.getPartitionCount(); index++) {
       OnePartitionDesc desc = addPartitionDesc.getPartition(index);
       if (desc.getLocation() != null) {
+        AcidUtils.validateAcidPartitionLocation(desc.getLocation(), conf);
         if(addPartitionDesc.isIfNotExists()) {
           //Don't add partition data if it already exists
           Partition oldPart = getPartition(tab, desc.getPartSpec(), false);

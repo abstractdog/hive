@@ -20,8 +20,8 @@ package org.apache.hive.service.cli.operation;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang3.CharEncoding;
 import org.apache.hadoop.hive.common.LogUtils;
+import org.apache.hadoop.hive.common.io.SessionStream;
 import org.apache.hadoop.hive.common.metrics.common.Metrics;
 import org.apache.hadoop.hive.common.metrics.common.MetricsConstant;
 import org.apache.hadoop.hive.common.metrics.common.MetricsFactory;
@@ -55,7 +55,6 @@ import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.exec.FetchTask;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
 import org.apache.hadoop.hive.ql.metadata.Hive;
-import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.serde.serdeConstants;
@@ -139,9 +138,12 @@ public class SQLOperation extends ExecuteStatementOperation {
   private void setupSessionIO(SessionState sessionState) {
     try {
       sessionState.in = null; // hive server's session input stream is not used
-      sessionState.out = new PrintStream(System.out, true, CharEncoding.UTF_8);
-      sessionState.info = new PrintStream(System.err, true, CharEncoding.UTF_8);
-      sessionState.err = new PrintStream(System.err, true, CharEncoding.UTF_8);
+      sessionState.out =
+          new SessionStream(System.out, true, StandardCharsets.UTF_8.name());
+      sessionState.info =
+          new SessionStream(System.err, true, StandardCharsets.UTF_8.name());
+      sessionState.err =
+          new SessionStream(System.err, true, StandardCharsets.UTF_8.name());
     } catch (UnsupportedEncodingException e) {
         LOG.error("Error creating PrintStream", e);
         e.printStackTrace();
@@ -543,16 +545,12 @@ public class SQLOperation extends ExecuteStatementOperation {
     List<? extends StructField> fieldRefs = soi.getAllStructFieldRefs();
 
     Object[] deserializedFields = new Object[fieldRefs.size()];
-    Object rowObj;
     ObjectInspector fieldOI;
 
     int protocol = getProtocolVersion().getValue();
     for (Object rowString : rows) {
-      try {
-        rowObj = serde.deserialize(new BytesWritable(((String)rowString).getBytes("UTF-8")));
-      } catch (UnsupportedEncodingException e) {
-        throw new SerDeException(e);
-      }
+      final Object rowObj = serde.deserialize(new BytesWritable(
+          ((String) rowString).getBytes(StandardCharsets.UTF_8)));
       for (int i = 0; i < fieldRefs.size(); i++) {
         StructField fieldRef = fieldRefs.get(i);
         fieldOI = fieldRef.getFieldObjectInspector();

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.udf.generic;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContDoubleEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFPercentileCont.PercentileContEvaluator.PercentileAgg;
@@ -72,8 +73,9 @@ public class TestGenericUDAFPercentileCont {
    * perc from percentile_src;
    */
   @Test
-  public void testPostresRefExample() throws Exception {
+  public void testPostgresRefExample() throws Exception {
     Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    Arrays.sort(items);
     checkPercentile(items, 0.5, 54);
   }
 
@@ -83,8 +85,9 @@ public class TestGenericUDAFPercentileCont {
    * perc from percentile_src;
    */
   @Test
-  public void testPostresRefExample2() throws Exception {
+  public void testPostgresRefExample2() throws Exception {
     Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
+    Arrays.sort(items);
     checkPercentile(items, 0.72, 76.64);
   }
 
@@ -125,8 +128,9 @@ public class TestGenericUDAFPercentileCont {
    * (order by k) as perc from percentile_src;
    */
   @Test
-  public void testDoublePostresRefExample() throws Exception {
+  public void testDoublePostgresRefExample() throws Exception {
     Double[] items = new Double[] {54.0, 35.0, 15.0, 15.0, 76.0, 87.0, 78.0 };
+    Arrays.sort(items);
     checkPercentile(items, 0.5, 54);
   }
 
@@ -136,8 +140,9 @@ public class TestGenericUDAFPercentileCont {
    * (order by k) as perc from percentile_src;
    */
   @Test
-  public void testDoublePostresRefExample2() throws Exception {
+  public void testDoublePostgresRefExample2() throws Exception {
     Double[] items = new Double[] {54.5, 35.3, 15.7, 15.7, 76.8, 87.34, 78.0 };
+    Arrays.sort(items);
     checkPercentile(items, 0.72, 77.184);
   }
 
@@ -151,7 +156,7 @@ public class TestGenericUDAFPercentileCont {
     agg.percentiles.add(new DoubleWritable(percentile));
 
     for (int i = 0; i < items.length; i++) {
-      eval.increment(agg, new LongWritable(items[i]), 1);
+      eval.increment(agg, new LongWritable(items[i]));
     }
 
     DoubleWritable result = (DoubleWritable) eval.terminate(agg);
@@ -170,7 +175,7 @@ public class TestGenericUDAFPercentileCont {
     agg.percentiles.add(new DoubleWritable(percentile));
 
     for (int i = 0; i < items.length; i++) {
-      eval.increment(agg, new DoubleWritable(items[i]), 1);
+      eval.increment(agg, new DoubleWritable(items[i]));
     }
 
     DoubleWritable result = (DoubleWritable) eval.terminate(agg);

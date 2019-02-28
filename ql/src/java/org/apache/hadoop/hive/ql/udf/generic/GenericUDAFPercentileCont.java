@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.udf.generic;
 
 import java.io.Serializable;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -131,13 +132,13 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
      * A state class to store intermediate aggregation results.
      */
     public class PercentileAgg extends AbstractAggregationBuffer {
-      Map<U, LongWritable> counts;
+      List<Map.Entry<U, LongWritable>> counts;
       List<DoubleWritable> percentiles;
     }
 
     // For PARTIAL1 and COMPLETE
     protected PrimitiveObjectInspector inputOI;
-    MapObjectInspector countsOI;
+    ListObjectInspector countsOI;
     ListObjectInspector percentilesOI;
 
     // For PARTIAL1 and PARTIAL2
@@ -183,7 +184,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         countsField = soi.getStructFieldRef("counts");
         percentilesField = soi.getStructFieldRef("percentiles");
 
-        countsOI = (MapObjectInspector) countsField.getFieldObjectInspector();
+        countsOI = (ListObjectInspector) countsField.getFieldObjectInspector();
         percentilesOI = (ListObjectInspector) percentilesField.getFieldObjectInspector();
       }
     }
@@ -277,16 +278,21 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
      */
     protected void increment(PercentileAgg s, LongWritable input, long i) {
       if (s.counts == null) {
-        s.counts = new HashMap<LongWritable, LongWritable>();
+        s.counts = new ArrayList<Map.Entry<LongWritable, LongWritable>>();
       }
-      LongWritable count = s.counts.get(input);
-      if (count == null) {
+      if (s.counts.isEmpty()){
+        s.counts.add(
+            new AbstractMap.SimpleEntry<LongWritable, LongWritable>(input, new LongWritable(0)));
+      }
+      
+      Map.Entry<LongWritable, LongWritable> count = s.counts.get(s.counts.size() - 1);
+      if (count.getKey().get() != input.get()) {
         // We have to create a new object, because the object o belongs
         // to the code that creates it and may get its value changed.
         LongWritable key = new LongWritable(input.get());
-        s.counts.put(key, new LongWritable(i));
+        s.counts.add(new AbstractMap.SimpleEntry<LongWritable, LongWritable>(key, new LongWritable(i)));
       } else {
-        count.set(count.get() + i);
+        count.getValue().set(count.getValue().get() + i);
       }
     }
 
@@ -299,8 +305,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       Object objCounts = soi.getStructFieldData(partial, countsField);
       Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
 
-      Map<LongWritable, LongWritable> counts =
-          (Map<LongWritable, LongWritable>) countsOI.getMap(objCounts);
+      List<Map.Entry<LongWritable, LongWritable>> counts =
+          (List<Map.Entry<LongWritable, LongWritable>>) countsOI.getList(objCounts);
       List<DoubleWritable> percentiles =
           (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
 
@@ -314,7 +320,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         percAgg.percentiles = new ArrayList<DoubleWritable>(percentiles);
       }
 
-      for (Map.Entry<LongWritable, LongWritable> e : counts.entrySet()) {
+      for (Map.Entry<LongWritable, LongWritable> e : counts) {
         increment(percAgg, e.getKey(), e.getValue().get());
       }
     }
@@ -329,10 +335,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       }
 
       // Get all items into an array and sort them.
-      Set<Map.Entry<LongWritable, LongWritable>> entries = percAgg.counts.entrySet();
-      List<Map.Entry<LongWritable, LongWritable>> entriesList =
-          new ArrayList<Map.Entry<LongWritable, LongWritable>>(entries);
-      Collections.sort(entriesList, new LongComparator());
+      List<Map.Entry<LongWritable, LongWritable>> entriesList = percAgg.counts;
 
       // Accumulate the counts.
       long total = getTotal(entriesList);
@@ -357,8 +360,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
 
     public static long getTotal(List<Map.Entry<LongWritable, LongWritable>> entriesList) {
       long total = 0;
-      for (int i = 0; i < entriesList.size(); i++) {
-        LongWritable count = entriesList.get(i).getValue();
+      for (Map.Entry<LongWritable, LongWritable> entry : entriesList) {
+        LongWritable count = entry.getValue();
         total += count.get();
         count.set(total);
       }
@@ -395,19 +398,26 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       return new DoubleWritable(input);
     }
 
-    @Override
+    /**
+     * Increment the State object with o as the key, and i as the count.
+     */
     protected void increment(PercentileAgg s, DoubleWritable input, long i) {
       if (s.counts == null) {
-        s.counts = new HashMap<DoubleWritable, LongWritable>();
+        s.counts = new ArrayList<Map.Entry<DoubleWritable, LongWritable>>();
       }
-      LongWritable count = s.counts.get(input);
-      if (count == null) {
+      if (s.counts.isEmpty()){
+        s.counts.add(
+            new AbstractMap.SimpleEntry<DoubleWritable, LongWritable>(input, new LongWritable(0)));
+      }
+      
+      Map.Entry<DoubleWritable, LongWritable> count = s.counts.get(s.counts.size() - 1);
+      if (count.getKey().get() != input.get()) {
         // We have to create a new object, because the object o belongs
         // to the code that creates it and may get its value changed.
         DoubleWritable key = new DoubleWritable(input.get());
-        s.counts.put(key, new LongWritable(i));
+        s.counts.add(new AbstractMap.SimpleEntry<DoubleWritable, LongWritable>(key, new LongWritable(i)));
       } else {
-        count.set(count.get() + i);
+        count.getValue().set(count.getValue().get() + i);
       }
     }
 
@@ -420,8 +430,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       Object objCounts = soi.getStructFieldData(partial, countsField);
       Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
 
-      Map<DoubleWritable, LongWritable> counts =
-          (Map<DoubleWritable, LongWritable>) countsOI.getMap(objCounts);
+      List<Map.Entry<DoubleWritable, LongWritable>> counts =
+          (List<Map.Entry<DoubleWritable, LongWritable>>) countsOI.getList(objCounts);
       List<DoubleWritable> percentiles =
           (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
 
@@ -435,7 +445,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
         percAgg.percentiles = new ArrayList<DoubleWritable>(percentiles);
       }
 
-      for (Map.Entry<DoubleWritable, LongWritable> e : counts.entrySet()) {
+      for (Map.Entry<DoubleWritable, LongWritable> e : counts) {
         increment(percAgg, e.getKey(), e.getValue().get());
       }
     }
@@ -450,10 +460,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       }
 
       // Get all items into an array and sort them.
-      Set<Map.Entry<DoubleWritable, LongWritable>> entries = percAgg.counts.entrySet();
-      List<Map.Entry<DoubleWritable, LongWritable>> entriesList =
-          new ArrayList<Map.Entry<DoubleWritable, LongWritable>>(entries);
-      Collections.sort(entriesList, new DoubleComparator());
+      List<Map.Entry<DoubleWritable, LongWritable>> entriesList = percAgg.counts;
 
       // Accumulate the counts.
       long total = getTotal(entriesList);
@@ -478,8 +485,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
 
     public static long getTotal(List<Map.Entry<DoubleWritable, LongWritable>> entriesList) {
       long total = 0;
-      for (int i = 0; i < entriesList.size(); i++) {
-        LongWritable count = entriesList.get(i).getValue();
+      for (Map.Entry<DoubleWritable, LongWritable> entry : entriesList) {
+        LongWritable count = entry.getValue();
         total += count.get();
         count.set(total);
       }

@@ -88,7 +88,7 @@ public class TestSQL11ReservedKeyWordsNegative {
           { "RANGE" }, { "READS" }, { "REFERENCES" }, { "REGEXP" }, { "REVOKE" }, { "RIGHT" },
           { "RLIKE" }, { "ROLLUP" }, { "ROW" }, { "ROWS" }, { "SET" }, { "SMALLINT" }, { "TABLE" },
           { "TIME" }, { "TIMESTAMP" }, { "TO" }, { "TRIGGER" }, { "TRUE" }, { "TRUNCATE" },
-          { "UNION" }, { "UNIQUE" }, { "UNKNOWN" }, { "UPDATE" }, { "USER" }, { "USING" },
+          { "UNION" }, { "UNIQUE" }, { "UPDATE" }, { "USER" }, { "USING" },
           { "VALUES" }, { "WITH" } });
     }
 

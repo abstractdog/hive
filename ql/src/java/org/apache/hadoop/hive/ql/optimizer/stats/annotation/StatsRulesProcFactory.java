@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.ql.Context;
@@ -91,7 +90,6 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDFIn;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFInBloomFilter;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPAnd;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual;
-import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualNS;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrGreaterThan;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrLessThan;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan;
@@ -606,13 +604,13 @@ public class StatsRulesProcFactory {
           String boundValue = stringVal;
           switch (colType) {
           case serdeConstants.TINYINT_TYPE_NAME: {
-            byte value = new Byte(stringVal);
+            byte value = Byte.parseByte(stringVal);
             byte maxValue = range.maxValue.byteValue();
             byte minValue = range.minValue.byteValue();
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
           }
           case serdeConstants.SMALLINT_TYPE_NAME: {
-            short value = new Short(boundValue);
+            short value = Short.parseShort(boundValue);
             short maxValue = range.maxValue.shortValue();
             short minValue = range.minValue.shortValue();
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
@@ -625,25 +623,25 @@ public class StatsRulesProcFactory {
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
           }
           case serdeConstants.INT_TYPE_NAME: {
-            int value = new Integer(boundValue);
+            int value = Integer.parseInt(boundValue);
             int maxValue = range.maxValue.intValue();
             int minValue = range.minValue.intValue();
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
           }
           case serdeConstants.BIGINT_TYPE_NAME: {
-            long value = new Long(boundValue);
+            long value = Long.parseLong(boundValue);
             long maxValue = range.maxValue.longValue();
             long minValue = range.minValue.longValue();
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
           }
           case serdeConstants.FLOAT_TYPE_NAME: {
-            float value = new Float(boundValue);
+            float value = Float.parseFloat(boundValue);
             float maxValue = range.maxValue.floatValue();
             float minValue = range.minValue.floatValue();
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
           }
           case serdeConstants.DOUBLE_TYPE_NAME: {
-            double value = new Double(boundValue);
+            double value = Double.parseDouble(boundValue);
             double maxValue = range.maxValue.doubleValue();
             double minValue = range.minValue.doubleValue();
             return RangeResult.of(value < minValue, value < maxValue, value == minValue, value == maxValue);
@@ -954,7 +952,7 @@ public class StatsRulesProcFactory {
         String colTypeLowerCase = columnDesc.getTypeString().toLowerCase();
         try {
           if (colTypeLowerCase.equals(serdeConstants.TINYINT_TYPE_NAME)) {
-            byte value = new Byte(boundValue);
+            byte value = Byte.parseByte(boundValue);
             byte maxValue = cs.getRange().maxValue.byteValue();
             byte minValue = cs.getRange().minValue.byteValue();
             if (upperBound) {
@@ -973,7 +971,7 @@ public class StatsRulesProcFactory {
               }
             }
           } else if (colTypeLowerCase.equals(serdeConstants.SMALLINT_TYPE_NAME)) {
-            short value = new Short(boundValue);
+            short value = Short.parseShort(boundValue);
             short maxValue = cs.getRange().maxValue.shortValue();
             short minValue = cs.getRange().minValue.shortValue();
             if (upperBound) {
@@ -998,7 +996,7 @@ public class StatsRulesProcFactory {
               DateWritable writableVal = new DateWritable(java.sql.Date.valueOf(boundValue));
               value = writableVal.getDays();
             } else {
-              value = new Integer(boundValue);
+              value = Integer.parseInt(boundValue);
             }
             // Date is an integer internally
             int maxValue = cs.getRange().maxValue.intValue();
@@ -1019,7 +1017,7 @@ public class StatsRulesProcFactory {
               }
             }
           } else if (colTypeLowerCase.equals(serdeConstants.BIGINT_TYPE_NAME)) {
-            long value = new Long(boundValue);
+            long value = Long.parseLong(boundValue);
             long maxValue = cs.getRange().maxValue.longValue();
             long minValue = cs.getRange().minValue.longValue();
             if (upperBound) {
@@ -1038,7 +1036,7 @@ public class StatsRulesProcFactory {
               }
             }
           } else if (colTypeLowerCase.equals(serdeConstants.FLOAT_TYPE_NAME)) {
-            float value = new Float(boundValue);
+            float value = Float.parseFloat(boundValue);
             float maxValue = cs.getRange().maxValue.floatValue();
             float minValue = cs.getRange().minValue.floatValue();
             if (upperBound) {
@@ -1057,7 +1055,7 @@ public class StatsRulesProcFactory {
               }
             }
           } else if (colTypeLowerCase.equals(serdeConstants.DOUBLE_TYPE_NAME)) {
-            double value = new Double(boundValue);
+            double value = Double.parseDouble(boundValue);
             double maxValue = cs.getRange().maxValue.doubleValue();
             double minValue = cs.getRange().minValue.doubleValue();
             if (upperBound) {
@@ -1095,8 +1093,7 @@ public class StatsRulesProcFactory {
         ExprNodeGenericFuncDesc genFunc = (ExprNodeGenericFuncDesc) child;
         GenericUDF udf = genFunc.getGenericUDF();
 
-        if (udf instanceof GenericUDFOPEqual ||
-            udf instanceof GenericUDFOPEqualNS) {
+        if (udf instanceof GenericUDFOPEqual) {
           String colName = null;
           boolean isConst = false;
           Object prevConst = null;

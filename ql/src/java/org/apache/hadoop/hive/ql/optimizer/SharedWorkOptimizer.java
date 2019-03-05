@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -354,19 +355,21 @@ public class SharedWorkOptimizer extends Transform {
             LOG.debug("Merging subtree starting at {} into subtree starting at {}",
                 discardableTsOp, retainableTsOp);
           } else {
-            // Only TS operator
-            ExprNodeGenericFuncDesc exprNode = null;
             if (retainableTsOp.getConf().getFilterExpr() != null) {
-              // Push filter on top of children
+              // Push filter on top of children for retainable
               pushFilterToTopOfTableScan(optimizerCache, retainableTsOp);
-              // Clone to push to table scan
-              exprNode = (ExprNodeGenericFuncDesc) retainableTsOp.getConf().getFilterExpr();
             }
             if (discardableTsOp.getConf().getFilterExpr() != null) {
-              // Push filter on top
+              // Push filter on top of children for discardable
               pushFilterToTopOfTableScan(optimizerCache, discardableTsOp);
+            }
+            // Obtain filter for shared TS operator
+            ExprNodeGenericFuncDesc exprNode = null;
+            if (retainableTsOp.getConf().getFilterExpr() != null && discardableTsOp.getConf().getFilterExpr() != null) {
+              // Combine
+              exprNode = retainableTsOp.getConf().getFilterExpr();
               ExprNodeGenericFuncDesc tsExprNode = discardableTsOp.getConf().getFilterExpr();
-              if (exprNode != null && !exprNode.isSame(tsExprNode)) {
+              if (!exprNode.isSame(tsExprNode)) {
                 // We merge filters from previous scan by ORing with filters from current scan
                 if (exprNode.getGenericUDF() instanceof GenericUDFOPOr) {
                   List<ExprNodeDesc> newChildren = new ArrayList<>(exprNode.getChildren().size() + 1);
@@ -797,6 +800,10 @@ public class SharedWorkOptimizer extends Transform {
     }
     // If row limit does not match, we currently do not merge
     if (tsOp1.getConf().getRowLimit() != tsOp2.getConf().getRowLimit()) {
+      return false;
+    }
+    // If table properties do not match, we currently do not merge
+    if (!Objects.equals(tsOp1.getConf().getOpProps(), tsOp2.getConf().getOpProps())) {
       return false;
     }
     // If partitions do not match, we currently do not merge
@@ -1336,7 +1343,8 @@ public class SharedWorkOptimizer extends Transform {
           && StringUtils.equals(op1Conf.getFilterExprString(), op2Conf.getFilterExprString())
           && pctx.getPrunedPartitions(tsOp1).getPartitions().equals(
               pctx.getPrunedPartitions(tsOp2).getPartitions())
-          && op1Conf.getRowLimit() == op2Conf.getRowLimit()) {
+          && op1Conf.getRowLimit() == op2Conf.getRowLimit()
+          && Objects.equals(op1Conf.getOpProps(), op2Conf.getOpProps())) {
         return true;
       } else {
         return false;

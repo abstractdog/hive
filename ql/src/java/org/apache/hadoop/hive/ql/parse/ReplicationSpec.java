@@ -48,6 +48,8 @@ public class ReplicationSpec {
   private String validTxnList = null;
   private Type specType = Type.DEFAULT; // DEFAULT means REPL_LOAD or BOOTSTRAP_DUMP or EXPORT
   private boolean isMigratingToTxnTable = false;
+  private boolean isMigratingToExternalTable = false;
+  private boolean needDupCopyCheck = false;
 
   // Key definitions related to replication
   public enum KEY {
@@ -409,5 +411,30 @@ public class ReplicationSpec {
   }
   public void setMigratingToTxnTable() {
     isMigratingToTxnTable = true;
+  }
+
+  public boolean isMigratingToExternalTable() {
+    return isMigratingToExternalTable;
+  }
+
+  public void setMigratingToExternalTable() {
+    isMigratingToExternalTable = true;
+  }
+
+  public static void copyLastReplId(Map<String, String> srcParameter, Map<String, String> destParameter) {
+    String lastReplId = srcParameter.get(ReplicationSpec.KEY.CURR_STATE_ID.toString());
+    if (lastReplId != null) {
+      destParameter.put(ReplicationSpec.KEY.CURR_STATE_ID.toString(), lastReplId);
+    }
+  }
+
+  public boolean needDupCopyCheck() {
+    return needDupCopyCheck;
+  }
+
+  public void setNeedDupCopyCheck(boolean isFirstIncPending) {
+    // Duplicate file check during copy is required until after first successful incremental load.
+    // Check HIVE-21197 for more detail.
+    this.needDupCopyCheck = isFirstIncPending;
   }
 }

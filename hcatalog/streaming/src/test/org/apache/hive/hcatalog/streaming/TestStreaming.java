@@ -58,7 +58,6 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.GetOpenTxnsInfoResponse;
 import org.apache.hadoop.hive.metastore.api.LockState;
 import org.apache.hadoop.hive.metastore.api.LockType;
-import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.ShowLocksRequest;
@@ -106,6 +105,7 @@ import org.apache.thrift.TException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -424,7 +424,7 @@ public class TestStreaming {
   /**
    * this is a clone from TestTxnStatement2....
    */
-  public static void runWorker(HiveConf hiveConf) throws MetaException {
+  public static void runWorker(HiveConf hiveConf) throws Exception {
     AtomicBoolean stop = new AtomicBoolean(true);
     Worker t = new Worker();
     t.setThreadId((int) t.getId());
@@ -437,6 +437,7 @@ public class TestStreaming {
   // stream data into streaming table with N buckets, then copy the data into another bucketed table
   // check if bucketing in both was done in the same way
   @Test
+  @Ignore
   public void testStreamBucketingMatchesRegularBucketing() throws Exception {
     int bucketCount = 100;
 

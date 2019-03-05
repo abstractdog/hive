@@ -76,6 +76,7 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveMaterializedViewsRegistry;
 import org.apache.hadoop.hive.ql.metadata.HiveUtils;
 import org.apache.hadoop.hive.ql.metadata.events.NotificationEventPoll;
+import org.apache.hadoop.hive.ql.parse.CalcitePlanner;
 import org.apache.hadoop.hive.ql.plan.mapper.StatsSources;
 import org.apache.hadoop.hive.ql.security.authorization.HiveMetastoreAuthorizationProvider;
 import org.apache.hadoop.hive.ql.security.authorization.PolicyProviderContainer;
@@ -83,6 +84,8 @@ import org.apache.hadoop.hive.ql.security.authorization.PrivilegeSynchronizer;
 import org.apache.hadoop.hive.ql.security.authorization.plugin.HiveAuthorizer;
 import org.apache.hadoop.hive.ql.session.ClearDanglingScratchDir;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hadoop.hive.ql.txn.compactor.CompactorThread;
+import org.apache.hadoop.hive.ql.txn.compactor.Worker;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.hive.shims.Utils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -239,6 +242,9 @@ public class HiveServer2 extends CompositeService {
       LlapRegistryService.getClient(hiveConf);
     }
 
+    // Initialize metadata provider class
+    CalcitePlanner.initializeMetadataProviderClass();
+
     try {
       sessionHive = Hive.get(hiveConf);
     } catch (HiveException e) {
@@ -284,6 +290,12 @@ public class HiveServer2 extends CompositeService {
       }
     } catch (Exception e) {
       throw new ServiceException(e);
+    }
+
+    try {
+      maybeStartCompactorThreads(hiveConf);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
 
     // Setup web UI
@@ -1001,6 +1013,16 @@ public class HiveServer2 extends CompositeService {
             Thread.currentThread().interrupt();
           }
         }
+      }
+    }
+  }
+
+  private void maybeStartCompactorThreads(HiveConf hiveConf) throws Exception {
+    if (MetastoreConf.getVar(hiveConf, MetastoreConf.ConfVars.HIVE_METASTORE_RUNWORKER_IN).equals("hs2")) {
+      int numWorkers = MetastoreConf.getIntVar(hiveConf, MetastoreConf.ConfVars.COMPACTOR_WORKER_THREADS);
+      for (int i = 0; i < numWorkers; i++) {
+        Worker w = new Worker();
+        CompactorThread.initializeAndStartThread(w, hiveConf);
       }
     }
   }

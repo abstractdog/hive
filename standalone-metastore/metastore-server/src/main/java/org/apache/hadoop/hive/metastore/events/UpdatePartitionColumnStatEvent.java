@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hive.metastore.IHMSHandler;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
+import org.apache.hadoop.hive.metastore.api.Table;
 
 import java.util.List;
 import java.util.Map;
@@ -34,27 +35,27 @@ import java.util.Map;
 @InterfaceStability.Stable
 public class UpdatePartitionColumnStatEvent extends ListenerEvent {
   private ColumnStatistics partColStats;
-  private String validWriteIds;
   private long writeId;
   private Map<String, String> parameters;
   private List<String> partVals;
+  private Table tableObj;
 
   /**
    * @param statsObj Columns statistics Info.
    * @param partVals partition names
    * @param parameters table parameters to be updated after stats are updated.
-   * @param validWriteIds valid write id list for the query.
+   * @param tableObj table object
    * @param writeId writeId for the query.
    * @param handler handler that is firing the event
    */
   public UpdatePartitionColumnStatEvent(ColumnStatistics statsObj, List<String> partVals, Map<String, String> parameters,
-                                    String validWriteIds, long writeId, IHMSHandler handler) {
+                                        Table tableObj, long writeId, IHMSHandler handler) {
     super(true, handler);
     this.partColStats = statsObj;
-    this.validWriteIds = validWriteIds;
     this.writeId = writeId;
     this.parameters = parameters;
     this.partVals = partVals;
+    this.tableObj = tableObj;
   }
 
   /**
@@ -62,21 +63,18 @@ public class UpdatePartitionColumnStatEvent extends ListenerEvent {
    * @param partVals partition names
    * @param handler handler that is firing the event
    */
-  public UpdatePartitionColumnStatEvent(ColumnStatistics statsObj, List<String> partVals, IHMSHandler handler) {
+  public UpdatePartitionColumnStatEvent(ColumnStatistics statsObj, List<String> partVals,
+                                        Table tableObj, IHMSHandler handler) {
     super(true, handler);
     this.partColStats = statsObj;
     this.partVals = partVals;
-    this.validWriteIds = null;
     this.writeId = 0;
     this.parameters = null;
+    this.tableObj = tableObj;
   }
 
   public ColumnStatistics getPartColStats() {
     return partColStats;
-  }
-
-  public String getValidWriteIds() {
-    return validWriteIds;
   }
 
   public long getWriteId() {
@@ -90,4 +88,6 @@ public class UpdatePartitionColumnStatEvent extends ListenerEvent {
   public List<String> getPartVals() {
     return partVals;
   }
+
+  public Table getTableObj() { return tableObj; }
 }

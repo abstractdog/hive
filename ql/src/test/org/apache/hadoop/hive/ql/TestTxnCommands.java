@@ -64,6 +64,7 @@ import org.apache.hadoop.hive.ql.io.AcidOutputFormat;
 import org.apache.hadoop.hive.ql.io.AcidUtils;
 import org.apache.hadoop.hive.ql.io.BucketCodec;
 import org.apache.hadoop.hive.ql.lockmgr.TestDbTxnManager2;
+import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
@@ -358,6 +359,8 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
       throws Exception, MetaException, TException, NoSuchObjectException {
     hiveConf.setBoolean("hive.stats.autogather", true);
     hiveConf.setBoolean("hive.stats.column.autogather", true);
+    // Need to close the thread local Hive object so that configuration change is reflected to HMS.
+    Hive.closeCurrent();
     runStatementOnDriver("drop table if exists " + tableName);
     runStatementOnDriver(String.format("create table %s (a int) stored as orc " +
         "TBLPROPERTIES ('transactional'='true', 'transactional_properties'='insert_only')",
@@ -433,6 +436,8 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
     String tableName = "mm_table";
     hiveConf.setBoolean("hive.stats.autogather", true);
     hiveConf.setBoolean("hive.stats.column.autogather", true);
+    // Need to close the thread local Hive object so that configuration change is reflected to HMS.
+    Hive.closeCurrent();
     runStatementOnDriver("drop table if exists " + tableName);
     runStatementOnDriver(String.format("create table %s (a int) stored as orc " +
         "TBLPROPERTIES ('transactional'='true', 'transactional_properties'='insert_only')",
@@ -459,6 +464,8 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
     Assert.assertEquals(1, stats.size());
     msClient.close();
     hiveConf.setBoolean(MetastoreConf.ConfVars.HIVE_TXN_STATS_ENABLED.getVarname(), false);
+    // Need to close the thread local Hive object so that configuration change is reflected to HMS.
+    Hive.closeCurrent();
     // Running the query with stats disabled will cause stats in metastore itself to become invalid.
     runStatementOnDriver(String.format("insert into %s (a) values (1)", tableName));
     hiveConf.setBoolean(MetastoreConf.ConfVars.HIVE_TXN_STATS_ENABLED.getVarname(), true);
@@ -970,13 +977,29 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
       sb.append(s).append('\n');
     }
     LOG.info("Explain1: " + sb);
+    /*
+     Edges:
+     Reducer 2 <- Map 1 (SIMPLE_EDGE), Map 8 (SIMPLE_EDGE)
+     Reducer 3 <- Reducer 2 (SIMPLE_EDGE)
+     Reducer 4 <- Reducer 2 (SIMPLE_EDGE)
+     Reducer 5 <- Reducer 2 (CUSTOM_SIMPLE_EDGE)
+     Reducer 6 <- Reducer 2 (SIMPLE_EDGE)
+     Reducer 7 <- Reducer 2 (CUSTOM_SIMPLE_EDGE)
+     */
     for(int i = 0; i < explain.size(); i++) {
       if(explain.get(i).contains("Edges:")) {
-        Assert.assertTrue("At i+1=" + (i+1) + explain.get(i + 1), explain.get(i + 1).contains("Reducer 2 <- Map 1 (SIMPLE_EDGE), Map 7 (SIMPLE_EDGE)"));
-        Assert.assertTrue("At i+1=" + (i+2) + explain.get(i + 2), explain.get(i + 2).contains("Reducer 3 <- Reducer 2 (SIMPLE_EDGE)"));
-        Assert.assertTrue("At i+1=" + (i+3) + explain.get(i + 3), explain.get(i + 3).contains("Reducer 4 <- Reducer 2 (SIMPLE_EDGE)"));
-        Assert.assertTrue("At i+1=" + (i+4) + explain.get(i + 4), explain.get(i + 4).contains("Reducer 5 <- Reducer 2 (SIMPLE_EDGE)"));
-        Assert.assertTrue("At i+1=" + (i+5) + explain.get(i + 5), explain.get(i + 5).contains("Reducer 6 <- Reducer 2 (CUSTOM_SIMPLE_EDGE)"));
+        Assert.assertTrue("At i+1=" + (i+1) + explain.get(i + 1),
+            explain.get(i + 1).contains("Reducer 2 <- Map 1 (SIMPLE_EDGE), Map 8 (SIMPLE_EDGE)"));
+        Assert.assertTrue("At i+1=" + (i+2) + explain.get(i + 2),
+            explain.get(i + 2).contains("Reducer 3 <- Reducer 2 (SIMPLE_EDGE)"));
+        Assert.assertTrue("At i+1=" + (i+3) + explain.get(i + 3),
+            explain.get(i + 3).contains("Reducer 4 <- Reducer 2 (SIMPLE_EDGE)"));
+        Assert.assertTrue("At i+1=" + (i+4) + explain.get(i + 4),
+            explain.get(i + 4).contains("Reducer 5 <- Reducer 2 (CUSTOM_SIMPLE_EDGE)"));
+        Assert.assertTrue("At i+1=" + (i+5) + explain.get(i + 5),
+            explain.get(i + 5).contains("Reducer 6 <- Reducer 2 (SIMPLE_EDGE)"));
+        Assert.assertTrue("At i+1=" + (i+5) + explain.get(i + 5),
+            explain.get(i + 6).contains("Reducer 7 <- Reducer 2 (CUSTOM_SIMPLE_EDGE)"));
         break;
       }
     }
@@ -1208,6 +1231,8 @@ public class TestTxnCommands extends TxnCommandsBaseForTests {
   @Test
   public void testVersioning() throws Exception {
     hiveConf.set(MetastoreConf.ConfVars.CREATE_TABLES_AS_ACID.getVarname(), "true");
+    // Need to close the thread local Hive object so that configuration change is reflected to HMS.
+    Hive.closeCurrent();
     runStatementOnDriver("drop table if exists T");
     runStatementOnDriver("create table T (a int, b int) stored as orc");
     int[][] data = {{1, 2}};

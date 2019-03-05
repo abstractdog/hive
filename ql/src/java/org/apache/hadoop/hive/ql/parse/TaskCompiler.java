@@ -20,8 +20,10 @@ package org.apache.hadoop.hive.ql.parse;
 
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
+import com.google.common.collect.Lists;
 
 import org.apache.commons.collections.*;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.HiveStatsUtils;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -32,8 +34,11 @@ import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.exec.DDLTask;
 import org.apache.hadoop.hive.ql.exec.FetchTask;
+import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.exec.MaterializedViewDesc;
 import org.apache.hadoop.hive.ql.exec.MoveTask;
+import org.apache.hadoop.hive.ql.exec.Operator;
+import org.apache.hadoop.hive.ql.exec.OperatorUtils;
 import org.apache.hadoop.hive.ql.exec.StatsTask;
 import org.apache.hadoop.hive.ql.exec.TableScanOperator;
 import org.apache.hadoop.hive.ql.exec.Task;
@@ -42,7 +47,6 @@ import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
 import org.apache.hadoop.hive.ql.io.AcidUtils;
-import org.apache.hadoop.hive.ql.io.orc.OrcInputFormat;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Partition;
@@ -63,11 +67,13 @@ import org.apache.hadoop.hive.ql.plan.FileSinkDesc;
 import org.apache.hadoop.hive.ql.plan.LoadFileDesc;
 import org.apache.hadoop.hive.ql.plan.LoadTableDesc;
 import org.apache.hadoop.hive.ql.plan.MoveWork;
+import org.apache.hadoop.hive.ql.plan.OperatorDesc;
 import org.apache.hadoop.hive.ql.plan.PlanUtils;
 import org.apache.hadoop.hive.ql.plan.StatsWork;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper;
+import org.apache.hadoop.hive.ql.stats.BasicStatsNoJobTask;
 import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.DefaultFetchFormatter;
 import org.apache.hadoop.hive.serde2.NoOpFetchFormatter;
@@ -81,6 +87,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -169,7 +176,7 @@ public abstract class TaskCompiler {
       if (resultTab == null) {
         resFileFormat = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEQUERYRESULTFILEFORMAT);
         if (SessionState.get().getIsUsingThriftJDBCBinarySerDe()
-            && (resFileFormat.equalsIgnoreCase("SequenceFile"))) {
+            && ("SequenceFile".equalsIgnoreCase(resFileFormat))) {
           resultTab =
               PlanUtils.getDefaultQueryOutputTableDesc(cols, colTypes, resFileFormat,
                   ThriftJDBCBinarySerDe.class);
@@ -177,9 +184,18 @@ public abstract class TaskCompiler {
           // read formatted thrift objects from the output SequenceFile written by Tasks.
           conf.set(SerDeUtils.LIST_SINK_OUTPUT_FORMATTER, NoOpFetchFormatter.class.getName());
         } else {
-          resultTab =
-              PlanUtils.getDefaultQueryOutputTableDesc(cols, colTypes, resFileFormat,
-                  LazySimpleSerDe.class);
+          if("SequenceFile".equalsIgnoreCase(resFileFormat)) {
+            // file format is changed so that IF file sink provides list of files to fetch from (instead
+            // of whle directory) list status is done on files (which is what HiveSequenceFileInputFormat do)
+            resultTab =
+                PlanUtils.getDefaultQueryOutputTableDesc(cols, colTypes, "HiveSequenceFile",
+                                                         LazySimpleSerDe.class);
+
+          } else {
+            resultTab =
+                PlanUtils.getDefaultQueryOutputTableDesc(cols, colTypes, resFileFormat,
+                                                         LazySimpleSerDe.class);
+          }
         }
       } else {
         if (resultTab.getProperties().getProperty(serdeConstants.SERIALIZATION_LIB)
@@ -202,6 +218,19 @@ public abstract class TaskCompiler {
           fetch.setIsUsingThriftJDBCBinarySerDe(true);
       } else {
           fetch.setIsUsingThriftJDBCBinarySerDe(false);
+      }
+
+      // The idea here is to keep an object reference both in FileSink and in FetchTask for list of files
+      // to be fetched. During Job close file sink will populate the list and fetch task later will use it
+      // to fetch the results.
+      Collection<Operator<? extends OperatorDesc>> tableScanOps =
+          Lists.<Operator<?>>newArrayList(pCtx.getTopOps().values());
+      Set<FileSinkOperator> fsOps = OperatorUtils.findOperators(tableScanOps, FileSinkOperator.class);
+      if(fsOps != null && fsOps.size() == 1) {
+        FileSinkOperator op = fsOps.iterator().next();
+        Set<FileStatus> filesToFetch =  new HashSet<>();
+        op.getConf().setFilesToFetch(filesToFetch);
+        fetch.setFilesToFetch(filesToFetch);
       }
 
       pCtx.setFetchTask((FetchTask) TaskFactory.get(fetch));
@@ -388,9 +417,7 @@ public abstract class TaskCompiler {
     TableSpec tableSpec = new TableSpec(table, partitions);
     tableScan.getConf().getTableMetadata().setTableSpec(tableSpec);
 
-    // Note: this should probably use BasicStatsNoJobTask.canUseFooterScan, but it doesn't check
-    //       Parquet for some reason. I'm keeping the existing behavior for now.
-    if (inputFormat.equals(OrcInputFormat.class) && !AcidUtils.isTransactionalTable(table)) {
+    if (BasicStatsNoJobTask.canUseFooterScan(table, inputFormat)) {
       // For ORC, there is no Tez Job for table stats.
       StatsWork columnStatsWork = new StatsWork(table, parseContext.getConf());
       columnStatsWork.setFooterScan();

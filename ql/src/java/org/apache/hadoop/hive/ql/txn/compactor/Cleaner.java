@@ -59,7 +59,7 @@ import static org.apache.hadoop.hive.metastore.utils.MetaStoreUtils.getDefaultCa
 /**
  * A class to clean directories after compactions.  This will run in a separate thread.
  */
-public class Cleaner extends CompactorThread {
+public class Cleaner extends MetaStoreCompactorThread {
   static final private String CLASS_NAME = Cleaner.class.getName();
   static final private Logger LOG = LoggerFactory.getLogger(CLASS_NAME);
   private long cleanerCheckInterval = 0;
@@ -67,7 +67,7 @@ public class Cleaner extends CompactorThread {
   private ReplChangeManager replChangeManager;
 
   @Override
-  public void init(AtomicBoolean stop, AtomicBoolean looped) throws MetaException {
+  public void init(AtomicBoolean stop, AtomicBoolean looped) throws Exception {
     super.init(stop, looped);
     replChangeManager = ReplChangeManager.getInstance(conf);
   }
@@ -226,7 +226,7 @@ public class Cleaner extends CompactorThread {
           throws IOException, NoSuchObjectException {
     Path locPath = new Path(location);
     AcidUtils.Directory dir = AcidUtils.getAcidState(locPath, conf, writeIdList);
-    List<FileStatus> obsoleteDirs = dir.getObsolete();
+    List<Path> obsoleteDirs = dir.getObsolete();
     /**
      * add anything in 'dir'  that only has data from aborted transactions - no one should be
      * trying to read anything in that dir (except getAcidState() that only reads the name of
@@ -239,11 +239,11 @@ public class Cleaner extends CompactorThread {
     obsoleteDirs.addAll(dir.getAbortedDirectories());
     List<Path> filesToDelete = new ArrayList<>(obsoleteDirs.size());
     StringBuilder extraDebugInfo = new StringBuilder("[");
-    for (FileStatus stat : obsoleteDirs) {
-      filesToDelete.add(stat.getPath());
-      extraDebugInfo.append(stat.getPath().getName()).append(",");
-      if(!FileUtils.isPathWithinSubtree(stat.getPath(), locPath)) {
-        LOG.info(idWatermark(ci) + " found unexpected file: " + stat.getPath());
+    for (Path stat : obsoleteDirs) {
+      filesToDelete.add(stat);
+      extraDebugInfo.append(stat.getName()).append(",");
+      if(!FileUtils.isPathWithinSubtree(stat, locPath)) {
+        LOG.info(idWatermark(ci) + " found unexpected file: " + stat);
       }
     }
     extraDebugInfo.setCharAt(extraDebugInfo.length() - 1, ']');

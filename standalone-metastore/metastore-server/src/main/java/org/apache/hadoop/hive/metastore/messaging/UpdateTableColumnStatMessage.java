@@ -18,6 +18,8 @@
 package org.apache.hadoop.hive.metastore.messaging;
 
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
+import org.apache.hadoop.hive.metastore.api.Table;
+
 import java.util.Map;
 
 /**
@@ -31,9 +33,9 @@ public abstract class UpdateTableColumnStatMessage extends EventMessage {
 
   public abstract ColumnStatistics getColumnStatistics();
 
-  public abstract String getValidWriteIds();
-
   public abstract Long getWriteId();
 
   public abstract Map<String, String> getParameters();
+
+  public abstract Table getTableObject() throws Exception;
 }

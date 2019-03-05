@@ -31,6 +31,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.MetaStoreTestUtils;
 import org.apache.hadoop.hive.metastore.Warehouse;
+import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.ForeignKeysRequest;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
 import org.apache.hadoop.hive.ql.DriverFactory;
 import org.apache.hadoop.hive.ql.IDriver;
 import org.apache.hadoop.hive.ql.exec.repl.ReplDumpWork;
+import org.apache.hadoop.hive.ql.exec.repl.util.ReplUtils;
 import org.apache.hadoop.hive.ql.parse.repl.PathBuilder;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
@@ -55,11 +57,8 @@ import org.apache.hive.hcatalog.api.repl.ReplicationV1CompatRule;
 import org.apache.hive.hcatalog.listener.DbNotificationListener;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.slf4j.Logger;
-import org.apache.hadoop.hive.ql.exec.Utilities;
 
 import java.io.Closeable;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -75,20 +74,18 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class WarehouseInstance implements Closeable {
-  final String functionsRoot;
+  final String functionsRoot, repldDir;
   private Logger logger;
   private IDriver driver;
   HiveConf hiveConf;
   MiniDFSCluster miniDFSCluster;
   private HiveMetaStoreClient client;
-  public final Path warehouseRoot;
-  public final Path externalTableWarehouseRoot;
-  public Path avroSchemaFile;
+  final Path warehouseRoot;
+  final Path externalTableWarehouseRoot;
 
   private static int uniqueIdentifier = 0;
 
   private final static String LISTENER_CLASS = DbNotificationListener.class.getCanonicalName();
-  private final static String AVRO_SCHEMA_FILE_NAME = "avro_table.avsc";
 
   WarehouseInstance(Logger logger, MiniDFSCluster cluster, Map<String, String> overridesForHiveConf,
       String keyNameForEncryptedZone) throws Exception {
@@ -106,8 +103,14 @@ public class WarehouseInstance implements Closeable {
     }
     Path cmRootPath = mkDir(fs, "/cmroot" + uniqueIdentifier);
     this.functionsRoot = mkDir(fs, "/functions" + uniqueIdentifier).toString();
-    initialize(cmRootPath.toString(), warehouseRoot.toString(), externalTableWarehouseRoot.toString(),
-            overridesForHiveConf);
+    String tmpDir = "/tmp/"
+        + TestReplicationScenarios.class.getCanonicalName().replace('.', '_')
+        + "_"
+        + System.nanoTime();
+
+    this.repldDir = mkDir(fs, tmpDir + "/hrepl" + uniqueIdentifier + "/").toString();
+    initialize(cmRootPath.toString(), externalTableWarehouseRoot.toString(),
+        warehouseRoot.toString(), overridesForHiveConf);
   }
 
   WarehouseInstance(Logger logger, MiniDFSCluster cluster,
@@ -115,18 +118,11 @@ public class WarehouseInstance implements Closeable {
     this(logger, cluster, overridesForHiveConf, null);
   }
 
-  private void initialize(String cmRoot, String warehouseRoot, String externalTableWarehouseRoot,
+  private void initialize(String cmRoot, String externalTableWarehouseRoot, String warehouseRoot,
       Map<String, String> overridesForHiveConf) throws Exception {
     hiveConf = new HiveConf(miniDFSCluster.getConfiguration(0), TestReplicationScenarios.class);
-    for (Map.Entry<String, String> entry : overridesForHiveConf.entrySet()) {
-      hiveConf.set(entry.getKey(), entry.getValue());
-    }
+
     String metaStoreUri = System.getProperty("test." + HiveConf.ConfVars.METASTOREURIS.varname);
-    String hiveWarehouseLocation = System.getProperty("test.warehouse.dir", "/tmp")
-        + Path.SEPARATOR
-        + TestReplicationScenarios.class.getCanonicalName().replace('.', '_')
-        + "_"
-        + System.nanoTime();
     if (metaStoreUri != null) {
       hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, metaStoreUri);
       return;
@@ -143,8 +139,7 @@ public class WarehouseInstance implements Closeable {
     hiveConf.setVar(HiveConf.ConfVars.REPL_FUNCTIONS_ROOT_DIR, functionsRoot);
     hiveConf.setVar(HiveConf.ConfVars.METASTORECONNECTURLKEY,
         "jdbc:derby:memory:${test.tmp.dir}/APP;create=true");
-    hiveConf.setVar(HiveConf.ConfVars.REPLDIR,
-        hiveWarehouseLocation + "/hrepl" + uniqueIdentifier + "/");
+    hiveConf.setVar(HiveConf.ConfVars.REPLDIR, this.repldDir);
     hiveConf.setIntVar(HiveConf.ConfVars.METASTORETHRIFTCONNECTIONRETRIES, 3);
     hiveConf.set(HiveConf.ConfVars.PREEXECHOOKS.varname, "");
     hiveConf.set(HiveConf.ConfVars.POSTEXECHOOKS.varname, "");
@@ -156,13 +151,38 @@ public class WarehouseInstance implements Closeable {
     System.setProperty(HiveConf.ConfVars.PREEXECHOOKS.varname, " ");
     System.setProperty(HiveConf.ConfVars.POSTEXECHOOKS.varname, " ");
 
+    for (Map.Entry<String, String> entry : overridesForHiveConf.entrySet()) {
+      hiveConf.set(entry.getKey(), entry.getValue());
+    }
+
     MetaStoreTestUtils.startMetaStoreWithRetry(hiveConf, true);
 
-    Path testPath = new Path(hiveWarehouseLocation);
-    FileSystem testPathFileSystem = FileSystem.get(testPath.toUri(), hiveConf);
-    testPathFileSystem.mkdirs(testPath);
+    // Add the below mentioned dependency in metastore/pom.xml file. For postgres need to copy postgresql-42.2.1.jar to
+    // .m2//repository/postgresql/postgresql/9.3-1102.jdbc41/postgresql-9.3-1102.jdbc41.jar.
+    /*
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.15</version>
+    </dependency>
 
-    avroSchemaFile = createAvroSchemaFile(testPathFileSystem, testPath);
+    <dependency>
+      <groupId>postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>9.3-1102.jdbc41</version>
+    </dependency>
+    */
+
+    /*hiveConf.setVar(HiveConf.ConfVars.METASTORECONNECTURLKEY, "jdbc:mysql://localhost:3306/APP");
+    hiveConf.setVar(HiveConf.ConfVars.METASTORE_CONNECTION_DRIVER, "com.mysql.jdbc.Driver");
+    hiveConf.setVar(HiveConf.ConfVars.METASTOREPWD, "hivepassword");
+    hiveConf.setVar(HiveConf.ConfVars.METASTORE_CONNECTION_USER_NAME, "hiveuser");*/
+
+    /*hiveConf.setVar(HiveConf.ConfVars.METASTORECONNECTURLKEY,"jdbc:postgresql://localhost/app");
+    hiveConf.setVar(HiveConf.ConfVars.METASTORE_CONNECTION_DRIVER, "org.postgresql.Driver");
+    hiveConf.setVar(HiveConf.ConfVars.METASTOREPWD, "password");
+    hiveConf.setVar(HiveConf.ConfVars.METASTORE_CONNECTION_USER_NAME, "postgres");*/
+
     driver = DriverFactory.newDriver(hiveConf);
     SessionState.start(new CliSessionState(hiveConf));
     client = new HiveMetaStoreClient(hiveConf);
@@ -177,51 +197,8 @@ public class WarehouseInstance implements Closeable {
   private Path mkDir(DistributedFileSystem fs, String pathString)
       throws IOException, SemanticException {
     Path path = new Path(pathString);
-    fs.mkdir(path, new FsPermission("777"));
+    fs.mkdirs(path, new FsPermission("777"));
     return PathBuilder.fullyQualifiedHDFSUri(path, fs);
-  }
-
-  private Path createAvroSchemaFile(FileSystem fs, Path testPath) throws IOException {
-    Path schemaFile = new Path(testPath, AVRO_SCHEMA_FILE_NAME);
-    String[] schemaVals = new String[] { "{",
-            "  \"type\" : \"record\",",
-            "  \"name\" : \"table1\",",
-            "  \"doc\" : \"Sqoop import of table1\",",
-            "  \"fields\" : [ {",
-            "    \"name\" : \"col1\",",
-            "    \"type\" : [ \"null\", \"string\" ],",
-            "    \"default\" : null,",
-            "    \"columnName\" : \"col1\",",
-            "    \"sqlType\" : \"12\"",
-            "  }, {",
-            "    \"name\" : \"col2\",",
-            "    \"type\" : [ \"null\", \"long\" ],",
-            "    \"default\" : null,",
-            "    \"columnName\" : \"col2\",",
-            "    \"sqlType\" : \"13\"",
-            "  } ],",
-            "  \"tableName\" : \"table1\"",
-            "}"
-    };
-    createTestDataFile(schemaFile.toUri().getPath(), schemaVals);
-    return schemaFile;
-  }
-
-  private void createTestDataFile(String filename, String[] lines) throws IOException {
-    FileWriter writer = null;
-    try {
-      File file = new File(filename);
-      file.deleteOnExit();
-      writer = new FileWriter(file);
-      int i=0;
-      for (String line : lines) {
-        writer.write(line + "\n");
-      }
-    } finally {
-      if (writer != null) {
-        writer.close();
-      }
-    }
   }
 
   public HiveConf getConf() {
@@ -413,6 +390,32 @@ public class WarehouseInstance implements Closeable {
     }
   }
 
+  private void verifyIfCkptSet(Map<String, String> props, String dumpDir) {
+    assertTrue(props.containsKey(ReplUtils.REPL_CHECKPOINT_KEY));
+    assertTrue(props.get(ReplUtils.REPL_CHECKPOINT_KEY).equals(dumpDir));
+  }
+
+  public void verifyIfCkptSet(String dbName, String dumpDir) throws Exception {
+    Database db = getDatabase(dbName);
+    verifyIfCkptSet(db.getParameters(), dumpDir);
+
+    List<String> tblNames = getAllTables(dbName);
+    verifyIfCkptSetForTables(dbName, tblNames, dumpDir);
+  }
+
+  public void verifyIfCkptSetForTables(String dbName, List<String> tblNames, String dumpDir) throws Exception {
+    for (String tblName : tblNames) {
+      Table tbl = getTable(dbName, tblName);
+      verifyIfCkptSet(tbl.getParameters(), dumpDir);
+      if (tbl.getPartitionKeysSize() != 0) {
+        List<Partition> partitions = getAllPartitions(dbName, tblName);
+        for (Partition ptn : partitions) {
+          verifyIfCkptSet(ptn.getParameters(), dumpDir);
+        }
+      }
+    }
+  }
+
   public Database getDatabase(String dbName) throws Exception {
     try {
       return client.getDatabase(dbName);
@@ -431,6 +434,60 @@ public class WarehouseInstance implements Closeable {
     } catch (NoSuchObjectException e) {
       return null;
     }
+  }
+
+  /**
+   * Get statistics for given set of columns of a given table in the given database.
+   * @param dbName - the database where the table resides
+   * @param tableName - tablename whose statistics are to be retrieved
+   * @return - list of ColumnStatisticsObj objects in the order of the specified columns
+   */
+  public List<ColumnStatisticsObj> getTableColumnStatistics(String dbName, String tableName) throws Exception {
+    return client.getTableColumnStatistics(dbName, tableName, getTableColNames(dbName, tableName));
+  }
+
+  /**
+   * @param dbName, database name
+   * @param tableName, table name
+   * @return - list of columns of given table in the given database.
+   * @throws Exception
+   */
+  public List<String> getTableColNames(String dbName, String tableName) throws Exception {
+    List<String> colNames = new ArrayList();
+    client.getSchema(dbName, tableName).forEach(fs -> colNames.add(fs.getName()));
+    return colNames;
+  }
+
+  /**
+   * Get statistics for given set of columns of a given table in the given database
+   * @param dbName - the database where the table resides
+   * @param tableName - tablename whose statistics are to be retrieved
+   * @param colNames - columns whose statistics is to be retrieved.
+   * @return - list of ColumnStatisticsObj objects in the order of the specified columns
+   */
+  public Map<String, List<ColumnStatisticsObj>> getAllPartitionColumnStatistics(String dbName,
+                                                                    String tableName) throws Exception {
+    List<String> colNames = new ArrayList();
+    client.getFields(dbName, tableName).forEach(fs -> colNames.add(fs.getName()));
+    return getAllPartitionColumnStatistics(dbName, tableName, colNames);
+  }
+
+  /**
+   * Get statistics for given set of columns for all the partitions of a given table in the given
+   * database.
+   * @param dbName - the database where the table resides
+   * @param tableName - name of the partitioned table in the database
+   * @param colNames - columns whose statistics is to be retrieved
+   * @return Map of partition name and list of ColumnStatisticsObj. The objects in the list are
+   * ordered according to the given list of columns.
+   * @throws Exception
+   */
+  Map<String, List<ColumnStatisticsObj>> getAllPartitionColumnStatistics(String dbName,
+                                                                         String tableName,
+                                                                         List<String> colNames)
+          throws Exception {
+    return client.getPartitionColumnStatistics(dbName, tableName,
+            client.listPartitionNames(dbName, tableName, (short) -1), colNames);
   }
 
   public List<Partition> getAllPartitions(String dbName, String tableName) throws Exception {

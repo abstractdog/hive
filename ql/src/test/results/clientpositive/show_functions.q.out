@@ -41,6 +41,7 @@ bin
 bloom_filter
 bround
 bucket_number
+buildversion
 cardinality_violation
 case
 cbrt
@@ -110,6 +111,7 @@ from_unixtime
 from_utc_timestamp
 get_json_object
 get_splits
+get_sql_schema
 greatest
 grouping
 hash
@@ -199,6 +201,7 @@ pow
 power
 printf
 quarter
+quote
 radians
 rand
 rank
@@ -278,6 +281,7 @@ unhex
 unix_timestamp
 upper
 uuid
+validate_acid_sort_order
 var_pop
 var_samp
 variance
@@ -368,6 +372,7 @@ parse_url_tuple
 percentile
 posexplode
 positive
+quote
 regexp_replace
 regr_slope
 replace
@@ -400,6 +405,7 @@ date_format
 date_sub
 datediff
 to_date
+validate_acid_sort_order
 PREHOOK: query: SHOW FUNCTIONS '***'
 PREHOOK: type: SHOWFUNCTIONS
 POSTHOOK: query: SHOW FUNCTIONS '***'

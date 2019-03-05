@@ -511,13 +511,17 @@ public class DagUtils {
     case CUSTOM_SIMPLE_EDGE:
       assert partitionerClassName != null;
       partitionerConf = createPartitionerConf(partitionerClassName, conf);
-      UnorderedPartitionedKVEdgeConfig et3Conf = UnorderedPartitionedKVEdgeConfig
+      UnorderedPartitionedKVEdgeConfig.Builder et3Conf = UnorderedPartitionedKVEdgeConfig
           .newBuilder(keyClass, valClass, MRPartitioner.class.getName(), partitionerConf)
           .setFromConfiguration(conf)
           .setKeySerializationClass(TezBytesWritableSerialization.class.getName(), null)
-          .setValueSerializationClass(TezBytesWritableSerialization.class.getName(), null)
-          .build();
-      return et3Conf.createDefaultEdgeProperty();
+          .setValueSerializationClass(TezBytesWritableSerialization.class.getName(), null);
+      if (edgeProp.getBufferSize() != null) {
+        et3Conf.setAdditionalConfiguration(
+            TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB,
+            edgeProp.getBufferSize().toString());
+      }
+      return et3Conf.build().createDefaultEdgeProperty();
     case ONE_TO_ONE_EDGE:
       UnorderedKVEdgeConfig et4Conf = UnorderedKVEdgeConfig
           .newBuilder(keyClass, valClass)
@@ -1500,11 +1504,14 @@ public class DagUtils {
     scratchDir = new Path(scratchDir, userName);
 
     Path tezDir = getTezDir(scratchDir);
-    FileSystem fs = tezDir.getFileSystem(conf);
-    LOG.debug("TezDir path set " + tezDir + " for user: " + userName);
-    // since we are adding the user name to the scratch dir, we do not
-    // need to give more permissions here
-    fs.mkdirs(tezDir);
+    if (!HiveConf.getBoolVar(conf, ConfVars.HIVE_RPC_QUERY_PLAN)) {
+      FileSystem fs = tezDir.getFileSystem(conf);
+      LOG.debug("TezDir path set " + tezDir + " for user: " + userName);
+      // since we are adding the user name to the scratch dir, we do not
+      // need to give more permissions here
+      // Since we are doing RPC creating a dir is not necessary
+      fs.mkdirs(tezDir);
+    }
 
     return tezDir;
 

@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.metastore.messaging.json;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
+import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.messaging.MessageBuilder;
 import org.apache.hadoop.hive.metastore.messaging.UpdateTableColumnStatMessage;
 import org.apache.thrift.TException;
@@ -35,13 +36,16 @@ public class JSONUpdateTableColumnStatMessage extends UpdateTableColumnStatMessa
   private Long writeId, timestamp;
 
   @JsonProperty
-  private String validWriteIds, server, servicePrincipal, database;
+  private String server, servicePrincipal, database;
 
   @JsonProperty
   private String colStatsJson;
 
   @JsonProperty
   Map<String, String> parameters;
+
+  @JsonProperty
+  private String tableObjJson;
 
   /**
    * Default constructor, needed for Jackson.
@@ -50,15 +54,16 @@ public class JSONUpdateTableColumnStatMessage extends UpdateTableColumnStatMessa
   }
 
   public JSONUpdateTableColumnStatMessage(String server, String servicePrincipal, Long timestamp,
-                      ColumnStatistics colStats, Map<String, String> parameters, String validWriteIds, long writeId) {
+                      ColumnStatistics colStats, Table tableObj, Map<String, String> parameters,
+                                           long writeId) {
     this.timestamp = timestamp;
     this.server = server;
     this.servicePrincipal = servicePrincipal;
     this.writeId = writeId;
-    this.validWriteIds = validWriteIds;
     this.database = colStats.getStatsDesc().getDbName();
     try {
       this.colStatsJson = MessageBuilder.createTableColumnStatJson(colStats);
+      this.tableObjJson = MessageBuilder.createTableObjJson(tableObj);
     } catch (TException e) {
       throw new IllegalArgumentException("Could not serialize JSONUpdateTableColumnStatMessage : ", e);
     }
@@ -95,8 +100,8 @@ public class JSONUpdateTableColumnStatMessage extends UpdateTableColumnStatMessa
   }
 
   @Override
-  public String getValidWriteIds() {
-    return validWriteIds;
+  public Table getTableObject() throws Exception {
+    return (Table) MessageBuilder.getTObj(tableObjJson, Table.class);
   }
 
   @Override

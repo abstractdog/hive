@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.metastore.messaging.json;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
+import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.messaging.MessageBuilder;
 import org.apache.hadoop.hive.metastore.messaging.UpdatePartitionColumnStatMessage;
 import org.apache.thrift.TException;
@@ -37,7 +38,7 @@ public class JSONUpdatePartitionColumnStatMessage extends UpdatePartitionColumnS
   private Long writeId, timestamp;
 
   @JsonProperty
-  private String validWriteIds, server, servicePrincipal, database;
+  private String server, servicePrincipal, database;
 
   @JsonProperty
   private String colStatsJson;
@@ -48,6 +49,9 @@ public class JSONUpdatePartitionColumnStatMessage extends UpdatePartitionColumnS
   @JsonProperty
   private List<String> partVals;
 
+  @JsonProperty
+  private String tableObjJson;
+
   /**
    * Default constructor, needed for Jackson.
    */
@@ -56,16 +60,17 @@ public class JSONUpdatePartitionColumnStatMessage extends UpdatePartitionColumnS
 
   public JSONUpdatePartitionColumnStatMessage(String server, String servicePrincipal, Long timestamp,
                                               ColumnStatistics colStats, List<String> partVals,
-                                              Map<String, String> parameters, String validWriteIds, long writeId) {
+                                              Map<String, String> parameters,
+                                              Table tableObj, long writeId) {
     this.timestamp = timestamp;
     this.server = server;
     this.servicePrincipal = servicePrincipal;
     this.writeId = writeId;
-    this.validWriteIds = validWriteIds;
     this.database = colStats.getStatsDesc().getDbName();
     this.partVals = partVals;
     try {
       this.colStatsJson = MessageBuilder.createTableColumnStatJson(colStats);
+      this.tableObjJson = MessageBuilder.createTableObjJson(tableObj);
     } catch (TException e) {
       throw new IllegalArgumentException("Could not serialize JSONUpdatePartitionColumnStatMessage : ", e);
     }
@@ -102,11 +107,6 @@ public class JSONUpdatePartitionColumnStatMessage extends UpdatePartitionColumnS
   }
 
   @Override
-  public String getValidWriteIds() {
-    return validWriteIds;
-  }
-
-  @Override
   public Long getWriteId() {
     return writeId;
   }
@@ -119,6 +119,11 @@ public class JSONUpdatePartitionColumnStatMessage extends UpdatePartitionColumnS
   @Override
   public List<String> getPartVals() {
     return partVals;
+  }
+
+  @Override
+  public Table getTableObject() throws Exception {
+    return  (Table) MessageBuilder.getTObj(tableObjJson, Table.class);
   }
 
   @Override

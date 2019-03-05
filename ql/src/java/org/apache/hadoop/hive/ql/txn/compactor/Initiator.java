@@ -60,7 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * A class to initiate compactions.  This will run in a separate thread.
  * It's critical that there exactly 1 of these in a given warehouse.
  */
-public class Initiator extends CompactorThread {
+public class Initiator extends MetaStoreCompactorThread {
   static final private String CLASS_NAME = Initiator.class.getName();
   static final private Logger LOG = LoggerFactory.getLogger(CLASS_NAME);
 
@@ -96,8 +96,20 @@ public class Initiator extends CompactorThread {
           LOG.debug("Found " + potentials.size() + " potential compactions, " +
               "checking to see if we should compact any of them");
           for (CompactionInfo ci : potentials) {
+            // Disable minor compaction for query based compactor
+            if (!ci.isMajorCompaction() && HiveConf.getBoolVar(conf, HiveConf.ConfVars.COMPACTOR_CRUD_QUERY_BASED)) {
+              LOG.debug("Not compacting: " + ci.getFullPartitionName()
+                  + ", as query based compaction currently does not " + "support minor compactions.");
+              continue;
+            }
             LOG.info("Checking to see if we should compact " + ci.getFullPartitionName());
             try {
+              if (replIsCompactionDisabledForDatabase(ci.dbname)) {
+                // Compaction is disabled for replicated database until after first successful incremental load.
+                LOG.info("Compaction is disabled for database " + ci.dbname);
+                continue;
+              }
+
               Table t = resolveTable(ci);
               if (t == null) {
                 // Most likely this means it's a temp table
@@ -109,6 +121,12 @@ public class Initiator extends CompactorThread {
               // check if no compaction set for this table
               if (noAutoCompactSet(t)) {
                 LOG.info("Table " + tableName(t) + " marked " + hive_metastoreConstants.TABLE_NO_AUTO_COMPACT + "=true so we will not compact it.");
+                continue;
+              }
+
+              if (replIsCompactionDisabledForTable(t)) {
+                // Compaction is disabled for replicated table until after first successful incremental load.
+                LOG.info("Compaction is disabled for table " + ci.getFullTableName());
                 continue;
               }
 
@@ -202,7 +220,7 @@ public class Initiator extends CompactorThread {
   }
 
   @Override
-  public void init(AtomicBoolean stop, AtomicBoolean looped) throws MetaException {
+  public void init(AtomicBoolean stop, AtomicBoolean looped) throws Exception {
     super.init(stop, looped);
     checkInterval =
         conf.getTimeVar(HiveConf.ConfVars.HIVE_COMPACTOR_CHECK_INTERVAL, TimeUnit.MILLISECONDS) ;

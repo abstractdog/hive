@@ -1,0 +1,154 @@
+PREHOOK: query: DESCRIBE FUNCTION trunc
+PREHOOK: type: DESCFUNCTION
+POSTHOOK: query: DESCRIBE FUNCTION trunc
+POSTHOOK: type: DESCFUNCTION
+trunc(date, fmt) / trunc(N,D) - Returns If input is date returns date with the time portion of the day truncated to the unit specified by the format model fmt. If you omit fmt, then date is truncated to the nearest day. It currently only supports 'MONTH'/'MON'/'MM', 'QUARTER'/'Q' and 'YEAR'/'YYYY'/'YY' as format.If input is a number group returns N truncated to D decimal places. If D is omitted, then N is truncated to 0 places.D can be negative to truncate (make zero) D digits left of the decimal point.
+PREHOOK: query: DESCRIBE FUNCTION EXTENDED trunc
+PREHOOK: type: DESCFUNCTION
+POSTHOOK: query: DESCRIBE FUNCTION EXTENDED trunc
+POSTHOOK: type: DESCFUNCTION
+trunc(date, fmt) / trunc(N,D) - Returns If input is date returns date with the time portion of the day truncated to the unit specified by the format model fmt. If you omit fmt, then date is truncated to the nearest day. It currently only supports 'MONTH'/'MON'/'MM', 'QUARTER'/'Q' and 'YEAR'/'YYYY'/'YY' as format.If input is a number group returns N truncated to D decimal places. If D is omitted, then N is truncated to 0 places.D can be negative to truncate (make zero) D digits left of the decimal point.
+date is a string in the format 'yyyy-MM-dd HH:mm:ss' or 'yyyy-MM-dd'. The time part of date is ignored.
+Example:
+  > SELECT trunc('2009-02-12', 'MM');
+OK
+ '2009-02-01'
+ > SELECT trunc('2017-03-15', 'Q');
+OK
+ '2017-01-01'
+ > SELECT trunc('2015-10-27', 'YEAR');
+OK
+ '2015-01-01' > SELECT trunc(1234567891.1234567891,4);
+OK
+ 1234567891.1234
+ > SELECT trunc(1234567891.1234567891,-4);
+OK
+ 1234560000 > SELECT trunc(1234567891.1234567891,0);
+OK
+ 1234567891
+ > SELECT trunc(1234567891.1234567891);
+OK
+ 1234567891
+Function class:org.apache.hadoop.hive.ql.udf.generic.GenericUDFTrunc
+Function type:BUILTIN
+PREHOOK: query: explain vectorization detail
+select trunc(ctimestamp1, 'MM') from alltypesorc
+PREHOOK: type: QUERY
+PREHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+POSTHOOK: query: explain vectorization detail
+select trunc(ctimestamp1, 'MM') from alltypesorc
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+PLAN VECTORIZATION:
+  enabled: true
+  enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Map Reduce
+      Map Operator Tree:
+          TableScan
+            alias: alltypesorc
+            Statistics: Num rows: 12288 Data size: 491520 Basic stats: COMPLETE Column stats: COMPLETE
+            Select Operator
+              expressions: trunc(ctimestamp1, 'MM') (type: string)
+              outputColumnNames: _col0
+              Statistics: Num rows: 12288 Data size: 2260992 Basic stats: COMPLETE Column stats: COMPLETE
+              File Output Operator
+                compressed: false
+                Statistics: Num rows: 12288 Data size: 2260992 Basic stats: COMPLETE Column stats: COMPLETE
+                table:
+                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                    output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+      Map Vectorization:
+          enabled: true
+          enabledConditionsMet: hive.vectorized.use.vectorized.input.format IS true
+          inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
+          notVectorizedReason: SELECT operator: Could not instantiate VectorExpression class TruncDate
+          vectorized: false
+
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        ListSink
+
+PREHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+PREHOOK: type: QUERY
+PREHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+POSTHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+1969-12-01	1969-12-31 15:59:46.674
+NULL	NULL
+1969-12-01	1969-12-31 15:59:55.787
+1969-12-01	1969-12-31 15:59:44.187
+1969-12-01	1969-12-31 15:59:50.434
+1969-12-01	1969-12-31 16:00:15.007
+1969-12-01	1969-12-31 16:00:07.021
+1969-12-01	1969-12-31 16:00:04.963
+1969-12-01	1969-12-31 15:59:52.176
+1969-12-01	1969-12-31 15:59:44.569
+PREHOOK: query: select trunc(ctimestamp1, 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+PREHOOK: type: QUERY
+PREHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+POSTHOOK: query: select trunc(ctimestamp1, 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+1969-10-01	1969-12-31 15:59:46.674
+NULL	NULL
+1969-10-01	1969-12-31 15:59:55.787
+1969-10-01	1969-12-31 15:59:44.187
+1969-10-01	1969-12-31 15:59:50.434
+1969-10-01	1969-12-31 16:00:15.007
+1969-10-01	1969-12-31 16:00:07.021
+1969-10-01	1969-12-31 16:00:04.963
+1969-10-01	1969-12-31 15:59:52.176
+1969-10-01	1969-12-31 15:59:44.569
+PREHOOK: query: select trunc(ctimestamp1, 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+PREHOOK: type: QUERY
+PREHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+POSTHOOK: query: select trunc(ctimestamp1, 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+1969-01-01	1969-12-31 15:59:46.674
+NULL	NULL
+1969-01-01	1969-12-31 15:59:55.787
+1969-01-01	1969-12-31 15:59:44.187
+1969-01-01	1969-12-31 15:59:50.434
+1969-01-01	1969-12-31 16:00:15.007
+1969-01-01	1969-12-31 16:00:07.021
+1969-01-01	1969-12-31 16:00:04.963
+1969-01-01	1969-12-31 15:59:52.176
+1969-01-01	1969-12-31 15:59:44.569
+PREHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc WHERE ctimestamp1 IS NULL LIMIT 10
+PREHOOK: type: QUERY
+PREHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+POSTHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc WHERE ctimestamp1 IS NULL LIMIT 10
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@alltypesorc
+#### A masked pattern was here ####
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL
+NULL	NULL

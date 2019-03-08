@@ -5,14 +5,14 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hive.common.type.Date;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hive.common.util.DateParser;
 
-//Vectorized implementation of ROUND(date, fmt) function
+//Vectorized implementation of trunc(date, fmt) function
 public class TruncDate extends VectorExpression {
   /**
    * 
@@ -22,10 +22,10 @@ public class TruncDate extends VectorExpression {
   private String fmt;
   private transient final DateParser dateParser = new DateParser();
 
-  public TruncDate(int colNum, String fmt, int outputColumnNum) {
+  public TruncDate(int colNum, byte[] fmt, int outputColumnNum) {
     super(outputColumnNum);
     this.colNum = colNum;
-    this.fmt = fmt;
+    this.fmt = new String(fmt);
   }
 
   @Override
@@ -40,14 +40,12 @@ public class TruncDate extends VectorExpression {
       this.evaluateChildren(batch);
     }
 
-    BytesColumnVector inputColVector = (BytesColumnVector) batch.cols[colNum];
-    LongColumnVector outputColVector = (LongColumnVector) batch.cols[outputColumnNum];
+    TimestampColumnVector inputColVector = (TimestampColumnVector) batch.cols[colNum];
+    BytesColumnVector outputColVector = (BytesColumnVector) batch.cols[outputColumnNum];
     int[] sel = batch.selected;
     boolean[] inputIsNull = inputColVector.isNull;
     boolean[] outputIsNull = outputColVector.isNull;
     int n = batch.size;
-    byte[][] vector = inputColVector.vector;
-    long[] outputVector = outputColVector.vector;
 
     // return immediately if batch is empty
     if (n == 0) {
@@ -73,7 +71,6 @@ public class TruncDate extends VectorExpression {
       if (batch.selectedInUse) {
 
         // CONSIDER: For large n, fill n or all of isNull array and use the tighter ELSE loop.
-
         if (!outputColVector.noNulls) {
           for (int j = 0; j != n; j++) {
             final int i = sel[j];
@@ -119,39 +116,51 @@ public class TruncDate extends VectorExpression {
     }
   }
 
-  private void truncDate(BytesColumnVector inV, LongColumnVector outV, int i) {
+  private void truncDate(TimestampColumnVector inV, BytesColumnVector outV, int i) {
+    Date date = Date.ofEpochMilli(inV.getTime(i));
+    processDate(outV, i, date);
+  }
+
+  private void truncDate(BytesColumnVector inV, BytesColumnVector outV, int i) {
     String dateString =
         new String(inV.vector[i], inV.start[i], inV.length[i], StandardCharsets.UTF_8);
     Date date = new Date();
     if (dateParser.parseDate(dateString, date)) {
-      if ("MONTH".equals(fmt) || "MON".equals(fmt) || "MM".equals(fmt)) {
-        date.setDayOfMonth(1);
-        outV.vector[i] = date.toEpochDay();
-      } else if ("QUARTER".equals(fmt) || "Q".equals(fmt)) {
-        int month = date.getMonth() - 1;
-        int quarter = month / 3;
-        int monthToSet = quarter * 3 + 1;
-        date.setMonth(monthToSet);
-        date.setDayOfMonth(1);
-        outV.vector[i] = date.toEpochDay();
-      } else if ("YEAR".equals(fmt) || "YYYY".equals(fmt) || "YY".equals(fmt)) {
-        date.setMonth(1);
-        date.setDayOfMonth(1);
-        outV.vector[i] = date.toEpochDay();
-      } else {
-        outV.vector[i] = date.toEpochDay();
-      }
+      processDate(outV, i, date);
+    } else {
+      outV.isNull[i] = true;
+      outV.noNulls = false;
     }
+  }
 
-    outV.vector[i] = 1;
-    outV.isNull[i] = true;
-    outV.noNulls = false;
+  private void processDate(BytesColumnVector outV, int i, Date date) {
+    if ("MONTH".equals(fmt) || "MON".equals(fmt) || "MM".equals(fmt)) {
+      date.setDayOfMonth(1);
+      outV.vector[i] = date.toString().getBytes();
+    } else if ("QUARTER".equals(fmt) || "Q".equals(fmt)) {
+      int month = date.getMonth() - 1;
+      int quarter = month / 3;
+      int monthToSet = quarter * 3 + 1;
+      date.setMonth(monthToSet);
+      date.setDayOfMonth(1);
+      outV.vector[i] = date.toString().getBytes();
+    } else if ("YEAR".equals(fmt) || "YYYY".equals(fmt) || "YY".equals(fmt)) {
+      date.setMonth(1);
+      date.setDayOfMonth(1);
+      outV.vector[i] = date.toString().getBytes();
+    } else {
+      outV.vector[i] = date.toString().getBytes();
+    }
   }
 
   @Override
   public Descriptor getDescriptor() {
     VectorExpressionDescriptor.Builder b = new VectorExpressionDescriptor.Builder();
-
+    b.setMode(VectorExpressionDescriptor.Mode.PROJECTION).setNumArguments(2)
+        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.DATETIME_FAMILY,
+            VectorExpressionDescriptor.ArgumentType.STRING_FAMILY)
+        .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.COLUMN,
+            VectorExpressionDescriptor.InputExpressionType.SCALAR);
     return b.build();
   }
 }

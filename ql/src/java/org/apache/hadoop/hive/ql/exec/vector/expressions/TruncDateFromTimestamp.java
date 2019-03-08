@@ -1,10 +1,10 @@
 package org.apache.hadoop.hive.ql.exec.vector.expressions;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.apache.hadoop.hive.common.type.Date;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descriptor;
@@ -13,16 +13,21 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hive.common.util.DateParser;
 
 //Vectorized implementation of trunc(date, fmt) function
-public class TruncDate extends VectorExpression {
+public class TruncDateFromTimestamp extends VectorExpression {
   /**
    * 
    */
   private static final long serialVersionUID = 1L;
-  private int colNum;
-  private String fmt;
-  private transient final DateParser dateParser = new DateParser();
+  protected int colNum;
+  protected String fmt;
+  protected transient final DateParser dateParser = new DateParser();
 
-  public TruncDate(int colNum, byte[] fmt, int outputColumnNum) {
+  public TruncDateFromTimestamp() {
+    super();
+    colNum = -1;
+  }
+
+  public TruncDateFromTimestamp(int colNum, byte[] fmt, int outputColumnNum) {
     super(outputColumnNum);
     this.colNum = colNum;
     this.fmt = new String(fmt);
@@ -30,7 +35,7 @@ public class TruncDate extends VectorExpression {
 
   @Override
   public String vectorExpressionParameters() {
-    return "FIXME implement later";
+    return "col " + colNum + ", format " + fmt;
   }
 
   @Override
@@ -40,8 +45,9 @@ public class TruncDate extends VectorExpression {
       this.evaluateChildren(batch);
     }
 
-    TimestampColumnVector inputColVector = (TimestampColumnVector) batch.cols[colNum];
+    ColumnVector inputColVector = batch.cols[colNum];
     BytesColumnVector outputColVector = (BytesColumnVector) batch.cols[outputColumnNum];
+
     int[] sel = batch.selected;
     boolean[] inputIsNull = inputColVector.isNull;
     boolean[] outputIsNull = outputColVector.isNull;
@@ -110,47 +116,34 @@ public class TruncDate extends VectorExpression {
       } else {
         System.arraycopy(inputIsNull, 0, outputIsNull, 0, n);
         for (int i = 0; i != n; i++) {
-          truncDate(inputColVector, outputColVector, i);
+          if (!inputColVector.isNull[i]) {
+            truncDate(inputColVector, outputColVector, i);
+          }
         }
       }
     }
   }
 
-  private void truncDate(TimestampColumnVector inV, BytesColumnVector outV, int i) {
-    Date date = Date.ofEpochMilli(inV.getTime(i));
+  protected void truncDate(ColumnVector inV, BytesColumnVector outV, int i) {
+    Date date = Date.ofEpochMilli(((TimestampColumnVector) inV).getTime(i));
     processDate(outV, i, date);
   }
 
-  private void truncDate(BytesColumnVector inV, BytesColumnVector outV, int i) {
-    String dateString =
-        new String(inV.vector[i], inV.start[i], inV.length[i], StandardCharsets.UTF_8);
-    Date date = new Date();
-    if (dateParser.parseDate(dateString, date)) {
-      processDate(outV, i, date);
-    } else {
-      outV.isNull[i] = true;
-      outV.noNulls = false;
-    }
-  }
-
-  private void processDate(BytesColumnVector outV, int i, Date date) {
+  protected void processDate(BytesColumnVector outV, int i, Date date) {
     if ("MONTH".equals(fmt) || "MON".equals(fmt) || "MM".equals(fmt)) {
       date.setDayOfMonth(1);
-      outV.vector[i] = date.toString().getBytes();
     } else if ("QUARTER".equals(fmt) || "Q".equals(fmt)) {
       int month = date.getMonth() - 1;
       int quarter = month / 3;
       int monthToSet = quarter * 3 + 1;
       date.setMonth(monthToSet);
       date.setDayOfMonth(1);
-      outV.vector[i] = date.toString().getBytes();
     } else if ("YEAR".equals(fmt) || "YYYY".equals(fmt) || "YY".equals(fmt)) {
       date.setMonth(1);
       date.setDayOfMonth(1);
-      outV.vector[i] = date.toString().getBytes();
-    } else {
-      outV.vector[i] = date.toString().getBytes();
     }
+    byte[] bytes = date.toString().getBytes();
+    outV.setVal(i, bytes, 0, bytes.length);
   }
 
   @Override

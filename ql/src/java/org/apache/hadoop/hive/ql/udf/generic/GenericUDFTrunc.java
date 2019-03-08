@@ -29,11 +29,8 @@ import org.apache.hadoop.hive.ql.exec.UDFArgumentException;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentLengthException;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedExpressions;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.FuncRoundWithNumDigitsDecimalToDecimal;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.RoundWithNumDigitsDoubleToDouble;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDate;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.gen.FuncRoundDecimalToDecimal;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.gen.FuncRoundDoubleToDouble;
+import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromString;
+import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromTimestamp;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
 import org.apache.hadoop.hive.serde2.io.DateWritableV2;
@@ -78,7 +75,7 @@ import org.apache.hadoop.io.Text;
         + " > SELECT _FUNC_(1234567891.1234567891,-4);\n" + "OK\n" + " 1234560000"
         + " > SELECT _FUNC_(1234567891.1234567891,0);\n" + "OK\n" + " 1234567891" + "\n"
         + " > SELECT _FUNC_(1234567891.1234567891);\n" + "OK\n" + " 1234567891")
-@VectorizedExpressions({TruncDate.class})
+@VectorizedExpressions({TruncDateFromTimestamp.class, TruncDateFromString.class})
 public class GenericUDFTrunc extends GenericUDF {
 
   private transient TimestampConverter timestampConverter;

@@ -29,6 +29,7 @@ import org.apache.hadoop.hive.ql.exec.UDFArgumentException;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentLengthException;
 import org.apache.hadoop.hive.ql.exec.UDFArgumentTypeException;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedExpressions;
+import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromDate;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromString;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromTimestamp;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -75,7 +76,8 @@ import org.apache.hadoop.io.Text;
         + " > SELECT _FUNC_(1234567891.1234567891,-4);\n" + "OK\n" + " 1234560000"
         + " > SELECT _FUNC_(1234567891.1234567891,0);\n" + "OK\n" + " 1234567891" + "\n"
         + " > SELECT _FUNC_(1234567891.1234567891);\n" + "OK\n" + " 1234567891")
-@VectorizedExpressions({TruncDateFromTimestamp.class, TruncDateFromString.class})
+@VectorizedExpressions({ TruncDateFromTimestamp.class, TruncDateFromString.class,
+    TruncDateFromDate.class })
 public class GenericUDFTrunc extends GenericUDF {
 
   private transient TimestampConverter timestampConverter;

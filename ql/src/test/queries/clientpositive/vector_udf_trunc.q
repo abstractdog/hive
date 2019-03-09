@@ -19,5 +19,13 @@ select trunc(CAST(ctimestamp1 AS STRING), 'MM'), ctimestamp1 from alltypesorc LI
 select trunc(CAST(ctimestamp1 AS STRING), 'Q'), ctimestamp1 from alltypesorc LIMIT 10;
 select trunc(CAST(ctimestamp1 AS STRING), 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10;
 
+explain vectorization detail
+select trunc(CAST(ctimestamp1 AS DATE), 'MM') from alltypesorc;
+
+select trunc(CAST(ctimestamp1 AS DATE), 'MM'), ctimestamp1 from alltypesorc LIMIT 10;
+select trunc(CAST(ctimestamp1 AS DATE), 'Q'), ctimestamp1 from alltypesorc LIMIT 10;
+select trunc(CAST(ctimestamp1 AS DATE), 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10;
+
+
 select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc WHERE ctimestamp1 IS NULL LIMIT 10;
 

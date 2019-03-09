@@ -150,7 +150,7 @@ public class TruncDateFromTimestamp extends VectorExpression {
   public Descriptor getDescriptor() {
     VectorExpressionDescriptor.Builder b = new VectorExpressionDescriptor.Builder();
     b.setMode(VectorExpressionDescriptor.Mode.PROJECTION).setNumArguments(2)
-        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.DATETIME_FAMILY,
+        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.TIMESTAMP,
             VectorExpressionDescriptor.ArgumentType.STRING_FAMILY)
         .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.COLUMN,
             VectorExpressionDescriptor.InputExpressionType.SCALAR);

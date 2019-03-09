@@ -1,18 +1,15 @@
 package org.apache.hadoop.hive.ql.exec.vector.expressions;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import org.apache.hadoop.hive.common.type.Date;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descriptor;
-import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
-import org.apache.hadoop.hive.ql.metadata.HiveException;
 
 public class TruncDateFromString extends TruncDateFromTimestamp {
+  private Date date = new Date();
 
   public TruncDateFromString(int colNum, byte[] fmt, int outputColumnNum) {
     super(colNum, fmt, outputColumnNum);
@@ -29,9 +26,9 @@ public class TruncDateFromString extends TruncDateFromTimestamp {
   }
 
   protected void truncDate(ColumnVector inV, BytesColumnVector outV, int i) {
-    truncDate((BytesColumnVector)inV, outV, i);
+    truncDate((BytesColumnVector) inV, outV, i);
   }
-  
+
   protected void truncDate(BytesColumnVector inV, BytesColumnVector outV, int i) {
     if (inV.vector[i] == null) {
       outV.isNull[i] = true;
@@ -40,7 +37,6 @@ public class TruncDateFromString extends TruncDateFromTimestamp {
 
     String dateString =
         new String(inV.vector[i], inV.start[i], inV.length[i], StandardCharsets.UTF_8);
-    Date date = new Date();
     if (dateParser.parseDate(dateString, date)) {
       processDate(outV, i, date);
     } else {

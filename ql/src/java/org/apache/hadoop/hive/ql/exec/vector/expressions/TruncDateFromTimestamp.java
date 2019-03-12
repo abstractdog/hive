@@ -7,16 +7,16 @@ import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
+import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.ArgumentType;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hive.common.util.DateParser;
 
-//Vectorized implementation of trunc(date, fmt) function
+/**
+ * Vectorized implementation of trunc(date, fmt) function for timestamp input
+ */
 public class TruncDateFromTimestamp extends VectorExpression {
-  /**
-   * 
-   */
   private static final long serialVersionUID = 1L;
   protected int colNum;
   protected String fmt;
@@ -150,10 +150,14 @@ public class TruncDateFromTimestamp extends VectorExpression {
   public Descriptor getDescriptor() {
     VectorExpressionDescriptor.Builder b = new VectorExpressionDescriptor.Builder();
     b.setMode(VectorExpressionDescriptor.Mode.PROJECTION).setNumArguments(2)
-        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.TIMESTAMP,
+        .setArgumentTypes(getInputColumnType(),
             VectorExpressionDescriptor.ArgumentType.STRING_FAMILY)
         .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.COLUMN,
             VectorExpressionDescriptor.InputExpressionType.SCALAR);
     return b.build();
+  }
+
+  protected ArgumentType getInputColumnType() {
+    return VectorExpressionDescriptor.ArgumentType.TIMESTAMP;
   }
 }

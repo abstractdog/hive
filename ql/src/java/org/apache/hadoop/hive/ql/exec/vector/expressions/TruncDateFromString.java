@@ -6,8 +6,11 @@ import org.apache.hadoop.hive.common.type.Date;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
-import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descriptor;
+import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.ArgumentType;
 
+/**
+ * Vectorized implementation of trunc(date, fmt) function for string input
+ */
 public class TruncDateFromString extends TruncDateFromTimestamp {
   private Date date = new Date();
 
@@ -15,9 +18,6 @@ public class TruncDateFromString extends TruncDateFromTimestamp {
     super(colNum, fmt, outputColumnNum);
   }
 
-  /**
-   * 
-   */
   private static final long serialVersionUID = 1L;
 
   public TruncDateFromString() {
@@ -45,14 +45,7 @@ public class TruncDateFromString extends TruncDateFromTimestamp {
   }
 
   @Override
-  public Descriptor getDescriptor() {
-    VectorExpressionDescriptor.Builder b = new VectorExpressionDescriptor.Builder();
-    b.setMode(VectorExpressionDescriptor.Mode.PROJECTION).setNumArguments(2)
-        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.STRING_FAMILY,
-            VectorExpressionDescriptor.ArgumentType.STRING_FAMILY)
-        .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.COLUMN,
-            VectorExpressionDescriptor.InputExpressionType.SCALAR);
-    return b.build();
+  protected ArgumentType getInputColumnType() {
+    return VectorExpressionDescriptor.ArgumentType.STRING_FAMILY;
   }
-
 }

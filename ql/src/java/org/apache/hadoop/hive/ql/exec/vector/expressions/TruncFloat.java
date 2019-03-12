@@ -6,21 +6,18 @@ import java.util.Arrays;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.DoubleColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
+import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.ArgumentType;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 
 /**
- * Vectorized implementation of trunc(number, scale) function
+ * Vectorized implementation of trunc(number, scale) function for float/double input
  */
 public class TruncFloat extends VectorExpression {
-  /**
-   * 
-   */
   private static final long serialVersionUID = 1L;
   protected int colNum;
   protected int scale;
-  protected BigDecimal pow = BigDecimal.valueOf(Math.pow(10, Math.abs(scale)));
 
   public TruncFloat() {
     super();
@@ -31,10 +28,6 @@ public class TruncFloat extends VectorExpression {
     super(outputColumnNum);
     this.colNum = colNum;
     this.scale = scale;
-
-    if (scale >= 0) {
-      pow = BigDecimal.valueOf(Math.pow(10, scale));
-    }
   }
 
   @Override
@@ -119,39 +112,38 @@ public class TruncFloat extends VectorExpression {
 
   protected void trunc(ColumnVector inputColVector, ColumnVector outputColVector, int i) {
     BigDecimal input = BigDecimal.valueOf(((DoubleColumnVector) inputColVector).vector[i]);
-    double output = DoubleColumnVector.NULL_VALUE;
 
-    output = trunc(input).doubleValue();
-
-    ((DoubleColumnVector)outputColVector).vector[i] = output;
+    double output = trunc(input).doubleValue();
+    ((DoubleColumnVector) outputColVector).vector[i] = output;
   }
 
   protected BigDecimal trunc(BigDecimal input) {
-    BigDecimal output = new BigDecimal(0);
     BigDecimal pow = BigDecimal.valueOf(Math.pow(10, Math.abs(scale)));
+
     if (scale >= 0) {
-      pow = BigDecimal.valueOf(Math.pow(10, scale));
       if (scale != 0) {
         long longValue = input.multiply(pow).longValue();
-        output = BigDecimal.valueOf(longValue).divide(pow);
+        return BigDecimal.valueOf(longValue).divide(pow);
       } else {
-        output = BigDecimal.valueOf(input.longValue());
+        return BigDecimal.valueOf(input.longValue());
       }
     } else {
       long longValue2 = input.divide(pow).longValue();
-      output = BigDecimal.valueOf(longValue2).multiply(pow);
+      return BigDecimal.valueOf(longValue2).multiply(pow);
     }
-    return output;
   }
 
   @Override
   public Descriptor getDescriptor() {
     VectorExpressionDescriptor.Builder b = new VectorExpressionDescriptor.Builder();
     b.setMode(VectorExpressionDescriptor.Mode.PROJECTION).setNumArguments(2)
-        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.FLOAT_FAMILY,
-            VectorExpressionDescriptor.ArgumentType.INT_FAMILY)
+        .setArgumentTypes(getInputColumnType(), VectorExpressionDescriptor.ArgumentType.INT_FAMILY)
         .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.COLUMN,
             VectorExpressionDescriptor.InputExpressionType.SCALAR);
     return b.build();
+  }
+
+  protected ArgumentType getInputColumnType() {
+    return VectorExpressionDescriptor.ArgumentType.FLOAT_FAMILY;
   }
 }

@@ -48,10 +48,10 @@ select c, 1, trunc(CAST (c AS FLOAT),1) from trunc_number LIMIT 1;
 
 
 explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL), 0) from trunc_number;
-select c, 0, trunc(CAST (c AS DECIMAL), 0) from trunc_number LIMIT 1;
-select c, -1, trunc(CAST (c AS DECIMAL), -1) from trunc_number LIMIT 1;
-select c, 1, trunc(CAST (c AS DECIMAL), 1) from trunc_number LIMIT 1;
+select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number;
+select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number LIMIT 1;
+select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from trunc_number LIMIT 1;
+select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from trunc_number LIMIT 1;
 
 -- scale not defined -> 0
 explain vectorization detail

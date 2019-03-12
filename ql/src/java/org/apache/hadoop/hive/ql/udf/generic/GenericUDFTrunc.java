@@ -33,7 +33,9 @@ import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromDate;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromString;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDateFromTimestamp;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDecimal;
+import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncDecimalNoScale;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncFloat;
+import org.apache.hadoop.hive.ql.exec.vector.expressions.TruncFloatNoScale;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
 import org.apache.hadoop.hive.serde2.io.DateWritableV2;
@@ -78,7 +80,7 @@ import org.apache.hadoop.io.Text;
         + " > SELECT _FUNC_(1234567891.1234567891,0);\n" + "OK\n" + " 1234567891" + "\n"
         + " > SELECT _FUNC_(1234567891.1234567891);\n" + "OK\n" + " 1234567891")
 @VectorizedExpressions({ TruncDateFromTimestamp.class, TruncDateFromString.class,
-    TruncDateFromDate.class, TruncFloat.class, TruncDecimal.class})
+    TruncDateFromDate.class, TruncFloat.class, TruncFloatNoScale.class, TruncDecimal.class, TruncDecimalNoScale.class})
 public class GenericUDFTrunc extends GenericUDF {
 
   private transient TimestampConverter timestampConverter;

@@ -55,9 +55,15 @@ select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number;
 select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from trunc_number;
 select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from trunc_number;
 
--- scale not defined -> 0
+-- scale not defined -> 0 (float)
 explain vectorization detail
 select c, trunc(c) from trunc_number;
+select c, trunc(c) from trunc_number;
+
+-- scale not defined -> 0 (decimal)
+explain vectorization detail
+select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number;
+select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number;
 
 drop table trunc_number_text;
 drop table trunc_number;

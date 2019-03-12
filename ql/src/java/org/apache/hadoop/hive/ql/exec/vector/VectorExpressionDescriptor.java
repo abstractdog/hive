@@ -352,7 +352,6 @@ public class VectorExpressionDescriptor {
           }
         }
       } catch (Exception ex) {
-        LOG.warn("Could not instantiate VectorExpression class " + ve.getSimpleName(), ex);
         throw new HiveException("Could not instantiate VectorExpression class " + ve.getSimpleName(), ex);
       }
     }

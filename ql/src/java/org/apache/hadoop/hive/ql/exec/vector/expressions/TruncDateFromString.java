@@ -12,7 +12,7 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Argument
  * Vectorized implementation of trunc(date, fmt) function for string input
  */
 public class TruncDateFromString extends TruncDateFromTimestamp {
-  private Date date = new Date();
+  private transient Date date = new Date();
 
   public TruncDateFromString(int colNum, byte[] fmt, int outputColumnNum) {
     super(colNum, fmt, outputColumnNum);

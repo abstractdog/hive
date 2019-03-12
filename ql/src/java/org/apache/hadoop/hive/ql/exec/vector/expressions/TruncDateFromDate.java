@@ -11,7 +11,7 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Argument
  * Vectorized implementation of trunc(date, fmt) function date timestamp input
  */
 public class TruncDateFromDate extends TruncDateFromTimestamp {
-  private Date date = new Date();
+  private transient Date date = new Date();
 
   public TruncDateFromDate(int colNum, byte[] fmt, int outputColumnNum) {
     super(colNum, fmt, outputColumnNum);

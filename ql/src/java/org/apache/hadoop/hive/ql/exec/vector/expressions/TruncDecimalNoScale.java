@@ -8,8 +8,6 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Descript
  */
 public class TruncDecimalNoScale extends TruncDecimal {
   private static final long serialVersionUID = 1L;
-  protected int colNum;
-  protected int scale;
 
   public TruncDecimalNoScale() {
     super();

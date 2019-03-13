@@ -13,6 +13,8 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hive.common.util.DateParser;
 
+import com.google.common.base.Charsets;
+
 /**
  * Vectorized implementation of trunc(date, fmt) function for timestamp input
  */
@@ -30,7 +32,7 @@ public class TruncDateFromTimestamp extends VectorExpression {
   public TruncDateFromTimestamp(int colNum, byte[] fmt, int outputColumnNum) {
     super(outputColumnNum);
     this.colNum = colNum;
-    this.fmt = new String(fmt);
+    this.fmt = new String(fmt, Charsets.UTF_8);
   }
 
   @Override
@@ -142,7 +144,7 @@ public class TruncDateFromTimestamp extends VectorExpression {
       date.setMonth(1);
       date.setDayOfMonth(1);
     }
-    byte[] bytes = date.toString().getBytes();
+    byte[] bytes = date.toString().getBytes(Charsets.UTF_8);
     outV.setVal(i, bytes, 0, bytes.length);
   }
 

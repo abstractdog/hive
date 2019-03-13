@@ -143,60 +143,60 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+PREHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-12-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-12-01	1969-12-31 15:59:55.787
-1969-12-01	1969-12-31 15:59:44.187
-1969-12-01	1969-12-31 15:59:50.434
-1969-12-01	1969-12-31 16:00:15.007
-1969-12-01	1969-12-31 16:00:07.021
-1969-12-01	1969-12-31 16:00:04.963
-1969-12-01	1969-12-31 15:59:52.176
-1969-12-01	1969-12-31 15:59:44.569
-PREHOOK: query: select trunc(ctimestamp1, 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:43.619
+1969-12-01	1969-12-31 15:59:43.627
+1969-12-01	1969-12-31 15:59:43.628
+1969-12-01	1969-12-31 15:59:43.631
+1969-12-01	1969-12-31 15:59:43.637
+1969-12-01	1969-12-31 15:59:43.64
+PREHOOK: query: select trunc(ctimestamp1, 'Q'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(ctimestamp1, 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(ctimestamp1, 'Q'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-10-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-10-01	1969-12-31 15:59:55.787
-1969-10-01	1969-12-31 15:59:44.187
-1969-10-01	1969-12-31 15:59:50.434
-1969-10-01	1969-12-31 16:00:15.007
-1969-10-01	1969-12-31 16:00:07.021
-1969-10-01	1969-12-31 16:00:04.963
-1969-10-01	1969-12-31 15:59:52.176
-1969-10-01	1969-12-31 15:59:44.569
-PREHOOK: query: select trunc(ctimestamp1, 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:43.619
+1969-10-01	1969-12-31 15:59:43.627
+1969-10-01	1969-12-31 15:59:43.628
+1969-10-01	1969-12-31 15:59:43.631
+1969-10-01	1969-12-31 15:59:43.637
+1969-10-01	1969-12-31 15:59:43.64
+PREHOOK: query: select trunc(ctimestamp1, 'YEAR'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(ctimestamp1, 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(ctimestamp1, 'YEAR'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-01-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-01-01	1969-12-31 15:59:55.787
-1969-01-01	1969-12-31 15:59:44.187
-1969-01-01	1969-12-31 15:59:50.434
-1969-01-01	1969-12-31 16:00:15.007
-1969-01-01	1969-12-31 16:00:07.021
-1969-01-01	1969-12-31 16:00:04.963
-1969-01-01	1969-12-31 15:59:52.176
-1969-01-01	1969-12-31 15:59:44.569
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:43.619
+1969-01-01	1969-12-31 15:59:43.627
+1969-01-01	1969-12-31 15:59:43.628
+1969-01-01	1969-12-31 15:59:43.631
+1969-01-01	1969-12-31 15:59:43.637
+1969-01-01	1969-12-31 15:59:43.64
 PREHOOK: query: explain vectorization detail select trunc(CAST(ctimestamp1 AS STRING), 'MM') from alltypesorc
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
@@ -265,60 +265,60 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+PREHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'MM'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'MM'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-12-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-12-01	1969-12-31 15:59:55.787
-1969-12-01	1969-12-31 15:59:44.187
-1969-12-01	1969-12-31 15:59:50.434
-1969-12-01	1969-12-31 16:00:15.007
-1969-12-01	1969-12-31 16:00:07.021
-1969-12-01	1969-12-31 16:00:04.963
-1969-12-01	1969-12-31 15:59:52.176
-1969-12-01	1969-12-31 15:59:44.569
-PREHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:43.619
+1969-12-01	1969-12-31 15:59:43.627
+1969-12-01	1969-12-31 15:59:43.628
+1969-12-01	1969-12-31 15:59:43.631
+1969-12-01	1969-12-31 15:59:43.637
+1969-12-01	1969-12-31 15:59:43.64
+PREHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'Q'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'Q'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-10-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-10-01	1969-12-31 15:59:55.787
-1969-10-01	1969-12-31 15:59:44.187
-1969-10-01	1969-12-31 15:59:50.434
-1969-10-01	1969-12-31 16:00:15.007
-1969-10-01	1969-12-31 16:00:07.021
-1969-10-01	1969-12-31 16:00:04.963
-1969-10-01	1969-12-31 15:59:52.176
-1969-10-01	1969-12-31 15:59:44.569
-PREHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:43.619
+1969-10-01	1969-12-31 15:59:43.627
+1969-10-01	1969-12-31 15:59:43.628
+1969-10-01	1969-12-31 15:59:43.631
+1969-10-01	1969-12-31 15:59:43.637
+1969-10-01	1969-12-31 15:59:43.64
+PREHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'YEAR'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(CAST(ctimestamp1 AS STRING), 'YEAR'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-01-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-01-01	1969-12-31 15:59:55.787
-1969-01-01	1969-12-31 15:59:44.187
-1969-01-01	1969-12-31 15:59:50.434
-1969-01-01	1969-12-31 16:00:15.007
-1969-01-01	1969-12-31 16:00:07.021
-1969-01-01	1969-12-31 16:00:04.963
-1969-01-01	1969-12-31 15:59:52.176
-1969-01-01	1969-12-31 15:59:44.569
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:43.619
+1969-01-01	1969-12-31 15:59:43.627
+1969-01-01	1969-12-31 15:59:43.628
+1969-01-01	1969-12-31 15:59:43.631
+1969-01-01	1969-12-31 15:59:43.637
+1969-01-01	1969-12-31 15:59:43.64
 PREHOOK: query: explain vectorization detail select trunc(CAST(ctimestamp1 AS DATE), 'MM') from alltypesorc
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
@@ -387,60 +387,60 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+PREHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'MM'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'MM'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'MM'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-12-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-12-01	1969-12-31 15:59:55.787
-1969-12-01	1969-12-31 15:59:44.187
-1969-12-01	1969-12-31 15:59:50.434
-1969-12-01	1969-12-31 16:00:15.007
-1969-12-01	1969-12-31 16:00:07.021
-1969-12-01	1969-12-31 16:00:04.963
-1969-12-01	1969-12-31 15:59:52.176
-1969-12-01	1969-12-31 15:59:44.569
-PREHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:30.929
+1969-12-01	1969-12-31 15:59:43.619
+1969-12-01	1969-12-31 15:59:43.627
+1969-12-01	1969-12-31 15:59:43.628
+1969-12-01	1969-12-31 15:59:43.631
+1969-12-01	1969-12-31 15:59:43.637
+1969-12-01	1969-12-31 15:59:43.64
+PREHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'Q'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'Q'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'Q'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-10-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-10-01	1969-12-31 15:59:55.787
-1969-10-01	1969-12-31 15:59:44.187
-1969-10-01	1969-12-31 15:59:50.434
-1969-10-01	1969-12-31 16:00:15.007
-1969-10-01	1969-12-31 16:00:07.021
-1969-10-01	1969-12-31 16:00:04.963
-1969-10-01	1969-12-31 15:59:52.176
-1969-10-01	1969-12-31 15:59:44.569
-PREHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:30.929
+1969-10-01	1969-12-31 15:59:43.619
+1969-10-01	1969-12-31 15:59:43.627
+1969-10-01	1969-12-31 15:59:43.628
+1969-10-01	1969-12-31 15:59:43.631
+1969-10-01	1969-12-31 15:59:43.637
+1969-10-01	1969-12-31 15:59:43.64
+PREHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'YEAR'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-POSTHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'YEAR'), ctimestamp1 from alltypesorc LIMIT 10
+POSTHOOK: query: select trunc(CAST(ctimestamp1 AS DATE), 'YEAR'), ctimestamp1 from alltypesorc order by ctimestamp1 LIMIT 10
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@alltypesorc
 #### A masked pattern was here ####
-1969-01-01	1969-12-31 15:59:46.674
-NULL	NULL
-1969-01-01	1969-12-31 15:59:55.787
-1969-01-01	1969-12-31 15:59:44.187
-1969-01-01	1969-12-31 15:59:50.434
-1969-01-01	1969-12-31 16:00:15.007
-1969-01-01	1969-12-31 16:00:07.021
-1969-01-01	1969-12-31 16:00:04.963
-1969-01-01	1969-12-31 15:59:52.176
-1969-01-01	1969-12-31 15:59:44.569
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:30.929
+1969-01-01	1969-12-31 15:59:43.619
+1969-01-01	1969-12-31 15:59:43.627
+1969-01-01	1969-12-31 15:59:43.628
+1969-01-01	1969-12-31 15:59:43.631
+1969-01-01	1969-12-31 15:59:43.637
+1969-01-01	1969-12-31 15:59:43.64
 PREHOOK: query: select trunc(ctimestamp1, 'MM'), ctimestamp1 from alltypesorc WHERE ctimestamp1 IS NULL LIMIT 10
 PREHOOK: type: QUERY
 PREHOOK: Input: default@alltypesorc
@@ -460,12 +460,12 @@ NULL	NULL
 NULL	NULL
 NULL	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(c,0) from trunc_number
+select c, trunc(c,0) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(c,0) from trunc_number
+select c, trunc(c,0) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -496,16 +496,16 @@ STAGE PLANS:
                   projectedOutputColumnNums: [0, 2]
                   selectExpressions: TruncFloat(col 0, scale 0) -> 2:double
               Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
-              File Output Operator
-                compressed: false
-                File Sink Vectorization:
-                    className: VectorFileSinkOperator
+              Reduce Output Operator
+                key expressions: _col0 (type: double)
+                sort order: +
+                Reduce Sink Vectorization:
+                    className: VectorReduceSinkOperator
                     native: false
+                    nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+                    nativeConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
                 Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
-                table:
-                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                value expressions: _col1 (type: double)
       Execution mode: vectorized
       Map Vectorization:
           enabled: true
@@ -522,6 +522,22 @@ STAGE PLANS:
               dataColumns: c:double
               partitionColumnCount: 0
               scratchColumnTypeNames: [double]
+      Reduce Vectorization:
+          enabled: false
+          enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true
+          enableConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
+      Reduce Operator Tree:
+        Select Operator
+          expressions: KEY.reducesinkkey0 (type: double), VALUE._col0 (type: double)
+          outputColumnNames: _col0, _col1
+          Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
+          File Output Operator
+            compressed: false
+            Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
+            table:
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+                serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
 
   Stage: Stage-0
     Fetch Operator
@@ -529,49 +545,49 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, 0, trunc(c,0) from trunc_number
+PREHOOK: query: select c, 0, trunc(c,0) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 0, trunc(c,0) from trunc_number
+POSTHOOK: query: select c, 0, trunc(c,0) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	0	12345.0
-12345.0	0	12345.0
 0.54321	0	0.0
+12345.0	0	12345.0
+12345.54321	0	12345.0
 NULL	0	NULL
-PREHOOK: query: select c, -1, trunc(c,-1) from trunc_number
+PREHOOK: query: select c, -1, trunc(c,-1) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, -1, trunc(c,-1) from trunc_number
+POSTHOOK: query: select c, -1, trunc(c,-1) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	-1	12340.0
-12345.0	-1	12340.0
 0.54321	-1	0.0
+12345.0	-1	12340.0
+12345.54321	-1	12340.0
 NULL	-1	NULL
-PREHOOK: query: select c, 1, trunc(c,1) from trunc_number
+PREHOOK: query: select c, 1, trunc(c,1) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 1, trunc(c,1) from trunc_number
+POSTHOOK: query: select c, 1, trunc(c,1) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	1	12345.5
-12345.0	1	12345.0
 0.54321	1	0.5
+12345.0	1	12345.0
+12345.54321	1	12345.5
 NULL	1	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS FLOAT), 0) from trunc_number
+select c, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS FLOAT), 0) from trunc_number
+select c, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -602,16 +618,16 @@ STAGE PLANS:
                   projectedOutputColumnNums: [0, 2]
                   selectExpressions: TruncFloat(col 0, scale 0)(children: col 0:double) -> 2:float
               Statistics: Num rows: 4 Data size: 48 Basic stats: COMPLETE Column stats: COMPLETE
-              File Output Operator
-                compressed: false
-                File Sink Vectorization:
-                    className: VectorFileSinkOperator
+              Reduce Output Operator
+                key expressions: _col0 (type: double)
+                sort order: +
+                Reduce Sink Vectorization:
+                    className: VectorReduceSinkOperator
                     native: false
+                    nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+                    nativeConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
                 Statistics: Num rows: 4 Data size: 48 Basic stats: COMPLETE Column stats: COMPLETE
-                table:
-                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                value expressions: _col1 (type: float)
       Execution mode: vectorized
       Map Vectorization:
           enabled: true
@@ -628,6 +644,22 @@ STAGE PLANS:
               dataColumns: c:double
               partitionColumnCount: 0
               scratchColumnTypeNames: [double]
+      Reduce Vectorization:
+          enabled: false
+          enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true
+          enableConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
+      Reduce Operator Tree:
+        Select Operator
+          expressions: KEY.reducesinkkey0 (type: double), VALUE._col0 (type: float)
+          outputColumnNames: _col0, _col1
+          Statistics: Num rows: 4 Data size: 48 Basic stats: COMPLETE Column stats: COMPLETE
+          File Output Operator
+            compressed: false
+            Statistics: Num rows: 4 Data size: 48 Basic stats: COMPLETE Column stats: COMPLETE
+            table:
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+                serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
 
   Stage: Stage-0
     Fetch Operator
@@ -635,49 +667,49 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from trunc_number
+PREHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from trunc_number
+POSTHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	0	12345.0
-12345.0	0	12345.0
 0.54321	0	0.0
+12345.0	0	12345.0
+12345.54321	0	12345.0
 NULL	0	NULL
-PREHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from trunc_number
+PREHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from trunc_number
+POSTHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	-1	12340.0
-12345.0	-1	12340.0
 0.54321	-1	0.0
+12345.0	-1	12340.0
+12345.54321	-1	12340.0
 NULL	-1	NULL
-PREHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from trunc_number
+PREHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from trunc_number
+POSTHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	1	12345.5
-12345.0	1	12345.0
 0.54321	1	0.5
+12345.0	1	12345.0
+12345.54321	1	12345.5
 NULL	1	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number
+select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number
+select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -708,16 +740,16 @@ STAGE PLANS:
                   projectedOutputColumnNums: [0, 3]
                   selectExpressions: TruncDecimal(col 2, scale 0)(children: CastDoubleToDecimal(col 0:double) -> 2:decimal(10,5)) -> 3:decimal(38,18)
               Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
-              File Output Operator
-                compressed: false
-                File Sink Vectorization:
-                    className: VectorFileSinkOperator
+              Reduce Output Operator
+                key expressions: _col0 (type: double)
+                sort order: +
+                Reduce Sink Vectorization:
+                    className: VectorReduceSinkOperator
                     native: false
+                    nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+                    nativeConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
                 Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
-                table:
-                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                value expressions: _col1 (type: decimal(38,18))
       Execution mode: vectorized
       Map Vectorization:
           enabled: true
@@ -734,6 +766,22 @@ STAGE PLANS:
               dataColumns: c:double
               partitionColumnCount: 0
               scratchColumnTypeNames: [decimal(10,5), decimal(38,18)]
+      Reduce Vectorization:
+          enabled: false
+          enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true
+          enableConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
+      Reduce Operator Tree:
+        Select Operator
+          expressions: KEY.reducesinkkey0 (type: double), VALUE._col0 (type: decimal(38,18))
+          outputColumnNames: _col0, _col1
+          Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
+          File Output Operator
+            compressed: false
+            Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
+            table:
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+                serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
 
   Stage: Stage-0
     Fetch Operator
@@ -741,49 +789,49 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number
+PREHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number
+POSTHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	0	12345.000000000000000000
-12345.0	0	12345.000000000000000000
 0.54321	0	0.000000000000000000
+12345.0	0	12345.000000000000000000
+12345.54321	0	12345.000000000000000000
 NULL	0	NULL
-PREHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from trunc_number
+PREHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from trunc_number
+POSTHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	-1	12340.000000000000000000
-12345.0	-1	12340.000000000000000000
 0.54321	-1	0.000000000000000000
+12345.0	-1	12340.000000000000000000
+12345.54321	-1	12340.000000000000000000
 NULL	-1	NULL
-PREHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from trunc_number
+PREHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from trunc_number
+POSTHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	1	12345.500000000000000000
-12345.0	1	12345.000000000000000000
 0.54321	1	0.500000000000000000
+12345.0	1	12345.000000000000000000
+12345.54321	1	12345.500000000000000000
 NULL	1	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(c) from trunc_number
+select c, trunc(c) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(c) from trunc_number
+select c, trunc(c) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -814,16 +862,16 @@ STAGE PLANS:
                   projectedOutputColumnNums: [0, 2]
                   selectExpressions: TruncFloatNoScale(col 0, scale 0) -> 2:double
               Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
-              File Output Operator
-                compressed: false
-                File Sink Vectorization:
-                    className: VectorFileSinkOperator
+              Reduce Output Operator
+                key expressions: _col0 (type: double)
+                sort order: +
+                Reduce Sink Vectorization:
+                    className: VectorReduceSinkOperator
                     native: false
+                    nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+                    nativeConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
                 Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
-                table:
-                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                value expressions: _col1 (type: double)
       Execution mode: vectorized
       Map Vectorization:
           enabled: true
@@ -840,6 +888,22 @@ STAGE PLANS:
               dataColumns: c:double
               partitionColumnCount: 0
               scratchColumnTypeNames: [double]
+      Reduce Vectorization:
+          enabled: false
+          enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true
+          enableConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
+      Reduce Operator Tree:
+        Select Operator
+          expressions: KEY.reducesinkkey0 (type: double), VALUE._col0 (type: double)
+          outputColumnNames: _col0, _col1
+          Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
+          File Output Operator
+            compressed: false
+            Statistics: Num rows: 4 Data size: 64 Basic stats: COMPLETE Column stats: COMPLETE
+            table:
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+                serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
 
   Stage: Stage-0
     Fetch Operator
@@ -847,25 +911,25 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, trunc(c) from trunc_number
+PREHOOK: query: select c, trunc(c) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, trunc(c) from trunc_number
+POSTHOOK: query: select c, trunc(c) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	12345.0
-12345.0	12345.0
 0.54321	0.0
+12345.0	12345.0
+12345.54321	12345.0
 NULL	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number
+select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number
+select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -896,16 +960,16 @@ STAGE PLANS:
                   projectedOutputColumnNums: [0, 3]
                   selectExpressions: TruncDecimalNoScale(col 2, scale 0)(children: CastDoubleToDecimal(col 0:double) -> 2:decimal(10,5)) -> 3:decimal(38,18)
               Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
-              File Output Operator
-                compressed: false
-                File Sink Vectorization:
-                    className: VectorFileSinkOperator
+              Reduce Output Operator
+                key expressions: _col0 (type: double)
+                sort order: +
+                Reduce Sink Vectorization:
+                    className: VectorReduceSinkOperator
                     native: false
+                    nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+                    nativeConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
                 Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
-                table:
-                    input format: org.apache.hadoop.mapred.SequenceFileInputFormat
-                    output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
-                    serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+                value expressions: _col1 (type: decimal(38,18))
       Execution mode: vectorized
       Map Vectorization:
           enabled: true
@@ -922,6 +986,22 @@ STAGE PLANS:
               dataColumns: c:double
               partitionColumnCount: 0
               scratchColumnTypeNames: [decimal(10,5), decimal(38,18)]
+      Reduce Vectorization:
+          enabled: false
+          enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true
+          enableConditionsNotMet: hive.execution.engine mr IN [tez, spark] IS false
+      Reduce Operator Tree:
+        Select Operator
+          expressions: KEY.reducesinkkey0 (type: double), VALUE._col0 (type: decimal(38,18))
+          outputColumnNames: _col0, _col1
+          Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
+          File Output Operator
+            compressed: false
+            Statistics: Num rows: 4 Data size: 480 Basic stats: COMPLETE Column stats: COMPLETE
+            table:
+                input format: org.apache.hadoop.mapred.SequenceFileInputFormat
+                output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
+                serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
 
   Stage: Stage-0
     Fetch Operator
@@ -929,22 +1009,18 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number
+PREHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number
+POSTHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-12345.54321	12345.000000000000000000
-12345.0	12345.000000000000000000
 0.54321	0.000000000000000000
+12345.0	12345.000000000000000000
+12345.54321	12345.000000000000000000
 NULL	NULL
-PREHOOK: query: drop table trunc_number_text
-PREHOOK: type: DROPTABLE
-POSTHOOK: query: drop table trunc_number_text
-POSTHOOK: type: DROPTABLE
 PREHOOK: query: drop table trunc_number
 PREHOOK: type: DROPTABLE
 PREHOOK: Input: default@trunc_number

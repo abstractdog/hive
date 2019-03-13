@@ -460,12 +460,12 @@ NULL	NULL
 NULL	NULL
 NULL	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(c,0) from  trunc_number order by c
+select c, trunc(c,0) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(c,0) from  trunc_number order by c
+select c, trunc(c,0) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -545,11 +545,11 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, 0, trunc(c,0) from  trunc_number order by c
+PREHOOK: query: select c, 0, trunc(c,0) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 0, trunc(c,0) from  trunc_number order by c
+POSTHOOK: query: select c, 0, trunc(c,0) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -557,11 +557,11 @@ POSTHOOK: Input: default@trunc_number
 12345.0	0	12345.0
 12345.54321	0	12345.0
 NULL	0	NULL
-PREHOOK: query: select c, -1, trunc(c,-1) from  trunc_number order by c
+PREHOOK: query: select c, -1, trunc(c,-1) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, -1, trunc(c,-1) from  trunc_number order by c
+POSTHOOK: query: select c, -1, trunc(c,-1) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -569,11 +569,11 @@ POSTHOOK: Input: default@trunc_number
 12345.0	-1	12340.0
 12345.54321	-1	12340.0
 NULL	-1	NULL
-PREHOOK: query: select c, 1, trunc(c,1) from  trunc_number order by c
+PREHOOK: query: select c, 1, trunc(c,1) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 1, trunc(c,1) from  trunc_number order by c
+POSTHOOK: query: select c, 1, trunc(c,1) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -582,12 +582,12 @@ POSTHOOK: Input: default@trunc_number
 12345.54321	1	12345.5
 NULL	1	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
+select c, trunc(CAST (c AS FLOAT), 0) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
+select c, trunc(CAST (c AS FLOAT), 0) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -667,11 +667,11 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
+PREHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from  trunc_number order by c
+POSTHOOK: query: select c, 0, trunc(CAST (c AS FLOAT), 0) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -679,11 +679,11 @@ POSTHOOK: Input: default@trunc_number
 12345.0	0	12345.0
 12345.54321	0	12345.0
 NULL	0	NULL
-PREHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from  trunc_number order by c
+PREHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from  trunc_number order by c
+POSTHOOK: query: select c, -1, trunc(CAST (c AS FLOAT), -1) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -691,11 +691,11 @@ POSTHOOK: Input: default@trunc_number
 12345.0	-1	12340.0
 12345.54321	-1	12340.0
 NULL	-1	NULL
-PREHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from  trunc_number order by c
+PREHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from  trunc_number order by c
+POSTHOOK: query: select c, 1, trunc(CAST (c AS FLOAT), 1) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -704,12 +704,12 @@ POSTHOOK: Input: default@trunc_number
 12345.54321	1	12345.5
 NULL	1	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
+select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
+select c, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -789,11 +789,11 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
+PREHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from  trunc_number order by c
+POSTHOOK: query: select c, 0, trunc(CAST (c AS DECIMAL(10,5)), 0) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -801,11 +801,11 @@ POSTHOOK: Input: default@trunc_number
 12345.0	0	12345.000000000000000000
 12345.54321	0	12345.000000000000000000
 NULL	0	NULL
-PREHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from  trunc_number order by c
+PREHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from  trunc_number order by c
+POSTHOOK: query: select c, -1, trunc(CAST (c AS DECIMAL(10,5)), -1) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -813,11 +813,11 @@ POSTHOOK: Input: default@trunc_number
 12345.0	-1	12340.000000000000000000
 12345.54321	-1	12340.000000000000000000
 NULL	-1	NULL
-PREHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from  trunc_number order by c
+PREHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from  trunc_number order by c
+POSTHOOK: query: select c, 1, trunc(CAST (c AS DECIMAL(10,5)), 1) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -826,12 +826,12 @@ POSTHOOK: Input: default@trunc_number
 12345.54321	1	12345.500000000000000000
 NULL	1	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(c) from  trunc_number order by c
+select c, trunc(c) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(c) from  trunc_number order by c
+select c, trunc(c) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -911,11 +911,11 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, trunc(c) from  trunc_number order by c
+PREHOOK: query: select c, trunc(c) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, trunc(c) from  trunc_number order by c
+POSTHOOK: query: select c, trunc(c) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -924,12 +924,12 @@ POSTHOOK: Input: default@trunc_number
 12345.54321	12345.0
 NULL	NULL
 PREHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
+select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
 POSTHOOK: query: explain vectorization detail
-select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
+select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
@@ -1009,11 +1009,11 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
-PREHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
+PREHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number order by c
 PREHOOK: type: QUERY
 PREHOOK: Input: default@trunc_number
 #### A masked pattern was here ####
-POSTHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from  trunc_number order by c
+POSTHOOK: query: select c, trunc(CAST (c AS DECIMAL(10,5))) from trunc_number order by c
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@trunc_number
 #### A masked pattern was here ####

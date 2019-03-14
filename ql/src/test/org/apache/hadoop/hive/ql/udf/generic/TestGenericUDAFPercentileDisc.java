@@ -72,7 +72,7 @@ public class TestGenericUDAFPercentileDisc {
    * perc from percentile_src;
    */
   @Test
-  public void testPostresRefExample() throws Exception {
+  public void testPostgresRefExample() throws Exception {
     Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
     checkPercentile(items, 0.5, 54);
   }
@@ -83,7 +83,7 @@ public class TestGenericUDAFPercentileDisc {
    * perc from percentile_src;
    */
   @Test
-  public void testPostresRefExample2() throws Exception {
+  public void testPostgresRefExample2() throws Exception {
     Long[] items = new Long[] {54L, 35L, 15L, 15L, 76L, 87L, 78L };
     checkPercentile(items, 0.72, 78);
   }
@@ -125,7 +125,7 @@ public class TestGenericUDAFPercentileDisc {
    * (order by k) as perc from percentile_src;
    */
   @Test
-  public void testDoublePostresRefExample() throws Exception {
+  public void testDoublePostgresRefExample() throws Exception {
     Double[] items = new Double[] {54.0, 35.0, 15.0, 15.0, 76.0, 87.0, 78.0 };
     checkPercentile(items, 0.5, 54);
   }
@@ -136,7 +136,7 @@ public class TestGenericUDAFPercentileDisc {
    * (order by k) as perc from percentile_src;
    */
   @Test
-  public void testDoublePostresRefExample2() throws Exception {
+  public void testDoublePostgresRefExample2() throws Exception {
     Double[] items = new Double[] {54.5, 35.3, 15.7, 15.7, 76.8, 87.34, 78.0 };
     checkPercentile(items, 0.72, 78.0);
   }

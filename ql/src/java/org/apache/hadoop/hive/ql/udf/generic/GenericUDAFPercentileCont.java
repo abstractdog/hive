@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.hadoop.hive.ql.exec.Description;
@@ -104,9 +105,11 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    * A comparator to sort the entries in order - Long.
    */
   @SuppressWarnings("serial")
-  public static class LongComparator implements Comparator<Map.Entry<LongWritable, LongWritable>>, Serializable {
+  public static class LongComparator
+      implements Comparator<Map.Entry<LongWritable, LongWritable>>, Serializable {
     @Override
-    public int compare(Map.Entry<LongWritable, LongWritable> o1, Map.Entry<LongWritable, LongWritable> o2) {
+    public int compare(Map.Entry<LongWritable, LongWritable> o1,
+        Map.Entry<LongWritable, LongWritable> o2) {
       return LONG_COMPARATOR.compare(o1.getKey(), o2.getKey());
     }
   }
@@ -115,7 +118,8 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    * A comparator to sort the entries in order - Double.
    */
   @SuppressWarnings("serial")
-  public static class DoubleComparator implements Comparator<Map.Entry<DoubleWritable, LongWritable>>, Serializable {
+  public static class DoubleComparator
+      implements Comparator<Map.Entry<DoubleWritable, LongWritable>>, Serializable {
     @Override
     public int compare(Map.Entry<DoubleWritable, LongWritable> o1,
         Map.Entry<DoubleWritable, LongWritable> o2) {
@@ -123,10 +127,16 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
   }
 
+  protected interface PercentileCalculator<U> {
+    double getPercentile(List<Map.Entry<U, LongWritable>> entriesList, double position);
+  }
+
   /**
    * An abstract class to hold the generic udf functions for calculating percentile.
    */
   public abstract static class PercentileContEvaluator<T, U> extends GenericUDAFEvaluator {
+    PercentileCalculator<U> calc = getCalculator();
+
     /**
      * A state class to store intermediate aggregation results.
      */
@@ -172,7 +182,17 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       }
     }
 
+    protected abstract PercentileCalculator<U> getCalculator();
+
     protected abstract ArrayList<ObjectInspector> getPartialInspectors();
+
+    protected abstract T getInput(Object object, PrimitiveObjectInspector inputOI);
+
+    protected abstract U wrapInput(T input);
+
+    protected abstract U copyInput(U input);
+
+    protected abstract void sortEntries(List<Entry<U, LongWritable>> entriesList);
 
     protected void initInspectors(ObjectInspector[] parameters) {
       if (mode == Mode.PARTIAL1 || mode == Mode.COMPLETE) {// ...for real input data
@@ -189,15 +209,6 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
     }
 
     @Override
-    public Object terminatePartial(AggregationBuffer agg) throws HiveException {
-      PercentileAgg percAgg = (PercentileAgg) agg;
-      partialResult[0] = percAgg.counts;
-      partialResult[1] = percAgg.percentiles;
-
-      return partialResult;
-    }
-
-    @Override
     public AggregationBuffer getNewAggregationBuffer() throws HiveException {
       PercentileAgg agg = new PercentileAgg();
       return agg;
@@ -208,12 +219,6 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       PercentileAgg percAgg = (PercentileAgg) agg;
       if (percAgg.counts != null) {
         percAgg.counts.clear();
-      }
-    }
-
-    protected void validatePercentile(Double percentile) {
-      if (percentile < 0.0 || percentile > 1.0) {
-        throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
       }
     }
 
@@ -239,11 +244,107 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       }
     }
 
-    protected abstract T getInput(Object object, PrimitiveObjectInspector inputOI);
+    protected void increment(PercentileAgg s, U input, long i) {
+      if (s.counts == null) {
+        s.counts = new HashMap<U, LongWritable>();
+      }
+      LongWritable count = s.counts.get(input);
+      if (count == null) {
+        s.counts.put(copyInput(input), new LongWritable(i));
+      } else {
+        count.set(count.get() + i);
+      }
+    }
 
-    protected abstract U wrapInput(T input);
+    @Override
+    public void merge(AggregationBuffer agg, Object partial) throws HiveException {
+      if (partial == null) {
+        return;
+      }
 
-    protected abstract void increment(PercentileAgg s, U input, long i);
+      Object objCounts = soi.getStructFieldData(partial, countsField);
+      Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
+
+      Map<U, LongWritable> counts = (Map<U, LongWritable>) countsOI.getMap(objCounts);
+      List<DoubleWritable> percentiles =
+          (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
+
+      if (counts == null || percentiles == null) {
+        return;
+      }
+
+      PercentileAgg percAgg = (PercentileAgg) agg;
+
+      if (percAgg.percentiles == null) {
+        percAgg.percentiles = new ArrayList<DoubleWritable>(percentiles);
+      }
+
+      for (Map.Entry<U, LongWritable> e : counts.entrySet()) {
+        increment(percAgg, e.getKey(), e.getValue().get());
+      }
+    }
+
+    @Override
+    public Object terminate(AggregationBuffer agg) throws HiveException {
+      PercentileAgg percAgg = (PercentileAgg) agg;
+
+      // No input data.
+      if (percAgg.counts == null || percAgg.counts.size() == 0) {
+        return null;
+      }
+
+      // Get all items into an array and sort them.
+      Set<Map.Entry<U, LongWritable>> entries = percAgg.counts.entrySet();
+      List<Map.Entry<U, LongWritable>> entriesList =
+          new ArrayList<Map.Entry<U, LongWritable>>(entries);
+      sortEntries(entriesList);
+
+      // Accumulate the counts.
+      long total = getTotal(entriesList);
+
+      // Initialize the result.
+      if (result == null) {
+        result = new DoubleWritable();
+      }
+
+      calculatePercentile(percAgg, entriesList, total);
+
+      return result;
+    }
+
+    @Override
+    public Object terminatePartial(AggregationBuffer agg) throws HiveException {
+      PercentileAgg percAgg = (PercentileAgg) agg;
+      partialResult[0] = percAgg.counts;
+      partialResult[1] = percAgg.percentiles;
+
+      return partialResult;
+    }
+
+    protected long getTotal(List<Map.Entry<U, LongWritable>> entriesList) {
+      long total = 0;
+      for (int i = 0; i < entriesList.size(); i++) {
+        LongWritable count = entriesList.get(i).getValue();
+        total += count.get();
+        count.set(total);
+      }
+      return total;
+    }
+
+    protected void validatePercentile(Double percentile) {
+      if (percentile < 0.0 || percentile > 1.0) {
+        throw new RuntimeException("Percentile value must be within the range of 0 to 1.");
+      }
+    }
+
+    protected void calculatePercentile(PercentileAgg percAgg,
+        List<Map.Entry<U, LongWritable>> entriesList, long total) {
+      // maxPosition is the 1.0 percentile
+      long maxPosition = total - 1;
+      double position = maxPosition * percAgg.percentiles.get(0).get();
+      result.set(calc.getPercentile(entriesList, position));
+    }
+
   }
 
   /**
@@ -251,7 +352,6 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    */
   public static class PercentileContLongEvaluator
       extends PercentileContEvaluator<Long, LongWritable> {
-    PercentileContLongCalculator calc = new PercentileContLongCalculator();
 
     protected ArrayList<ObjectInspector> getPartialInspectors() {
       ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
@@ -272,97 +372,17 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       return new LongWritable(input);
     }
 
-    /**
-     * Increment the State object with o as the key, and i as the count.
-     */
-    protected void increment(PercentileAgg s, LongWritable input, long i) {
-      if (s.counts == null) {
-        s.counts = new HashMap<LongWritable, LongWritable>();
-      }
-      LongWritable count = s.counts.get(input);
-      if (count == null) {
-        // We have to create a new object, because the object o belongs
-        // to the code that creates it and may get its value changed.
-        LongWritable key = new LongWritable(input.get());
-        s.counts.put(key, new LongWritable(i));
-      } else {
-        count.set(count.get() + i);
-      }
+    protected LongWritable copyInput(LongWritable input) {
+      return new LongWritable(input.get());
     }
 
-    @Override
-    public void merge(AggregationBuffer agg, Object partial) throws HiveException {
-      if (partial == null) {
-        return;
-      }
-
-      Object objCounts = soi.getStructFieldData(partial, countsField);
-      Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
-
-      Map<LongWritable, LongWritable> counts =
-          (Map<LongWritable, LongWritable>) countsOI.getMap(objCounts);
-      List<DoubleWritable> percentiles =
-          (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
-
-      if (counts == null || percentiles == null) {
-        return;
-      }
-
-      PercentileAgg percAgg = (PercentileAgg) agg;
-
-      if (percAgg.percentiles == null) {
-        percAgg.percentiles = new ArrayList<DoubleWritable>(percentiles);
-      }
-
-      for (Map.Entry<LongWritable, LongWritable> e : counts.entrySet()) {
-        increment(percAgg, e.getKey(), e.getValue().get());
-      }
-    }
-
-    @Override
-    public Object terminate(AggregationBuffer agg) throws HiveException {
-      PercentileAgg percAgg = (PercentileAgg) agg;
-
-      // No input data.
-      if (percAgg.counts == null || percAgg.counts.size() == 0) {
-        return null;
-      }
-
-      // Get all items into an array and sort them.
-      Set<Map.Entry<LongWritable, LongWritable>> entries = percAgg.counts.entrySet();
-      List<Map.Entry<LongWritable, LongWritable>> entriesList =
-          new ArrayList<Map.Entry<LongWritable, LongWritable>>(entries);
+    protected void sortEntries(List<Entry<LongWritable, LongWritable>> entriesList) {
       Collections.sort(entriesList, new LongComparator());
-
-      // Accumulate the counts.
-      long total = getTotal(entriesList);
-
-      // Initialize the result.
-      if (result == null) {
-        result = new DoubleWritable();
-      }
-
-      calculatePercentile(percAgg, entriesList, total);
-
-      return result;
     }
 
-    protected void calculatePercentile(PercentileAgg percAgg,
-        List<Map.Entry<LongWritable, LongWritable>> entriesList, long total) {
-      // maxPosition is the 1.0 percentile
-      long maxPosition = total - 1;
-      double position = maxPosition * percAgg.percentiles.get(0).get();
-      result.set(calc.getPercentile(entriesList, position));
-    }
-
-    public static long getTotal(List<Map.Entry<LongWritable, LongWritable>> entriesList) {
-      long total = 0;
-      for (int i = 0; i < entriesList.size(); i++) {
-        LongWritable count = entriesList.get(i).getValue();
-        total += count.get();
-        count.set(total);
-      }
-      return total;
+    @Override
+    protected PercentileCalculator<LongWritable> getCalculator() {
+      return new PercentileContLongCalculator();
     }
   }
 
@@ -371,8 +391,6 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
    */
   public static class PercentileContDoubleEvaluator
       extends PercentileContEvaluator<Double, DoubleWritable> {
-    PercentileContDoubleCalculator calc = new PercentileContDoubleCalculator();
-
     @Override
     protected ArrayList<ObjectInspector> getPartialInspectors() {
       ArrayList<ObjectInspector> foi = new ArrayList<ObjectInspector>();
@@ -395,110 +413,28 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
       return new DoubleWritable(input);
     }
 
-    @Override
-    protected void increment(PercentileAgg s, DoubleWritable input, long i) {
-      if (s.counts == null) {
-        s.counts = new HashMap<DoubleWritable, LongWritable>();
-      }
-      LongWritable count = s.counts.get(input);
-      if (count == null) {
-        // We have to create a new object, because the object o belongs
-        // to the code that creates it and may get its value changed.
-        DoubleWritable key = new DoubleWritable(input.get());
-        s.counts.put(key, new LongWritable(i));
-      } else {
-        count.set(count.get() + i);
-      }
+    protected DoubleWritable copyInput(DoubleWritable input) {
+      return new DoubleWritable(input.get());
     }
 
-    @Override
-    public void merge(AggregationBuffer agg, Object partial) throws HiveException {
-      if (partial == null) {
-        return;
-      }
-
-      Object objCounts = soi.getStructFieldData(partial, countsField);
-      Object objPercentiles = soi.getStructFieldData(partial, percentilesField);
-
-      Map<DoubleWritable, LongWritable> counts =
-          (Map<DoubleWritable, LongWritable>) countsOI.getMap(objCounts);
-      List<DoubleWritable> percentiles =
-          (List<DoubleWritable>) percentilesOI.getList(objPercentiles);
-
-      if (counts == null || percentiles == null) {
-        return;
-      }
-
-      PercentileAgg percAgg = (PercentileAgg) agg;
-
-      if (percAgg.percentiles == null) {
-        percAgg.percentiles = new ArrayList<DoubleWritable>(percentiles);
-      }
-
-      for (Map.Entry<DoubleWritable, LongWritable> e : counts.entrySet()) {
-        increment(percAgg, e.getKey(), e.getValue().get());
-      }
-    }
-
-    @Override
-    public Object terminate(AggregationBuffer agg) throws HiveException {
-      PercentileAgg percAgg = (PercentileAgg) agg;
-
-      // No input data.
-      if (percAgg.counts == null || percAgg.counts.size() == 0) {
-        return null;
-      }
-
-      // Get all items into an array and sort them.
-      Set<Map.Entry<DoubleWritable, LongWritable>> entries = percAgg.counts.entrySet();
-      List<Map.Entry<DoubleWritable, LongWritable>> entriesList =
-          new ArrayList<Map.Entry<DoubleWritable, LongWritable>>(entries);
+    protected void sortEntries(List<Entry<DoubleWritable, LongWritable>> entriesList) {
       Collections.sort(entriesList, new DoubleComparator());
-
-      // Accumulate the counts.
-      long total = getTotal(entriesList);
-
-      // Initialize the result.
-      if (result == null) {
-        result = new DoubleWritable();
-      }
-
-      calculatePercentile(percAgg, entriesList, total);
-
-      return result;
     }
 
-    protected void calculatePercentile(PercentileAgg percAgg,
-        List<Map.Entry<DoubleWritable, LongWritable>> entriesList, long total) {
-      // maxPosition is the 1.0 percentile
-      long maxPosition = total - 1;
-      double position = maxPosition * percAgg.percentiles.get(0).get();
-      result.set(calc.getPercentile(entriesList, position));
-    }
-
-    public static long getTotal(List<Map.Entry<DoubleWritable, LongWritable>> entriesList) {
-      long total = 0;
-      for (int i = 0; i < entriesList.size(); i++) {
-        LongWritable count = entriesList.get(i).getValue();
-        total += count.get();
-        count.set(total);
-      }
-      return total;
+    @Override
+    protected PercentileCalculator<DoubleWritable> getCalculator() {
+      return new PercentileContDoubleCalculator();
     }
   }
 
   /**
    * continuous percentile calculators
    */
-  public abstract static class PercentileContCalculator<T> {
-    abstract double getPercentile(List<Map.Entry<T, LongWritable>> entriesList, double position);
-  }
-
-  public static class PercentileContLongCalculator extends PercentileContCalculator<LongWritable> {
+  public static class PercentileContLongCalculator implements PercentileCalculator<LongWritable> {
     /**
      * Get the percentile value.
      */
-    public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList,
+    public double getPercentile(List<Entry<LongWritable, LongWritable>> entriesList,
         double position) {
       // We may need to do linear interpolation to get the exact percentile
       long lower = (long) Math.floor(position);
@@ -534,7 +470,7 @@ public class GenericUDAFPercentileCont extends AbstractGenericUDAFResolver {
   }
 
   public static class PercentileContDoubleCalculator
-      extends PercentileContCalculator<DoubleWritable> {
+      implements PercentileCalculator<DoubleWritable> {
 
     public double getPercentile(List<Map.Entry<DoubleWritable, LongWritable>> entriesList,
         double position) {

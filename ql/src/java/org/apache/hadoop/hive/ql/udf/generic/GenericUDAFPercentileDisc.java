@@ -74,15 +74,9 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
    * The evaluator for discrete percentile computation based on long.
    */
   public static class PercentileDiscLongEvaluator extends PercentileContLongEvaluator {
-    PercentileDiscLongCalculator calc = new PercentileDiscLongCalculator();
-
     @Override
-    protected void calculatePercentile(PercentileAgg percAgg,
-        List<Map.Entry<LongWritable, LongWritable>> entriesList, long total) {
-      // maxPosition is the 1.0 percentile
-      long maxPosition = total - 1;
-      double position = maxPosition * percAgg.percentiles.get(0).get();
-      result.set(calc.getPercentile(entriesList, position));
+    protected PercentileCalculator<LongWritable> getCalculator() {
+      return new PercentileDiscLongCalculator();
     }
   }
 
@@ -90,35 +84,18 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
    * The evaluator for discrete percentile computation based on double.
    */
   public static class PercentileDiscDoubleEvaluator extends PercentileContDoubleEvaluator {
-    PercentileDiscDoubleCalculator calc = new PercentileDiscDoubleCalculator();
-
     @Override
-    protected void calculatePercentile(PercentileAgg percAgg,
-        List<Map.Entry<DoubleWritable, LongWritable>> entriesList, long total) {
-      // maxPosition is the 1.0 percentile
-      long maxPosition = total - 1;
-      double position = maxPosition * percAgg.percentiles.get(0).get();
-      result.set(calc.getPercentile(entriesList, position));
+    protected PercentileCalculator<DoubleWritable> getCalculator() {
+      return new PercentileDiscDoubleCalculator();
     }
   }
 
-  /**
-   * discrete percentile calculators
-   */
-  public abstract static class PercentileDiscCalculator<T> {
-    abstract double getPercentile(List<Map.Entry<T, LongWritable>> entriesList, double position);
-  }
-
-  public static class PercentileDiscLongCalculator extends PercentileDiscCalculator<LongWritable> {
+  public static class PercentileDiscLongCalculator implements PercentileCalculator<LongWritable> {
     public double getPercentile(List<Map.Entry<LongWritable, LongWritable>> entriesList,
         double position) {
-      // We may need to do linear interpolation to get the exact percentile
       long lower = (long) Math.floor(position);
       long higher = (long) Math.ceil(position);
 
-      // Linear search since this won't take much time from the total execution anyway
-      // lower has the range of [0 .. total-1]
-      // The first entry with accumulated count (lower+1) corresponds to the lower position.
       int i = 0;
       while (entriesList.get(i).getValue().get() < lower + 1) {
         i++;
@@ -126,7 +103,6 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
 
       long lowerKey = entriesList.get(i).getKey().get();
       if (higher == lower) {
-        // no interpolation needed because position does not have a fraction
         return lowerKey;
       }
 
@@ -138,7 +114,7 @@ public class GenericUDAFPercentileDisc extends GenericUDAFPercentileCont {
   }
 
   public static class PercentileDiscDoubleCalculator
-      extends PercentileDiscCalculator<DoubleWritable> {
+      implements PercentileCalculator<DoubleWritable> {
     public double getPercentile(List<Map.Entry<DoubleWritable, LongWritable>> entriesList,
         double position) {
       long lower = (long) Math.floor(position);

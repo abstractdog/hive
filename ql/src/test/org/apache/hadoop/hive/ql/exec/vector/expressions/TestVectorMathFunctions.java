@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Random;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.hive.serde2.RandomTypeUtil;
 import org.apache.hadoop.hive.common.type.Timestamp;

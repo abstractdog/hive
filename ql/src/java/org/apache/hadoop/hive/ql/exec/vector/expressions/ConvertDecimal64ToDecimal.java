@@ -37,7 +37,6 @@ public class ConvertDecimal64ToDecimal extends FuncLongToDecimal {
     super(inputColumn, outputColumnNum);
   }
 
-  @Override
   protected void func(DecimalColumnVector outV, LongColumnVector inV, int i) {
     outV.vector[i].deserialize64(inV.vector[i], ((Decimal64ColumnVector) inV).scale);
   }

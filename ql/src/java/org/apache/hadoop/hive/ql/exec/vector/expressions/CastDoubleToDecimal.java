@@ -51,12 +51,9 @@ public class CastDoubleToDecimal extends FuncDoubleToDecimal {
   @Override
   public VectorExpressionDescriptor.Descriptor getDescriptor() {
     VectorExpressionDescriptor.Builder b = new VectorExpressionDescriptor.Builder();
-    b.setMode(VectorExpressionDescriptor.Mode.PROJECTION)
-        .setNumArguments(1)
-        .setArgumentTypes(
-            VectorExpressionDescriptor.ArgumentType.DOUBLE)
-        .setInputExpressionTypes(
-            VectorExpressionDescriptor.InputExpressionType.COLUMN);
+    b.setMode(VectorExpressionDescriptor.Mode.PROJECTION).setNumArguments(1)
+        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.DOUBLE)
+        .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.COLUMN);
     return b.build();
   }
 }

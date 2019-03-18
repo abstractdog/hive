@@ -23,9 +23,8 @@ import org.apache.hadoop.hive.ql.exec.vector.DecimalColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
 
 /**
- * To be used to cast long and boolean to decimal.
- * This works for boolean too because boolean is encoded as 0
- * for false and 1 for true.
+ * To be used to cast long and boolean to decimal. This works for boolean too because boolean is
+ * encoded as 0 for false and 1 for true.
  */
 public class CastLongToDecimal extends FuncLongToDecimal {
 
@@ -39,7 +38,6 @@ public class CastLongToDecimal extends FuncLongToDecimal {
     super(inputColumn, outputColumnNum);
   }
 
-  @Override
   protected void func(DecimalColumnVector outV, LongColumnVector inV, int i) {
     outV.set(i, HiveDecimal.create(inV.vector[i]));
   }

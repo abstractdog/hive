@@ -14,7 +14,7 @@ import org.apache.hadoop.hive.ql.metadata.HiveException;
  */
 public abstract class BaseVectorExpression<O, I> extends VectorExpression {
   private static final long serialVersionUID = 1L;
-  protected final int inputColumn;
+  protected int inputColumn;
 
   public BaseVectorExpression(int inputColumn, int outputColumnNum) {
     super(outputColumnNum);

@@ -29,7 +29,6 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 public abstract class FuncDecimalToDouble
     extends BaseVectorExpression<DoubleColumnVector, DecimalColumnVector> {
   private static final long serialVersionUID = 1L;
-  private final int inputColumn;
 
   public FuncDecimalToDouble(int inputColumn, int outputColumnNum) {
     super(outputColumnNum);
@@ -38,9 +37,6 @@ public abstract class FuncDecimalToDouble
 
   public FuncDecimalToDouble() {
     super();
-
-    // Dummy final assignments.
-    inputColumn = -1;
   }
 
   @Override

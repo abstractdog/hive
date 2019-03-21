@@ -29,7 +29,6 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 public abstract class FuncLongToDecimal
     extends BaseVectorExpression<DecimalColumnVector, LongColumnVector> {
   private static final long serialVersionUID = 1L;
-  private final int inputColumn;
 
   public FuncLongToDecimal(int inputColumn, int outputColumnNum) {
     super(outputColumnNum);
@@ -38,9 +37,6 @@ public abstract class FuncLongToDecimal
 
   public FuncLongToDecimal() {
     super();
-
-    // Dummy final assignments.
-    inputColumn = -1;
   }
 
   public String vectorExpressionParameters() {

@@ -71,6 +71,9 @@ import org.junit.Before;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -90,6 +93,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.Collection;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
@@ -105,6 +109,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_CATALOG_NAME;
 
+@RunWith(Parameterized.class)
 @Category(MetastoreUnitTest.class)
 public class TestObjectStore {
   private ObjectStore objectStore = null;
@@ -128,6 +133,11 @@ public class TestObjectStore {
     public Long get() {
       return value;
     }
+  }
+
+  @Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(new Object[10][0]);
   }
 
   @Before
@@ -762,7 +772,7 @@ public class TestObjectStore {
   private static void dropAllStoreObjects(RawStore store)
       throws MetaException, InvalidObjectException, InvalidInputException {
     try {
-      Deadline.registerIfNot(100000);
+      Deadline.registerIfNot(150000);
       List<Function> functions = store.getAllFunctions(DEFAULT_CATALOG_NAME);
       for (Function func : functions) {
         store.dropFunction(DEFAULT_CATALOG_NAME, func.getDbName(), func.getFunctionName());

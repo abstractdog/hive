@@ -168,6 +168,7 @@ mask_show_last_n
 matchpath
 max
 md5
+mid
 min
 minute
 mod
@@ -193,9 +194,12 @@ parse_url_tuple
 percent_rank
 percentile
 percentile_approx
+percentile_cont
+percentile_disc
 pi
 pmod
 posexplode
+position
 positive
 pow
 power
@@ -437,6 +441,7 @@ mask_show_last_n
 matchpath
 max
 md5
+mid
 min
 minute
 mod

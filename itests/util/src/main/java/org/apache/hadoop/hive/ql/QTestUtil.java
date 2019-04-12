@@ -1260,32 +1260,32 @@ public class QTestUtil {
     List<String> cmds = CliDriver.splitSemiColon(commands);
     CommandProcessorResponse response = new CommandProcessorResponse(0);
 
-    String command = "";
+    StringBuilder command = new StringBuilder();
     for (String oneCmd : cmds) {
       if (StringUtils.endsWith(oneCmd, "\\")) {
-        command += StringUtils.chop(oneCmd) + "\\;";
+        command.append(StringUtils.chop(oneCmd) + "\\;");
         continue;
       } else {
         if (isHiveCommand(oneCmd)) {
-          command = oneCmd;
-        } else {
-          command += oneCmd;
+          command.setLength(0);
         }
+        command.append(oneCmd);
       }
-      if (StringUtils.isBlank(command)) {
+      if (StringUtils.isBlank(command.toString())) {
         continue;
       }
 
-      if (isCommandUsedForTesting(command)) {
-        response = executeTestCommand(command);
+      String strCommand = command.toString();
+      if (isCommandUsedForTesting(strCommand)) {
+        response = executeTestCommand(strCommand);
       } else {
-        response = cliDriver.processLine(command);
+        response = cliDriver.processLine(strCommand);
       }
 
       if (response.getResponseCode() != 0 && !ignoreErrors()) {
         break;
       }
-      command = "";
+      command.setLength(0);
     }
     if (response.getResponseCode() == 0 && SessionState.get() != null) {
       SessionState.get().setLastCommand(null);  // reset
@@ -1979,7 +1979,7 @@ public class QTestUtil {
     String command = SessionState.get() != null ? SessionState.get().getLastCommand() : null;
 
     String message = String.format(
-        "Client execution failed with error code = %d \nrunning %s \nfname=%s\n%s\n %s", ecode,
+        "Client execution failed with error code = %d %nrunning %s %nfname=%s%n%s%n %s", ecode,
         command != null ? command : "", fname, debugHint != null ? debugHint : "",
         e == null ? "" : org.apache.hadoop.util.StringUtils.stringifyException(e));
     LOG.error(message);

@@ -387,26 +387,26 @@ public class CliDriver {
 
     try {
       CommandProcessorResponse lastRet = new CommandProcessorResponse(0);
-      CommandProcessorResponse ret = new CommandProcessorResponse(0);
+      CommandProcessorResponse ret;
 
       // we can not use "split" function directly as ";" may be quoted
       List<String> commands = splitSemiColon(line);
 
-      String command = "";
+      StringBuilder command = new StringBuilder();
       for (String oneCmd : commands) {
 
         if (StringUtils.endsWith(oneCmd, "\\")) {
-          command += StringUtils.chop(oneCmd) + ";";
+          command.append(StringUtils.chop(oneCmd) + ";");
           continue;
         } else {
-          command += oneCmd;
+          command.append(oneCmd);
         }
-        if (StringUtils.isBlank(command)) {
+        if (StringUtils.isBlank(command.toString())) {
           continue;
         }
 
-        ret = processCmd(command);
-        command = "";
+        ret = processCmd(command.toString());
+        command.setLength(0);;
         lastRet = ret;
         boolean ignoreErrors = HiveConf.getBoolVar(conf, HiveConf.ConfVars.CLIIGNOREERRORS);
         if (ret.getResponseCode() != 0 && !ignoreErrors) {
@@ -498,14 +498,13 @@ public class CliDriver {
       fs = FileSystem.get(path.toUri(), conf);
     }
     BufferedReader bufferReader = null;
-    CommandProcessorResponse response = new CommandProcessorResponse(0);
+
     try {
-      bufferReader = new BufferedReader(new InputStreamReader(fs.open(path)));
-      response = processReader(bufferReader);
+      bufferReader = new BufferedReader(new InputStreamReader(fs.open(path), StandardCharsets.UTF_8));
+      return processReader(bufferReader);
     } finally {
       IOUtils.closeStream(bufferReader);
     }
-    return response;
   }
 
   public void processInitFiles(CliSessionState ss) throws IOException {
@@ -822,14 +821,14 @@ public class CliDriver {
 
     String line;
     CommandProcessorResponse response = new CommandProcessorResponse(0);
-    String prefix = "";
+    StringBuilder prefix = new StringBuilder();
     String curDB = getFormattedDb(conf, ss);
     String curPrompt = prompt + curDB;
     String dbSpaces = spacesForString(curDB);
 
     while ((line = reader.readLine(curPrompt + "> ")) != null) {
-      if (!prefix.equals("")) {
-        prefix += '\n';
+      if (!prefix.toString().equals("")) {
+        prefix.append('\n');
       }
       if (line.trim().startsWith("--")) {
         continue;
@@ -837,12 +836,12 @@ public class CliDriver {
       if (line.trim().endsWith(";") && !line.trim().endsWith("\\;")) {
         line = prefix + line;
         response = cli.processLine(line, true);
-        prefix = "";
+        prefix.setLength(0);;
         curDB = getFormattedDb(conf, ss);
         curPrompt = prompt + curDB;
         dbSpaces = dbSpaces.length() == curDB.length() ? dbSpaces : spacesForString(curDB);
       } else {
-        prefix = prefix + line;
+        prefix.append(line);
         curPrompt = prompt2 + dbSpaces;
         continue;
       }

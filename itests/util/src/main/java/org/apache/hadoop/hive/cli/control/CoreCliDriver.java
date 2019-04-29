@@ -166,11 +166,6 @@ public class CoreCliDriver extends CliAdapter {
     }
   }
 
-  private static String debugHint =
-      "\nSee ./ql/target/tmp/log/hive.log or ./itests/qtest/target/tmp/log/hive.log, "
-          + "or check ./ql/target/surefire-reports "
-          + "or ./itests/qtest/target/surefire-reports/ for specific test cases logs.";
-
   @Override
   public void runTest(String testName, String fname, String fpath) {
     Stopwatch sw = Stopwatch.createStarted();
@@ -186,7 +181,7 @@ public class CoreCliDriver extends CliAdapter {
       int ecode = qt.executeClient(fname);
       if (ecode != 0) {
         failed = true;
-        qt.failed(ecode, fname, debugHint);
+        qt.failed(ecode, fname, QTestUtil.DEBUG_HINT);
       }
 
       setupAdditionalPartialMasks();
@@ -194,14 +189,14 @@ public class CoreCliDriver extends CliAdapter {
       resetAdditionalPartialMasks();
       if (result.getReturnCode() != 0) {
         failed = true;
-        String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ? debugHint
+        String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ? QTestUtil.DEBUG_HINT
             : "\r\n" + result.getCapturedOutput();
         qt.failedDiff(result.getReturnCode(), fname, message);
       }
     }
     catch (Exception e) {
       failed = true;
-      qt.failed(e, fname, debugHint);
+      qt.failed(e, fname, QTestUtil.DEBUG_HINT);
     } finally {
       String message = "Done query " + fname + ". succeeded=" + !failed + ", skipped=" + skipped +
           ". ElapsedTime(ms)=" + sw.stop().elapsed(TimeUnit.MILLISECONDS);

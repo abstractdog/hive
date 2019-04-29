@@ -27,7 +27,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -41,7 +40,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -87,9 +85,7 @@ import org.apache.hadoop.hive.llap.io.api.LlapProxy;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
 import org.apache.hadoop.hive.ql.cache.results.QueryResultsCache;
-import org.apache.hadoop.hive.ql.dataset.Dataset;
-import org.apache.hadoop.hive.ql.dataset.DatasetCollection;
-import org.apache.hadoop.hive.ql.dataset.DatasetParser;
+import org.apache.hadoop.hive.ql.dataset.QTestDatasetHandler;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.Utilities;
@@ -123,7 +119,6 @@ import org.apache.hive.druid.MiniDruidCluster;
 import org.apache.hive.kafka.SingleNodeKafkaCluster;
 import org.apache.hive.kafka.Wikipedia;
 import org.apache.logging.log4j.util.Strings;
-import org.apache.tools.ant.BuildException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
@@ -133,7 +128,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 
 /**
  * QTestUtil.
@@ -145,18 +139,14 @@ public class QTestUtil {
 
   // security property names
   private static final String SECURITY_KEY_PROVIDER_URI_NAME = "dfs.encryption.key.provider.uri";
-  private static final String CRLF = System.getProperty("line.separator");
-
   public static final String QTEST_LEAVE_FILES = "QTEST_LEAVE_FILES";
-  private final static String defaultInitScript = "q_test_init.sql";
-  private final static String defaultCleanupScript = "q_test_cleanup.sql";
-  private static SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+  private final static String DEFAULT_INIT_SCRIPT = "q_test_init.sql";
+  private final static String DEFAULT_CLEANUP_SCRIPT = "q_test_cleanup.sql";
+  private static final SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
   private final String[] testOnlyCommands = new String[]{ "crypto", "erasure" };
-
-  public static final String TEST_TMP_DIR_PROPERTY = "test.tmp.dir"; // typically target/tmp
-  private static final String BUILD_DIR_PROPERTY = "build.dir"; // typically target
-  private static final String TEST_SRC_TABLES_PROPERTY = "test.src.tables";
-
+  public static String DEBUG_HINT =
+      "\nSee ./ql/target/tmp/log/hive.log or ./itests/qtest/target/tmp/log/hive.log, "
+          + "or check ./ql/target/surefire-reports or ./itests/qtest/target/surefire-reports/ for specific test cases logs.";
   /**
    * The default Erasure Coding Policy to use in Erasure Coding tests.
    */
@@ -164,7 +154,6 @@ public class QTestUtil {
 
   private String testWarehouse;
   @Deprecated private final String testFiles;
-  private final File datasetDir;
   private final String outDir;
   protected final String logDir;
   private final TreeMap<String, String> qMap;
@@ -185,7 +174,6 @@ public class QTestUtil {
   protected HiveConf savedConf;
   private IDriver drv;
   private BaseSemanticAnalyzer sem;
-  private final boolean overWrite;
   private CliDriver cliDriver;
   private HadoopShims.MiniMrShim mr = null;
   private HadoopShims.MiniDFSShim dfs = null;
@@ -196,6 +184,7 @@ public class QTestUtil {
   private SparkSession sparkSession = null;
   private boolean isSessionStateStarted = false;
   private QOutProcessor qOutProcessor;
+  private QTestDatasetHandler datasetHandler;
   private final String initScript;
   private final String cleanupScript;
 
@@ -224,14 +213,14 @@ public class QTestUtil {
   }
 
   private static void storeSrcTables() {
-    System.setProperty(TEST_SRC_TABLES_PROPERTY, String.join(",", srcTables));
+    QTestSystemProperties.setSrcTables(srcTables);
   }
 
   private static void initSrcTablesFromSystemProperty() {
     srcTables = new HashSet<String>();
     // FIXME: moved default value to here...for now
     // i think this features is never really used from the command line
-    for (String srcTable : System.getProperty(TEST_SRC_TABLES_PROPERTY, "").trim().split(",")) {
+    for (String srcTable : QTestSystemProperties.getSrcTables()) {
       srcTable = srcTable.trim();
       if (!srcTable.isEmpty()) {
         srcTables.add(srcTable);
@@ -256,7 +245,7 @@ public class QTestUtil {
     // FIXME: moved default value to here...for now
     // i think this features is never really used from the command line
     String defaultTestSrcUDFs = "qtest_get_java_boolean";
-    for (String srcUDF : System.getProperty("test.src.udfs", defaultTestSrcUDFs).trim().split(",")) {
+    for (String srcUDF : QTestSystemProperties.getSourceUdfs(defaultTestSrcUDFs)) {
       srcUDF = srcUDF.trim();
       if (!srcUDF.isEmpty()) {
         srcUDFs.add(srcUDF);
@@ -273,9 +262,7 @@ public class QTestUtil {
   }
 
   public void initConf() throws Exception {
-
-    String vectorizationEnabled = System.getProperty("test.vectorization.enabled");
-    if (vectorizationEnabled != null && vectorizationEnabled.equalsIgnoreCase("true")) {
+    if (QTestSystemProperties.isVectorizationEnabled()) {
       conf.setBoolVar(ConfVars.HIVE_VECTORIZATION_ENABLED, true);
     }
 
@@ -305,7 +292,7 @@ public class QTestUtil {
       conf.set("hive.druid.coordinator.address.default", druidCluster.getCoordinatorURI());
       conf.set("hive.druid.overlord.address.default", druidCluster.getOverlordURI());
       conf.set("hive.druid.broker.address.default", druidCluster.getBrokerURI());
-      final Path scratchDir = fs.makeQualified(new Path(System.getProperty("test.tmp.dir"), "druidStagingDir"));
+      final Path scratchDir = fs.makeQualified(new Path(QTestSystemProperties.getTempDir(), "druidStagingDir"));
       fs.mkdirs(scratchDir);
       conf.set("hive.druid.working.directory", scratchDir.toUri().getPath());
     }
@@ -319,7 +306,7 @@ public class QTestUtil {
     Path jarPath;
     Path userInstallPath;
     if (isLocalFs) {
-      String buildDir = System.getProperty(BUILD_DIR_PROPERTY);
+      String buildDir = QTestSystemProperties.getBuildDir();
       Preconditions.checkState(Strings.isNotBlank(buildDir));
       Path path = new Path(fsUriString, buildDir);
 
@@ -504,33 +491,18 @@ public class QTestUtil {
       LlapProxy.initializeLlapIo(conf);
     }
 
-    // Use the current directory if it is not specified
-    String dataDir = conf.get("test.data.files");
-    if (dataDir == null) {
-      dataDir = new File(".").getAbsolutePath() + "/data/files";
-    }
-    testFiles = dataDir;
-    conf.set("test.data.dir", dataDir);
+    testFiles = datasetHandler.getDataDir(conf);
+    conf.set("test.data.dir", datasetHandler.getDataDir(conf));
 
-    // Use path relative to dataDir directory if it is not specified
-    datasetDir =
-        conf.get("test.data.set.files") == null ?
-            new File(new File(dataDir).getAbsolutePath() + "/datasets") :
-            new File(conf.get("test.data.set.files"));
+    datasetHandler = new QTestDatasetHandler(this, conf);
 
     String scriptsDir = getScriptsDir();
 
     this.initScript = scriptsDir + File.separator + testArgs.getInitScript();
     this.cleanupScript = scriptsDir + File.separator + testArgs.getCleanupScript();
 
-    overWrite = shouldOverwriteResults();
-
     init();
     savedConf = new HiveConf(conf);
-  }
-
-  private boolean shouldOverwriteResults() {
-    return "true".equalsIgnoreCase(System.getProperty("test.output.overwrite"));
   }
 
   private String getScriptsDir() {
@@ -600,7 +572,7 @@ public class QTestUtil {
     if (clusterType == MiniClusterType.druidKafka
         || clusterType == MiniClusterType.druidLocal
         || clusterType == MiniClusterType.druid) {
-      final String tempDir = System.getProperty("test.tmp.dir");
+      final String tempDir = QTestSystemProperties.getTempDir();
       druidCluster =
           new MiniDruidCluster(clusterType == MiniClusterType.druid ? "mini-druid" : "mini-druid-kafka",
               logDir,
@@ -609,7 +581,7 @@ public class QTestUtil {
               Utilities.jarFinderGetJar(MiniDruidCluster.class));
       final Path druidDeepStorage = fs.makeQualified(new Path(druidCluster.getDeepStorageDir()));
       fs.mkdirs(druidDeepStorage);
-      final Path scratchDir = fs.makeQualified(new Path(System.getProperty("test.tmp.dir"), "druidStagingDir"));
+      final Path scratchDir = fs.makeQualified(new Path(QTestSystemProperties.getTempDir(), "druidStagingDir"));
       fs.mkdirs(scratchDir);
       conf.set("hive.druid.working.directory", scratchDir.toUri().getPath());
       druidCluster.init(conf);
@@ -619,7 +591,7 @@ public class QTestUtil {
     if (clusterType == MiniClusterType.kafka || clusterType == MiniClusterType.druidKafka) {
       kafkaCluster =
           new SingleNodeKafkaCluster("kafka",
-              System.getProperty("test.tmp.dir") + "/kafka-cluster",
+              QTestSystemProperties.getTempDir() + "/kafka-cluster",
               setup.zkPort,
               clusterType == MiniClusterType.kafka ? 9093 : 9092);
       kafkaCluster.init(conf);
@@ -1058,45 +1030,6 @@ public class QTestUtil {
     }
   }
 
-  private void initDataSetForTest(File file) throws Exception {
-    synchronized (QTestUtil.class) {
-      DatasetParser parser = new DatasetParser();
-      parser.parse(file);
-
-      DatasetCollection datasets = parser.getDatasets();
-
-      Set<String> missingDatasets = datasets.getTables();
-      missingDatasets.removeAll(getSrcTables());
-      if (missingDatasets.isEmpty()) {
-        return;
-      }
-      newSession(true);
-      for (String table : missingDatasets) {
-        initDataset(table);
-      }
-      newSession(true);
-    }
-  }
-
-  protected void initDataset(String table) throws Exception {
-
-    File tableFile = new File(new File(datasetDir, table), Dataset.INIT_FILE_NAME);
-    String commands = null;
-    try {
-      commands = readEntireFileIntoString(tableFile);
-    } catch (IOException e) {
-      throw new RuntimeException(String.format("dataset file not found %s", tableFile), e);
-    }
-
-    int result = getCliDriver().processLine(commands);
-    LOG.info("Result from cliDrriver.processLine in initFromDatasets=" + result);
-    if (result != 0) {
-      Assert.fail("Failed during initFromDatasets processLine with code=" + result);
-    }
-
-    addSrcTable(table);
-  }
-
   public void init() throws Exception {
 
     // Create remote dirs once.
@@ -1129,7 +1062,7 @@ public class QTestUtil {
   public String cliInit(File file) throws Exception {
     String fileName = file.getName();
 
-    initDataSetForTest(file);
+    datasetHandler.initDataSetForTest(file, getCliDriver());
 
     if (qNoSessionReuseQuerySet.contains(fileName)) {
       newSession(false);
@@ -1248,7 +1181,7 @@ public class QTestUtil {
   }
 
   public int executeClient(String tname1, String tname2) {
-    String commands = getCommand(tname1) + CRLF + getCommand(tname2);
+    String commands = getCommand(tname1) +  System.getProperty("line.separator") + getCommand(tname2);
     return executeClientInternal(commands);
   }
 
@@ -1425,7 +1358,7 @@ public class QTestUtil {
     outfd.close();
 
     QTestProcessExecResult result = executeDiffCommand(outf.getPath(), expf, false, qSortSet.contains(qf.getName()));
-    if (overWrite) {
+    if (QTestSystemProperties.shouldOverwriteResults()) {
       overwriteResults(outf.getPath(), expf);
       return QTestProcessExecResult.createWithoutOutput(0);
     }
@@ -1456,7 +1389,7 @@ public class QTestUtil {
     outfd.close();
 
     QTestProcessExecResult result = executeDiffCommand(outf.getPath(), expf, false, qSortSet.contains(qf.getName()));
-    if (overWrite) {
+    if (QTestSystemProperties.shouldOverwriteResults()) {
       overwriteResults(outf.getPath(), expf);
       return QTestProcessExecResult.createWithoutOutput(0);
     }
@@ -1511,7 +1444,7 @@ public class QTestUtil {
     qOutProcessor.maskPatterns(f.getPath(), tname);
     QTestProcessExecResult exitVal = executeDiffCommand(f.getPath(), outFileName, false, qSortSet.contains(tname));
 
-    if (overWrite) {
+    if (QTestSystemProperties.shouldOverwriteResults()) {
       overwriteResults(f.getPath(), outFileName);
       return QTestProcessExecResult.createWithoutOutput(0);
     }
@@ -1698,8 +1631,7 @@ public class QTestUtil {
 
       if (zooKeeperCluster == null) {
         //create temp dir
-        String tmpBaseDir = System.getProperty(TEST_TMP_DIR_PROPERTY);
-        File tmpDir = Files.createTempDirectory(Paths.get(tmpBaseDir), "tmp_").toFile();
+        File tmpDir = Files.createTempDirectory(Paths.get(QTestSystemProperties.getTempDir()), "tmp_").toFile();
 
         zooKeeperCluster = new MiniZooKeeperCluster();
         zkPort = zooKeeperCluster.startup(tmpDir);
@@ -1794,8 +1726,8 @@ public class QTestUtil {
               .withLogDir(logDir)
               .withClusterType(MiniClusterType.none)
               .withConfDir(null)
-              .withInitScript(initScript == null ? defaultInitScript : initScript)
-              .withCleanupScript(cleanupScript == null ? defaultCleanupScript : cleanupScript)
+              .withInitScript(initScript == null ? DEFAULT_INIT_SCRIPT : initScript)
+              .withCleanupScript(cleanupScript == null ? DEFAULT_CLEANUP_SCRIPT : cleanupScript)
               .withLlapIo(false)
               .build());
 
@@ -1894,66 +1826,8 @@ public class QTestUtil {
   }
 
   public static void outputTestFailureHelpMessage() {
-    System.err.println("See ./ql/target/tmp/log/hive.log or ./itests/qtest/target/tmp/log/hive.log, or check "
-        + "./ql/target/surefire-reports or ./itests/qtest/target/surefire-reports/ for specific "
-        + "test cases logs.");
+    System.err.println(DEBUG_HINT);
     System.err.flush();
-  }
-
-  private static String[] cachedQvFileList = null;
-  private static ImmutableList<String> cachedDefaultQvFileList = null;
-  private static Pattern qvSuffix = Pattern.compile("_[0-9]+.qv$", Pattern.CASE_INSENSITIVE);
-
-  public static List<String> getVersionFiles(String queryDir, String tname) {
-    ensureQvFileList(queryDir);
-    List<String> result = getVersionFilesInternal(tname);
-    if (result == null) {
-      result = cachedDefaultQvFileList;
-    }
-    return result;
-  }
-
-  private static void ensureQvFileList(String queryDir) {
-    if (cachedQvFileList != null) {
-      return;
-    }
-    // Not thread-safe.
-    System.out.println("Getting versions from " + queryDir);
-    cachedQvFileList = (new File(queryDir)).list(new FilenameFilter() {
-      @Override public boolean accept(File dir, String name) {
-        return name.toLowerCase().endsWith(".qv");
-      }
-    });
-    if (cachedQvFileList == null) {
-      return; // no files at all
-    }
-    Arrays.sort(cachedQvFileList, String.CASE_INSENSITIVE_ORDER);
-    List<String> defaults = getVersionFilesInternal("default");
-    cachedDefaultQvFileList = (defaults != null) ? ImmutableList.copyOf(defaults) : ImmutableList.<String>of();
-  }
-
-  private static List<String> getVersionFilesInternal(String tname) {
-    if (cachedQvFileList == null) {
-      return new ArrayList<String>();
-    }
-    int pos = Arrays.binarySearch(cachedQvFileList, tname, String.CASE_INSENSITIVE_ORDER);
-    if (pos >= 0) {
-      throw new BuildException("Unexpected file list element: " + cachedQvFileList[pos]);
-    }
-    List<String> result = null;
-    for (pos = (-pos - 1); pos < cachedQvFileList.length; ++pos) {
-      String candidate = cachedQvFileList[pos];
-      if (candidate.length() <= tname.length()
-          || !tname.equalsIgnoreCase(candidate.substring(0, tname.length()))
-          || !qvSuffix.matcher(candidate.substring(tname.length())).matches()) {
-        break;
-      }
-      if (result == null) {
-        result = new ArrayList<String>();
-      }
-      result.add(candidate);
-    }
-    return result;
   }
 
   public void failed(int ecode, String fname, String debugHint) {

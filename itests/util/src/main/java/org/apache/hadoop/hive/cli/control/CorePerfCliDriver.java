@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hive.cli.control;
 
-
-
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -34,19 +32,17 @@ import org.junit.After;
 import org.junit.AfterClass;
 
 import com.google.common.base.Strings;
-/**
- This is the TestPerformance Cli Driver for integrating performance regression tests
- as part of the Hive Unit tests.
- Currently this includes support for :
- 1. Running explain plans for TPCDS workload (non-partitioned dataset)  on 30TB scaleset.
- TODO :
- 1. Support for partitioned data set
- 2. Use HBase Metastore instead of Derby
 
-This suite differs from TestCliDriver w.r.t the fact that we modify the underlying metastore
-database to reflect the dataset before running the queries.
-*/
-public class CorePerfCliDriver extends CliAdapter{
+/**
+ * This is the TestPerformance Cli Driver for integrating performance regression tests as part of
+ * the Hive Unit tests. Currently this includes support for : 1. Running explain plans for TPCDS
+ * workload (non-partitioned dataset) on 30TB scaleset. TODO : 1. Support for partitioned data set
+ * 2. Use HBase Metastore instead of Derby
+ * 
+ * This suite differs from TestCliDriver w.r.t the fact that we modify the underlying metastore
+ * database to reflect the dataset before running the queries.
+ */
+public class CorePerfCliDriver extends CliAdapter {
 
   private static QTestUtil qt;
 
@@ -65,16 +61,10 @@ public class CorePerfCliDriver extends CliAdapter{
     String cleanupScript = cliConfig.getCleanupScript();
 
     try {
-      qt = new QTestUtil(
-          QTestArguments.QTestArgumentsBuilder.instance()
-            .withOutDir(cliConfig.getResultsDir())
-            .withLogDir(cliConfig.getLogDir())
-            .withClusterType(miniMR)
-            .withConfDir(hiveConfDir)
-            .withInitScript(initScript)
-            .withCleanupScript(cleanupScript)
-            .withLlapIo(false)
-            .build());
+      qt = new QTestUtil(QTestArguments.QTestArgumentsBuilder.instance()
+          .withOutDir(cliConfig.getResultsDir()).withLogDir(cliConfig.getLogDir())
+          .withClusterType(miniMR).withConfDir(hiveConfDir).withInitScript(initScript)
+          .withCleanupScript(cleanupScript).withLlapIo(false).build());
 
       // do a one time initialization
       qt.newSession();
@@ -89,7 +79,8 @@ public class CorePerfCliDriver extends CliAdapter{
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();
       System.err.flush();
-      throw new RuntimeException("Unexpected exception in static initialization: " + e.getMessage(), e);
+      throw new RuntimeException("Unexpected exception in static initialization: " + e.getMessage(),
+          e);
     }
   }
 
@@ -126,10 +117,6 @@ public class CorePerfCliDriver extends CliAdapter{
     }
   }
 
-  private static String debugHint =
-      "\nSee ./ql/target/tmp/log/hive.log or ./itests/qtest/target/tmp/log/hive.log, "
-          + "or check ./ql/target/surefire-reports or ./itests/qtest/target/surefire-reports/ for specific test cases logs.";
-
   @Override
   public void runTest(String name, String fname, String fpath) {
     long startTime = System.currentTimeMillis();
@@ -141,17 +128,17 @@ public class CorePerfCliDriver extends CliAdapter{
 
       int ecode = qt.executeClient(fname);
       if (ecode != 0) {
-        qt.failed(ecode, fname, debugHint);
+        qt.failed(ecode, fname, QTestUtil.DEBUG_HINT);
       }
 
       QTestProcessExecResult result = qt.checkCliDriverResults(fname);
       if (result.getReturnCode() != 0) {
-        String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ?
-            debugHint : "\r\n" + result.getCapturedOutput();
+        String message = Strings.isNullOrEmpty(result.getCapturedOutput()) ? QTestUtil.DEBUG_HINT
+          : "\r\n" + result.getCapturedOutput();
         qt.failedDiff(result.getReturnCode(), fname, message);
       }
     } catch (Exception e) {
-      qt.failed(e, fname, debugHint);
+      qt.failed(e, fname, QTestUtil.DEBUG_HINT);
     }
 
     long elapsedTime = System.currentTimeMillis() - startTime;

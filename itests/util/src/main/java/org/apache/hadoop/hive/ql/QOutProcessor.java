@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.hive.ql.QTestUtil.FsType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.FsType;
 
 /**
  * QOutProcessor: produces the final q.out from original q.out by postprocessing (e.g. masks)

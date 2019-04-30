@@ -39,7 +39,6 @@ import com.google.common.base.Strings;
  * the Hive Unit tests. Currently this includes support for : 1. Running explain plans for TPCDS
  * workload (non-partitioned dataset) on 30TB scaleset. TODO : 1. Support for partitioned data set
  * 2. Use HBase Metastore instead of Derby
- * 
  * This suite differs from TestCliDriver w.r.t the fact that we modify the underlying metastore
  * database to reflect the dataset before running the queries.
  */

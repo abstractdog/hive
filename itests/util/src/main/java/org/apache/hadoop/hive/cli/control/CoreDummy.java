@@ -25,7 +25,7 @@ import org.apache.hadoop.hive.ql.QFileVersionHandler;
 
 public class CoreDummy extends CliAdapter {
   QFileVersionHandler qvh = new QFileVersionHandler();
-  
+
   public CoreDummy(AbstractCliConfig cliConfig) {
     super(cliConfig);
   }

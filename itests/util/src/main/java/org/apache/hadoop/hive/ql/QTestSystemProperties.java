@@ -55,7 +55,7 @@ public class QTestSystemProperties {
   public static boolean shouldOverwriteResults() {
     return isTrue(SYS_PROP_OUTPUT_OVERWRITE);
   }
-  
+
   private static boolean isTrue(String propertyName) {
     return "true".equals(System.getProperty(propertyName));
   }

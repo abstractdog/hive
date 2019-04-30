@@ -199,10 +199,9 @@ public class QTestUtil {
 
     initConf();
 
+    datasetHandler = new QTestDatasetHandler(this, conf);
     testFiles = datasetHandler.getDataDir(conf);
     conf.set("test.data.dir", datasetHandler.getDataDir(conf));
-
-    datasetHandler = new QTestDatasetHandler(this, conf);
 
     String scriptsDir = getScriptsDir();
 
@@ -226,7 +225,7 @@ public class QTestUtil {
     if (System.getenv(QTEST_LEAVE_FILES) == null) {
       cleanUp();
     }
-    
+
     miniClusters.shutDown();
 
     Hive.closeCurrent();

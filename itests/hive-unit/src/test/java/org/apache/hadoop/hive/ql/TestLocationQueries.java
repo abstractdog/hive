@@ -24,7 +24,7 @@ import java.io.FileReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 
 /**
  * Suite for testing location. e.g. if "alter table alter partition
@@ -123,7 +123,7 @@ public class TestLocationQueries extends BaseTestQueries {
       qt[i].clearTestSideEffects();
     }
 
-    boolean success = QTestUtil.queryListRunnerSingleThreaded(qfiles, qt);
+    boolean success = QTestRunnerUtils.queryListRunnerSingleThreaded(qfiles, qt);
     if (!success) {
       fail("One or more queries failed");
     }

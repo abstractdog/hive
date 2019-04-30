@@ -26,8 +26,9 @@ import java.io.File;
 import org.apache.hadoop.hive.ql.MetaStoreDumpUtility;
 import org.apache.hadoop.hive.ql.QTestArguments;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
+import org.apache.hadoop.hive.ql.QTestSystemProperties;
 import org.apache.hadoop.hive.ql.QTestUtil;
-import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 import org.junit.After;
 import org.junit.AfterClass;
 
@@ -73,7 +74,7 @@ public class CorePerfCliDriver extends CliAdapter {
       // Manually modify the underlying metastore db to reflect statistics corresponding to
       // the 30TB TPCDS scale set. This way the optimizer will generate plans for a 30 TB set.
       MetaStoreDumpUtility.setupMetaStoreTableColumnStatsFor30TBTPCDSWorkload(qt.getConf(),
-          System.getProperty(QTestUtil.TEST_TMP_DIR_PROPERTY));
+          QTestSystemProperties.getTempDir());
 
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());

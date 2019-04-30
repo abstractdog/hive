@@ -42,16 +42,23 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hive.cli.CliSessionState;
 import org.apache.hadoop.hive.cli.control.AbstractCliConfig;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.llap.LlapItUtils;
 import org.apache.hadoop.hive.llap.daemon.MiniLlapCluster;
+import org.apache.hadoop.hive.llap.io.api.LlapProxy;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.CoreClusterType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.FsType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkSession;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkSessionManagerImpl;
+import org.apache.hadoop.hive.ql.exec.tez.TezSessionState;
 import org.apache.hadoop.hive.ql.lockmgr.zookeeper.CuratorFrameworkSingleton;
 import org.apache.hadoop.hive.ql.lockmgr.zookeeper.ZooKeeperHiveLockManager;
+import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.shims.HadoopShims;
 import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.hive.shims.HadoopShims.HdfsErasureCodingShim;
@@ -68,7 +75,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 
 /**
- * QTestMiniClusters: decouples cluster details from QTestUtil (kafka/druid/spark/llap/tez/mr, file system)
+ * QTestMiniClusters: decouples cluster details from QTestUtil (kafka/druid/spark/llap/tez/mr, file
+ * system)
  */
 public class QTestMiniClusters {
   private static final Logger LOG = LoggerFactory.getLogger("QTestMiniClusters");
@@ -82,6 +90,9 @@ public class QTestMiniClusters {
   public static final String DEFAULT_TEST_EC_POLICY = "RS-3-2-1024k";
 
   private QTestSetup setup;
+  private QTestArguments testArgs;
+  private MiniClusterType clusterType;
+
   private HadoopShims shims;
   private SparkSession sparkSession = null;
   private FileSystem fs;
@@ -219,14 +230,16 @@ public class QTestMiniClusters {
     }
   }
 
-  public QTestMiniClusters(FsType fsType, HiveConf hiveConf) throws IOException {
+  public void setup(QTestArguments testArgs, HiveConf conf, String scriptsDir,
+      String logDir) throws Exception {
     this.shims = ShimLoader.getHadoopShims();
-    setupFileSystem(fsType, hiveConf);
-  }
+    this.clusterType = testArgs.getClusterType();
+    this.testArgs = testArgs;
 
-  public void setup(QTestSetup setup, MiniClusterType clusterType, HiveConf conf, String confDir,
-      String scriptsDir, String logDir) throws IOException {
-    this.setup = setup;
+    setupFileSystem(testArgs.getFsType(), conf);
+
+    this.setup = testArgs.getQTestSetup();
+    setup.preTest(conf);
 
     String uriString = fs.getUri().toString();
 
@@ -258,6 +271,7 @@ public class QTestMiniClusters {
       kafkaCluster.createTopicWithData("wiki_kafka_avro_table", getAvroRows());
     }
 
+    String confDir = testArgs.getConfDir();
     if (clusterType.getCoreClusterType() == CoreClusterType.TEZ) {
       if (confDir != null && !confDir.isEmpty()) {
         conf.addResource(
@@ -288,36 +302,10 @@ public class QTestMiniClusters {
     } else if (clusterType == MiniClusterType.mr) {
       mr = shims.getMiniMrCluster(conf, 2, uriString, 1);
     }
-  }
 
-  public void shutDown() {
-    if (druidCluster != null) {
-      druidCluster.stop();
-      druidCluster = null;
-    }
-
-    if (kafkaCluster != null) {
-      kafkaCluster.stop();
-      kafkaCluster = null;
-    }
-    setup.tearDown();
-    if (sparkSession != null) {
-      try {
-        SparkSessionManagerImpl.getInstance().closeSession(sparkSession);
-      } catch (Exception ex) {
-        LOG.error("Error closing spark session.", ex);
-      } finally {
-        sparkSession = null;
-      }
-    }
-    if (mr != null) {
-      mr.shutdown();
-      mr = null;
-    }
-    FileSystem.closeAll();
-    if (dfs != null) {
-      dfs.shutdown();
-      dfs = null;
+    if (testArgs.isWithLlapIo() && (clusterType == MiniClusterType.none)) {
+      LOG.info("initializing llap IO");
+      LlapProxy.initializeLlapIo(conf);
     }
   }
 
@@ -350,6 +338,78 @@ public class QTestMiniClusters {
       fs.mkdirs(scratchDir);
       conf.set("hive.druid.working.directory", scratchDir.toUri().getPath());
     }
+
+    if (testArgs.isWithLlapIo() && (clusterType == MiniClusterType.none)) {
+      LOG.info("initializing llap IO");
+      LlapProxy.initializeLlapIo(conf);
+    }
+  }
+
+  public void postInit(HiveConf conf) {
+    createRemoteDirs(conf);
+  }
+
+  public void preTest(HiveConf conf) throws Exception {
+    setup.preTest(conf);
+  }
+
+  public void postTest(HiveConf conf) throws Exception {
+    setup.postTest(conf);
+  }
+
+  public void restartSessions(boolean canReuseSession, CliSessionState ss, SessionState oldSs)
+      throws IOException {
+    if (oldSs != null && canReuseSession
+        && clusterType.getCoreClusterType() == CoreClusterType.TEZ) {
+      // Copy the tezSessionState from the old CliSessionState.
+      TezSessionState tezSessionState = oldSs.getTezSession();
+      oldSs.setTezSession(null);
+      ss.setTezSession(tezSessionState);
+      oldSs.close();
+    }
+
+    if (oldSs != null && clusterType.getCoreClusterType() == CoreClusterType.SPARK) {
+      sparkSession = oldSs.getSparkSession();
+      ss.setSparkSession(sparkSession);
+      oldSs.setSparkSession(null);
+      oldSs.close();
+    }
+  }
+
+  public void shutDown() throws Exception {
+    if (clusterType.getCoreClusterType() == CoreClusterType.TEZ
+        && SessionState.get().getTezSession() != null) {
+      SessionState.get().getTezSession().destroy();
+    }
+
+    if (druidCluster != null) {
+      druidCluster.stop();
+      druidCluster = null;
+    }
+
+    if (kafkaCluster != null) {
+      kafkaCluster.stop();
+      kafkaCluster = null;
+    }
+    setup.tearDown();
+    if (sparkSession != null) {
+      try {
+        SparkSessionManagerImpl.getInstance().closeSession(sparkSession);
+      } catch (Exception ex) {
+        LOG.error("Error closing spark session.", ex);
+      } finally {
+        sparkSession = null;
+      }
+    }
+    if (mr != null) {
+      mr.shutdown();
+      mr = null;
+    }
+    FileSystem.closeAll();
+    if (dfs != null) {
+      dfs.shutdown();
+      dfs = null;
+    }
   }
 
   public void setSparkSession(SparkSession sparkSession) {
@@ -368,7 +428,23 @@ public class QTestMiniClusters {
     return mr;
   }
 
-  public void createRemoteDirs(HiveConf conf) {
+  public MiniClusterType getClusterType() {
+    return this.clusterType;
+  }
+
+  /**
+   * Should deleted test tables have their data purged.
+   *
+   * @return true if data should be purged
+   */
+  public boolean fsNeedsPurge(FsType type) {
+    if (type == FsType.encrypted_hdfs || type == FsType.erasure_coded_hdfs) {
+      return true;
+    }
+    return false;
+  }
+
+  private void createRemoteDirs(HiveConf conf) {
     // Create remote dirs once.
     if (getMr() != null) {
       assert fs != null;

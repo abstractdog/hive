@@ -28,7 +28,7 @@ import org.apache.hadoop.hive.cli.control.CliConfigs;
 import org.apache.hadoop.hive.ql.QTestArguments;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
 import org.apache.hadoop.hive.ql.QTestUtil;
-import org.apache.hadoop.hive.ql.QTestUtil.MiniClusterType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -40,7 +40,6 @@ public class CoreParseNegative extends CliAdapter{
   private static QTestUtil qt;
 
   private static CliConfigs.ParseNegativeConfig cliConfig = new CliConfigs.ParseNegativeConfig();
-  private static boolean firstRun;
 
   public CoreParseNegative(AbstractCliConfig testCliConfig) {
     super(testCliConfig);
@@ -52,7 +51,6 @@ public class CoreParseNegative extends CliAdapter{
     MiniClusterType miniMR = cliConfig.getClusterType();
     String initScript = cliConfig.getInitScript();
     String cleanupScript = cliConfig.getCleanupScript();
-    firstRun = true;
 
     try {
       qt = new QTestUtil(
@@ -67,6 +65,8 @@ public class CoreParseNegative extends CliAdapter{
             .build());
 
       qt.newSession();
+      qt.cleanUp();
+      qt.createSources();
 
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
@@ -109,11 +109,6 @@ public class CoreParseNegative extends CliAdapter{
       System.err.println("Begin query: " + fname);
 
       qt.addFile(fpath);
-      if (firstRun) {
-        qt.init(fname);
-        firstRun = false;
-      }
-
       qt.cliInit(new File(fpath));
 
       ASTNode tree = qt.parseQuery(fname);

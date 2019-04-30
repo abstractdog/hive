@@ -20,11 +20,13 @@ package org.apache.hadoop.hive.ql.dataset;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hive.cli.CliDriver;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.QTestSystemProperties;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -35,25 +37,24 @@ public class QTestDatasetHandler {
 
   private File datasetDir;
   private QTestUtil qt;
+  private static Set<String> srcTables;
 
   public QTestDatasetHandler(QTestUtil qTestUtil, HiveConf conf) {
     // Use path relative to dataDir directory if it is not specified
     String dataDir = getDataDir(conf);
-    
-    datasetDir =
-        conf.get("test.data.set.files") == null ?
-            new File(dataDir  + "/datasets") :
-            new File(conf.get("test.data.set.files"));
+
+    datasetDir = conf.get("test.data.set.files") == null ? new File(dataDir + "/datasets")
+      : new File(conf.get("test.data.set.files"));
     this.qt = qTestUtil;
   }
-  
-  public String getDataDir(HiveConf conf){
+
+  public String getDataDir(HiveConf conf) {
     String dataDir = conf.get("test.data.files");
     // Use the current directory if it is not specified
     if (dataDir == null) {
       dataDir = new File(".").getAbsolutePath() + "/data/files";
     }
-    
+
     return dataDir;
   }
 
@@ -65,21 +66,21 @@ public class QTestDatasetHandler {
       DatasetCollection datasets = parser.getDatasets();
 
       Set<String> missingDatasets = datasets.getTables();
-      missingDatasets.removeAll(QTestUtil.getSrcTables());
+      missingDatasets.removeAll(getSrcTables());
       if (missingDatasets.isEmpty()) {
         return;
       }
       qt.newSession(true);
       for (String table : missingDatasets) {
-        if (initDataset(table, cliDriver)){
-          QTestUtil.addSrcTable(table);
+        if (initDataset(table, cliDriver)) {
+          addSrcTable(table);
         }
       }
       qt.newSession(true);
     }
   }
-  
-  private boolean initDataset(String table, CliDriver cliDriver) throws Exception {
+
+  public boolean initDataset(String table, CliDriver cliDriver) throws Exception {
     File tableFile = new File(new File(datasetDir, table), Dataset.INIT_FILE_NAME);
     String commands = null;
     try {
@@ -93,7 +94,48 @@ public class QTestDatasetHandler {
     if (result != 0) {
       Assert.fail("Failed during initFromDatasets processLine with code=" + result);
     }
-    
+
     return true;
+  }
+
+  public static Set<String> getSrcTables() {
+    if (srcTables == null) {
+      initSrcTables();
+    }
+    return srcTables;
+  }
+
+  public static void addSrcTable(String table) {
+    getSrcTables().add(table);
+    storeSrcTables();
+  }
+
+  public static Set<String> initSrcTables() {
+    if (srcTables == null) {
+      initSrcTablesFromSystemProperty();
+      storeSrcTables();
+    }
+
+    return srcTables;
+  }
+
+  public static boolean isSourceTable(String name) {
+    return getSrcTables().contains(name);
+  }
+
+  private static void storeSrcTables() {
+    QTestSystemProperties.setSrcTables(srcTables);
+  }
+
+  private static void initSrcTablesFromSystemProperty() {
+    srcTables = new HashSet<String>();
+    // FIXME: moved default value to here...for now
+    // i think this features is never really used from the command line
+    for (String srcTable : QTestSystemProperties.getSrcTables()) {
+      srcTable = srcTable.trim();
+      if (!srcTable.isEmpty()) {
+        srcTables.add(srcTable);
+      }
+    }
   }
 }

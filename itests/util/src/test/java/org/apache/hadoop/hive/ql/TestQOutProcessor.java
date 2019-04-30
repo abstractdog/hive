@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hive.ql;
 
-import org.apache.hadoop.hive.ql.QTestUtil.FsType;
+import org.apache.hadoop.hive.ql.QTestMiniClusters.FsType;
 import org.junit.Assert;
 import org.junit.Test;
 

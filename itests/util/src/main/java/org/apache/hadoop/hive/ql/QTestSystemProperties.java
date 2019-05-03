@@ -26,6 +26,7 @@ public class QTestSystemProperties {
   private static final String SYS_PROP_OUTPUT_OVERWRITE = "test.output.overwrite";
   private static final String SYS_PROP_SRC_UDFS = "test.src.udfs";
   private static final String SYS_PROP_VECTORIZATION_ENABLED = "test.vectorization.enabled";
+  private static final String SYS_PROP_CHECK_SYNTAX = "test.check.syntax";
   private static final String SYS_PROP_BUILD_DIR = "build.dir"; // typically target
 
   public static String getTempDir() {
@@ -54,6 +55,10 @@ public class QTestSystemProperties {
 
   public static boolean shouldOverwriteResults() {
     return isTrue(SYS_PROP_OUTPUT_OVERWRITE);
+  }
+
+  public static boolean shouldCheckSyntax() {
+    return isTrue(SYS_PROP_CHECK_SYNTAX);
   }
 
   private static boolean isTrue(String propertyName) {

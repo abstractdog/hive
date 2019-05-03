@@ -61,7 +61,7 @@ public class QTestSyntaxUtil {
 
   public void checkQFileSyntax(List<String> cmds) {
     String command = "";
-    if (shouldCheckSyntax()) {
+    if (QTestSystemProperties.shouldCheckSyntax()) {
       //check syntax first
       for (String oneCmd : cmds) {
         if (StringUtils.endsWith(oneCmd, "\\")) {
@@ -81,10 +81,6 @@ public class QTestSyntaxUtil {
         command = "";
       }
     }
-  }
-
-  private boolean shouldCheckSyntax() {
-    return "true".equalsIgnoreCase(System.getProperty("test.check.syntax"));
   }
 
   private boolean checkSyntax(String cmd) {

@@ -49,12 +49,12 @@ import org.apache.hive.common.util.HiveStringUtils;
  */
 public class QTestSyntaxUtil {
 
-  private QTestUtil qUtil;
+  private QTestUtil qTestUtil;
   private HiveConf conf;
   private ParseDriver pd;
 
   public QTestSyntaxUtil(QTestUtil qTestUtil, HiveConf conf, ParseDriver pd) {
-    qUtil = qTestUtil;
+    this.qTestUtil = qTestUtil;
     this.conf = conf;
     this.pd = pd;
   }
@@ -68,7 +68,7 @@ public class QTestSyntaxUtil {
           command += StringUtils.chop(oneCmd) + "\\;";
           continue;
         } else {
-          if (qUtil.isHiveCommand(oneCmd)) {
+          if (qTestUtil.isHiveCommand(oneCmd)) {
             command = oneCmd;
           } else {
             command += oneCmd;
@@ -113,7 +113,7 @@ public class QTestSyntaxUtil {
           ctx.setCmd(cmd);
           ctx.setHDFSCleanup(true);
           tree = pd.parse(cmd, ctx);
-          qUtil.analyzeAST(tree);
+          qTestUtil.analyzeAST(tree);
         } catch (Exception e) {
           return false;
         }

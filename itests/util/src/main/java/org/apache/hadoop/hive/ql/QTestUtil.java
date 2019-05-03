@@ -103,7 +103,6 @@ public class QTestUtil {
   private final FsType fsType;
   private ParseDriver pd;
   protected Hive db;
-  private QueryState queryState;
   protected HiveConf conf;
   protected HiveConf savedConf;
   private IDriver drv;
@@ -191,8 +190,9 @@ public class QTestUtil {
       System.out.println("Setting hive-site: " + HiveConf.getHiveSiteLocation());
     }
 
-    queryState = new QueryState.Builder().withHiveConf(new HiveConf(IDriver.class)).build();
+    QueryState queryState = new QueryState.Builder().withHiveConf(new HiveConf(IDriver.class)).build();
     conf = queryState.getConf();
+    sem = new SemanticAnalyzer(queryState);
 
     this.miniClusters.setup(testArgs, conf, getScriptsDir(), logDir);
 
@@ -503,22 +503,17 @@ public class QTestUtil {
     }
   }
 
-  public void postInit() throws Exception {
+  private void postInit() throws Exception {
     miniClusters.postInit(conf);
 
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
-    String execEngine = conf.get("hive.execution.engine");
-    conf.set("hive.execution.engine", "mr");
-    SessionState.start(conf);
-    conf.set("hive.execution.engine", execEngine);
+
     db = Hive.get(conf);
-
-    // Create views registry
-    initMaterializedViews();
-
     drv = DriverFactory.newDriver(conf);
     pd = new ParseDriver();
-    sem = new SemanticAnalyzer(queryState);
+
+    initMaterializedViews(); // Create views registry
+    firstStartSessionState();
   }
 
   private void initMaterializedViews() {
@@ -526,6 +521,14 @@ public class QTestUtil {
     db.getConf().set("hive.server2.materializedviews.registry.impl", "DUMMY");
     HiveMaterializedViewsRegistry.get().init(db);
     db.getConf().set("hive.server2.materializedviews.registry.impl", registryImpl);
+  }
+
+  //FIXME: check why mr is needed for starting a session state from conf
+  private void firstStartSessionState() {
+    String execEngine = conf.get("hive.execution.engine");
+    conf.set("hive.execution.engine", "mr");
+    SessionState.start(conf);
+    conf.set("hive.execution.engine", execEngine);
   }
 
   public void init(String fileName) throws Exception {
@@ -587,6 +590,7 @@ public class QTestUtil {
         HiveConf.ConfVars.HIVE_AUTHENTICATOR_MANAGER,
         "org.apache.hadoop.hive.ql.security.DummyAuthenticator");
 
+    //FIXME: check why mr is needed for starting a session state from conf
     String execEngine = conf.get("hive.execution.engine");
     conf.set("hive.execution.engine", "mr");
 

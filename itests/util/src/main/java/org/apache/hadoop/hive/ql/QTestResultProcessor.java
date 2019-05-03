@@ -40,7 +40,7 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hive.common.util.StreamPrinter;
 
 /**
- * QTestResultProcessor: handles file-level q test result postprocessing: sort, diff (similar to
+ * QTestResultProcessor: handles file-level q test result post-processing: sort, diff (similar to
  * QOutProcessor, but this works with files, and QOutProcessor is for text-processing within a qtest
  * result file)
  *

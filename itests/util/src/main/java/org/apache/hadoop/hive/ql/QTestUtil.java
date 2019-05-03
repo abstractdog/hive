@@ -19,7 +19,6 @@
 package org.apache.hadoop.hive.ql;
 
 import static org.apache.hadoop.hive.metastore.Warehouse.DEFAULT_DATABASE_NAME;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -647,6 +646,9 @@ public class QTestUtil {
     int rc = 0;
 
     String command = "";
+    QTestSyntaxUtil qtsu = new QTestSyntaxUtil(this, conf, pd);
+    qtsu.checkQFileSyntax(cmds);
+
     for (String oneCmd : cmds) {
       if (StringUtils.endsWith(oneCmd, "\\")) {
         command += StringUtils.chop(oneCmd) + "\\;";
@@ -679,7 +681,7 @@ public class QTestUtil {
     return rc;
   }
 
-  /**
+/**
    * This allows a .q file to continue executing after a statement runs into an error which is convenient
    * if you want to use another hive cmd after the failure to sanity check the state of the system.
    */
@@ -687,7 +689,7 @@ public class QTestUtil {
     return conf.getBoolVar(HiveConf.ConfVars.CLIIGNOREERRORS);
   }
 
-  private boolean isHiveCommand(String command) {
+  boolean isHiveCommand(String command) {
     String[] cmd = command.trim().split("\\s+");
     if (HiveCommand.find(cmd) != null) {
       return true;

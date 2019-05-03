@@ -1548,20 +1548,18 @@ public class Hive {
    * @throws HiveException
    */
   public List<RelOptMaterialization> getAllValidMaterializedViews(List<String> tablesUsed, boolean forceMVContentsUpToDate,
-                                                                  HiveTxnManager txnMgr) throws HiveException {
+      HiveTxnManager txnMgr) throws HiveException {
     // Final result
     List<RelOptMaterialization> result = new ArrayList<>();
     try {
-      for (String dbName : getMSC().getAllDatabases()) {
-        // From metastore (for security)
-        List<String> materializedViewNames = getMaterializedViewsForRewriting(dbName);
-        if (materializedViewNames.isEmpty()) {
-          // Bail out: empty list
-          continue;
-        }
-        result.addAll(getValidMaterializedViews(dbName, materializedViewNames,
-                                                tablesUsed, forceMVContentsUpToDate, txnMgr));
+      // From metastore (for security)
+      List<Table> materializedViews = getAllMaterializedViewObjectsForRewriting();
+      if (materializedViews.isEmpty()) {
+        // Bail out: empty list
+        return result;
       }
+      result.addAll(getValidMaterializedViews(materializedViews,
+          tablesUsed, forceMVContentsUpToDate, txnMgr));
       return result;
     } catch (Exception e) {
       throw new HiveException(e);
@@ -1570,11 +1568,11 @@ public class Hive {
 
   public List<RelOptMaterialization> getValidMaterializedView(String dbName, String materializedViewName,
       List<String> tablesUsed, boolean forceMVContentsUpToDate, HiveTxnManager txnMgr) throws HiveException {
-    return getValidMaterializedViews(dbName, ImmutableList.of(materializedViewName),
+    return getValidMaterializedViews(ImmutableList.of(getTable(dbName, materializedViewName)),
             tablesUsed, forceMVContentsUpToDate, txnMgr);
   }
 
-  private List<RelOptMaterialization> getValidMaterializedViews(String dbName, List<String> materializedViewNames,
+  private List<RelOptMaterialization> getValidMaterializedViews(List<Table> materializedViewTables,
       List<String> tablesUsed, boolean forceMVContentsUpToDate, HiveTxnManager txnMgr) throws HiveException {
     final String validTxnsList = conf.get(ValidTxnList.VALID_TXNS_KEY);
     final ValidTxnWriteIdList currentTxnWriteIds = txnMgr.getValidWriteIds(tablesUsed, validTxnsList);
@@ -1588,7 +1586,6 @@ public class Hive {
     try {
       // Final result
       List<RelOptMaterialization> result = new ArrayList<>();
-      List<Table> materializedViewTables = getTableObjects(dbName, materializedViewNames);
       for (Table materializedViewTable : materializedViewTables) {
         final Boolean outdated = isOutdatedMaterializedView(materializedViewTable, currentTxnWriteIds,
             defaultTimeWindow, tablesUsed, forceMVContentsUpToDate);
@@ -1623,7 +1620,7 @@ public class Hive {
         // It passed the test, load
         RelOptMaterialization materialization =
             HiveMaterializedViewsRegistry.get().getRewritingMaterializedView(
-                dbName, materializedViewTable.getTableName());
+                materializedViewTable.getDbName(), materializedViewTable.getTableName());
         if (materialization != null) {
           RelNode viewScan = materialization.tableRel;
           RelOptHiveTable cachedMaterializedViewTable;
@@ -1790,6 +1787,21 @@ public class Hive {
     final RelNode modifiedQueryRel = augmentMaterializationPlanner.findBestExp();
     return new RelOptMaterialization(materialization.tableRel, modifiedQueryRel,
         null, materialization.qualifiedTableName);
+  }
+
+  public List<Table> getAllMaterializedViewObjectsForRewriting() throws HiveException {
+    try {
+      return Lists.transform(getMSC().getAllMaterializedViewObjectsForRewriting(),
+          new com.google.common.base.Function<org.apache.hadoop.hive.metastore.api.Table, Table>() {
+            @Override
+            public Table apply(org.apache.hadoop.hive.metastore.api.Table table) {
+              return new Table(table);
+            }
+          }
+      );
+    } catch (Exception e) {
+      throw new HiveException(e);
+    }
   }
 
   /**
@@ -2138,7 +2150,7 @@ public class Hive {
           boolean needRecycle = !tbl.isTemporary()
                   && ReplChangeManager.isSourceOfReplication(Hive.get().getDatabase(tbl.getDbName()));
           replaceFiles(tbl.getPath(), loadPath, destPath, oldPartPath, getConf(), isSrcLocal,
-              isAutoPurge, newFiles, FileUtils.HIDDEN_FILES_PATH_FILTER, needRecycle, isManaged);
+              isAutoPurge, newFiles, FileUtils.HIDDEN_FILES_PATH_FILTER, needRecycle, isManaged, isInsertOverwrite);
         } else {
           FileSystem fs = destPath.getFileSystem(conf);
           copyFiles(conf, loadPath, destPath, fs, isSrcLocal, isAcidIUDoperation,
@@ -2350,7 +2362,7 @@ public class Hive {
             ((null != oldPart) || AcidUtils.isTransactionalTable(tbl));
   }
 
-  private void listFilesInsideAcidDirectory(Path acidDir, FileSystem srcFs, List<Path> newFiles) throws IOException {
+  public void listFilesInsideAcidDirectory(Path acidDir, FileSystem srcFs, List<Path> newFiles) throws IOException {
     // list out all the files/directory in the path
     FileStatus[] acidFiles;
     acidFiles = srcFs.listStatus(acidDir);
@@ -2897,7 +2909,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
         boolean needRecycle = !tbl.isTemporary()
                 && ReplChangeManager.isSourceOfReplication(Hive.get().getDatabase(tbl.getDbName()));
         replaceFiles(tblPath, loadPath, destPath, tblPath, conf, isSrcLocal, isAutopurge,
-            newFiles, FileUtils.HIDDEN_FILES_PATH_FILTER, needRecycle, isManaged);
+            newFiles, FileUtils.HIDDEN_FILES_PATH_FILTER, needRecycle, isManaged, isInsertOverwrite);
       } else {
         try {
           FileSystem fs = tbl.getDataLocation().getFileSystem(conf);
@@ -3249,7 +3261,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     tpart.getSd().setLocation(partPath);
   }
 
-  private void addWriteNotificationLog(Table tbl, Map<String, String> partitionSpec,
+  public void addWriteNotificationLog(Table tbl, Map<String, String> partitionSpec,
                                        List<Path> newFiles, Long writeId) throws HiveException {
     if (!conf.getBoolVar(ConfVars.FIRE_EVENTS_FOR_DML)) {
       LOG.debug("write notification log is ignored as dml event logging is disabled");
@@ -4748,9 +4760,9 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @param isManaged
    *          If the table is managed.
    */
-  protected void replaceFiles(Path tablePath, Path srcf, Path destf, Path oldPath, HiveConf conf,
+  private void replaceFiles(Path tablePath, Path srcf, Path destf, Path oldPath, HiveConf conf,
           boolean isSrcLocal, boolean purge, List<Path> newFiles, PathFilter deletePathFilter,
-          boolean isNeedRecycle, boolean isManaged) throws HiveException {
+      boolean isNeedRecycle, boolean isManaged, boolean isInsertOverwrite) throws HiveException {
     try {
 
       FileSystem destFs = destf.getFileSystem(conf);
@@ -4763,13 +4775,15 @@ private void constructOneLBLocationMap(FileStatus fSta,
       } catch (IOException e) {
         throw new HiveException("Getting globStatus " + srcf.toString(), e);
       }
+
+      // the extra check is required to make ALTER TABLE ... CONCATENATE work
+      if (oldPath != null && (srcs != null || isInsertOverwrite)) {
+        deleteOldPathForReplace(destf, oldPath, conf, purge, deletePathFilter, isNeedRecycle);
+      }
+
       if (srcs == null) {
         LOG.info("No sources specified to move: " + srcf);
         return;
-      }
-
-      if (oldPath != null) {
-        deleteOldPathForReplace(destf, oldPath, conf, purge, deletePathFilter, isNeedRecycle);
       }
 
       // first call FileUtils.mkdir to make sure that destf directory exists, if not, it creates

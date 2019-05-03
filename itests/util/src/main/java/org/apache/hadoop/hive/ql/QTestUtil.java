@@ -1261,6 +1261,9 @@ public class QTestUtil {
     CommandProcessorResponse response = new CommandProcessorResponse(0);
 
     StringBuilder command = new StringBuilder();
+    QTestSyntaxUtil qtsu = new QTestSyntaxUtil(this, conf, pd);
+    qtsu.checkQFileSyntax(cmds);
+
     for (String oneCmd : cmds) {
       if (StringUtils.endsWith(oneCmd, "\\")) {
         command.append(StringUtils.chop(oneCmd) + "\\;");
@@ -1293,7 +1296,7 @@ public class QTestUtil {
     return response;
   }
 
-  /**
+/**
    * This allows a .q file to continue executing after a statement runs into an error which is convenient
    * if you want to use another hive cmd after the failure to sanity check the state of the system.
    */
@@ -1301,7 +1304,7 @@ public class QTestUtil {
     return conf.getBoolVar(HiveConf.ConfVars.CLIIGNOREERRORS);
   }
 
-  private boolean isHiveCommand(String command) {
+  boolean isHiveCommand(String command) {
     String[] cmd = command.trim().split("\\s+");
     if (HiveCommand.find(cmd) != null) {
       return true;

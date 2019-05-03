@@ -70,7 +70,7 @@ public class QTestRunnerUtils {
     for (int i = 0; i < qfiles.length; i++) {
 
       qt[i] = new QTestUtil(QTestArguments.QTestArgumentsBuilder.instance().withOutDir(resDir)
-          .withLogDir(logDir).withClusterType(MiniClusterType.none).withConfDir(null)
+          .withLogDir(logDir).withClusterType(MiniClusterType.NONE).withConfDir(null)
           .withInitScript(initScript == null ? DEFAULT_INIT_SCRIPT : initScript)
           .withCleanupScript(cleanupScript == null ? DEFAULT_CLEANUP_SCRIPT : cleanupScript)
           .withLlapIo(false).build());

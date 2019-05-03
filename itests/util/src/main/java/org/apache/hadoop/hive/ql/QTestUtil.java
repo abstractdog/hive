@@ -304,7 +304,7 @@ public class QTestUtil {
         if (!tblObj.isMaterializedView()) {
           continue;
         }
-        db.dropTable(dbName, tblName, true, true, fsType == FsType.encrypted_hdfs);
+        db.dropTable(dbName, tblName, true, true, fsType == FsType.ENCRYPTED_HDFS);
       }
     }
 

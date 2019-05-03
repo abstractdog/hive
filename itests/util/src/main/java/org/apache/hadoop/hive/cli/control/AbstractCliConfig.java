@@ -75,7 +75,7 @@ public abstract class AbstractCliConfig {
 
   public AbstractCliConfig(Class<? extends CliAdapter> adapter) {
     cliAdapter = adapter;
-    clusterType = MiniClusterType.none;
+    clusterType = MiniClusterType.NONE;
     queryFile = getSysPropValue("qfile");
     queryFileRegex = getSysPropValue("qfile_regex");
     runDisabled = getSysPropValue("run_disabled");

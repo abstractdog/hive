@@ -72,7 +72,7 @@ public class QOutProcessor {
   private static final Pattern PATTERN_MASK_DATA_SIZE = Pattern.compile("-- MASK_DATA_SIZE");
   private static final Pattern PATTERN_MASK_LINEAGE = Pattern.compile("-- MASK_LINEAGE");
 
-  private FsType fsType = FsType.local;
+  private FsType fsType = FsType.LOCAL;
 
   public static class LineProcessingResult {
     private String line;
@@ -140,7 +140,7 @@ public class QOutProcessor {
   }
 
   public QOutProcessor() {
-    this.fsType = FsType.hdfs;
+    this.fsType = FsType.HDFS;
   }
   
   private Pattern[] toPattern(String[] patternStrs) {
@@ -194,7 +194,7 @@ public class QOutProcessor {
     
     Matcher matcher = null;
 
-    if (fsType == FsType.encrypted_hdfs) {
+    if (fsType == FsType.ENCRYPTED_HDFS) {
       for (Pattern pattern : partialReservedPlanMask) {
         matcher = pattern.matcher(result.line);
         if (matcher.find()) {

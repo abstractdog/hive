@@ -25,7 +25,7 @@ import org.junit.Test;
  * This class contains unit tests for QTestUtil
  */
 public class TestQOutProcessor {
-  QOutProcessor qOutProcessor = new QOutProcessor(FsType.local);
+  QOutProcessor qOutProcessor = new QOutProcessor(FsType.LOCAL);
 
   @Test
   public void testSelectiveHdfsPatternMaskOnlyHdfsPath() {

@@ -49,9 +49,6 @@ import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.llap.LlapItUtils;
 import org.apache.hadoop.hive.llap.daemon.MiniLlapCluster;
 import org.apache.hadoop.hive.llap.io.api.LlapProxy;
-import org.apache.hadoop.hive.ql.QTestMiniClusters.CoreClusterType;
-import org.apache.hadoop.hive.ql.QTestMiniClusters.FsType;
-import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkSession;
 import org.apache.hadoop.hive.ql.exec.spark.session.SparkSessionManagerImpl;
@@ -108,19 +105,22 @@ public class QTestMiniClusters {
   }
 
   public enum FsType {
-    local, hdfs, encrypted_hdfs, erasure_coded_hdfs,
+    LOCAL, HDFS, ENCRYPTED_HDFS, ERASURE_CODED_HDFS,
   }
 
   public enum MiniClusterType {
-
-    mr(CoreClusterType.MR, FsType.hdfs), tez(CoreClusterType.TEZ, FsType.hdfs), tez_local(
-        CoreClusterType.TEZ,
-        FsType.local), spark(CoreClusterType.SPARK, FsType.local), miniSparkOnYarn(
-            CoreClusterType.SPARK, FsType.hdfs), llap(CoreClusterType.TEZ, FsType.hdfs), llap_local(
-                CoreClusterType.TEZ, FsType.local), none(CoreClusterType.MR,
-                    FsType.local), druidLocal(CoreClusterType.TEZ, FsType.local), druid(
-                        CoreClusterType.TEZ, FsType.hdfs), druidKafka(CoreClusterType.TEZ,
-                            FsType.hdfs), kafka(CoreClusterType.TEZ, FsType.hdfs);
+    MR(CoreClusterType.MR, FsType.HDFS),
+    TEZ(CoreClusterType.TEZ, FsType.HDFS),
+    TEZ_LOCAL(CoreClusterType.TEZ, FsType.LOCAL),
+    SPARK(CoreClusterType.SPARK, FsType.LOCAL),
+    MINI_SPARK_ON_YARN(CoreClusterType.SPARK, FsType.HDFS), 
+    LLAP(CoreClusterType.TEZ, FsType.HDFS),
+    LLAP_LOCAL(CoreClusterType.TEZ, FsType.LOCAL), 
+    NONE(CoreClusterType.MR,FsType.LOCAL),
+    DRUID_LOCAL(CoreClusterType.TEZ, FsType.LOCAL),
+    DRUID(CoreClusterType.TEZ, FsType.HDFS),
+    DRUID_KAFKA(CoreClusterType.TEZ, FsType.HDFS),
+    KAFKA(CoreClusterType.TEZ, FsType.HDFS);
 
     private final CoreClusterType coreClusterType;
     private final FsType defaultFsType;
@@ -141,29 +141,29 @@ public class QTestMiniClusters {
     public static MiniClusterType valueForString(String type) {
       // Replace this with valueOf.
       if (type.equals("miniMR")) {
-        return mr;
+        return MR;
       } else if (type.equals("tez")) {
-        return tez;
+        return TEZ;
       } else if (type.equals("tez_local")) {
-        return tez_local;
+        return TEZ_LOCAL;
       } else if (type.equals("spark")) {
-        return spark;
+        return SPARK;
       } else if (type.equals("miniSparkOnYarn")) {
-        return miniSparkOnYarn;
+        return MINI_SPARK_ON_YARN;
       } else if (type.equals("llap")) {
-        return llap;
+        return LLAP;
       } else if (type.equals("llap_local")) {
-        return llap_local;
+        return LLAP_LOCAL;
       } else if (type.equals("druidLocal")) {
-        return druidLocal;
+        return DRUID_LOCAL;
       } else if (type.equals("druid")) {
-        return druid;
+        return DRUID;
       } else if (type.equals("druid-kafka")) {
-        return druidKafka;
+        return DRUID_KAFKA;
       } else if (type.equals("kafka")) {
-        return kafka;
+        return KAFKA;
       } else {
-        return none;
+        throw new RuntimeException(String.format("cannot recognize MiniClusterType from '%s'", type));
       }
     }
   }
@@ -243,11 +243,11 @@ public class QTestMiniClusters {
 
     String uriString = fs.getUri().toString();
 
-    if (clusterType == MiniClusterType.druidKafka || clusterType == MiniClusterType.druidLocal
-        || clusterType == MiniClusterType.druid) {
+    if (clusterType == MiniClusterType.DRUID_KAFKA || clusterType == MiniClusterType.DRUID_LOCAL
+        || clusterType == MiniClusterType.DRUID) {
       final String tempDir = QTestSystemProperties.getTempDir();
       druidCluster = new MiniDruidCluster(
-          clusterType == MiniClusterType.druid ? "mini-druid" : "mini-druid-kafka", logDir, tempDir,
+          clusterType == MiniClusterType.DRUID ? "mini-druid" : "mini-druid-kafka", logDir, tempDir,
           setup.zkPort, Utilities.jarFinderGetJar(MiniDruidCluster.class));
       final Path druidDeepStorage = fs.makeQualified(new Path(druidCluster.getDeepStorageDir()));
       fs.mkdirs(druidDeepStorage);
@@ -259,10 +259,10 @@ public class QTestMiniClusters {
       druidCluster.start();
     }
 
-    if (clusterType == MiniClusterType.kafka || clusterType == MiniClusterType.druidKafka) {
+    if (clusterType == MiniClusterType.KAFKA || clusterType == MiniClusterType.DRUID_KAFKA) {
       kafkaCluster =
           new SingleNodeKafkaCluster("kafka", QTestSystemProperties.getTempDir() + "/kafka-cluster",
-              setup.zkPort, clusterType == MiniClusterType.kafka ? 9093 : 9092);
+              setup.zkPort, clusterType == MiniClusterType.KAFKA ? 9093 : 9092);
       kafkaCluster.init(conf);
       kafkaCluster.start();
       kafkaCluster.createTopicWithData("test-topic", new File(scriptsDir, "kafka_init_data.json"));
@@ -279,31 +279,31 @@ public class QTestMiniClusters {
       }
       int numTrackers = 2;
       if (EnumSet
-          .of(MiniClusterType.llap, MiniClusterType.llap_local, MiniClusterType.druidLocal,
-              MiniClusterType.druidKafka, MiniClusterType.druid, MiniClusterType.kafka)
+          .of(MiniClusterType.LLAP, MiniClusterType.LLAP_LOCAL, MiniClusterType.DRUID_LOCAL,
+              MiniClusterType.DRUID_KAFKA, MiniClusterType.DRUID, MiniClusterType.KAFKA)
           .contains(clusterType)) {
         llapCluster = LlapItUtils.startAndGetMiniLlapCluster(conf, setup.zooKeeperCluster, confDir);
       }
       if (EnumSet
-          .of(MiniClusterType.llap_local, MiniClusterType.tez_local, MiniClusterType.druidLocal)
+          .of(MiniClusterType.LLAP_LOCAL, MiniClusterType.TEZ_LOCAL, MiniClusterType.DRUID_LOCAL)
           .contains(clusterType)) {
         mr = shims.getLocalMiniTezCluster(conf,
-            clusterType == MiniClusterType.llap_local || clusterType == MiniClusterType.druidLocal);
+            clusterType == MiniClusterType.LLAP_LOCAL || clusterType == MiniClusterType.DRUID_LOCAL);
       } else {
         mr = shims
             .getMiniTezCluster(conf, numTrackers, uriString,
                 EnumSet
-                    .of(MiniClusterType.llap, MiniClusterType.llap_local,
-                        MiniClusterType.druidKafka, MiniClusterType.druid, MiniClusterType.kafka)
+                    .of(MiniClusterType.LLAP, MiniClusterType.LLAP_LOCAL,
+                        MiniClusterType.DRUID_KAFKA, MiniClusterType.DRUID, MiniClusterType.KAFKA)
                     .contains(clusterType));
       }
-    } else if (clusterType == MiniClusterType.miniSparkOnYarn) {
+    } else if (clusterType == MiniClusterType.MINI_SPARK_ON_YARN) {
       mr = shims.getMiniSparkCluster(conf, 2, uriString, 1);
-    } else if (clusterType == MiniClusterType.mr) {
+    } else if (clusterType == MiniClusterType.MR) {
       mr = shims.getMiniMrCluster(conf, 2, uriString, 1);
     }
 
-    if (testArgs.isWithLlapIo() && (clusterType == MiniClusterType.none)) {
+    if (testArgs.isWithLlapIo() && (clusterType == MiniClusterType.NONE)) {
       LOG.info("initializing llap IO");
       LlapProxy.initializeLlapIo(conf);
     }
@@ -339,7 +339,7 @@ public class QTestMiniClusters {
       conf.set("hive.druid.working.directory", scratchDir.toUri().getPath());
     }
 
-    if (testArgs.isWithLlapIo() && (clusterType == MiniClusterType.none)) {
+    if (testArgs.isWithLlapIo() && (clusterType == MiniClusterType.NONE)) {
       LOG.info("initializing llap IO");
       LlapProxy.initializeLlapIo(conf);
     }
@@ -438,7 +438,7 @@ public class QTestMiniClusters {
    * @return true if data should be purged
    */
   public boolean fsNeedsPurge(FsType type) {
-    if (type == FsType.encrypted_hdfs || type == FsType.erasure_coded_hdfs) {
+    if (type == FsType.ENCRYPTED_HDFS || type == FsType.ERASURE_CODED_HDFS) {
       return true;
     }
     return false;
@@ -477,21 +477,21 @@ public class QTestMiniClusters {
   }
 
   private void setupFileSystem(FsType fsType, HiveConf conf) throws IOException {
-    if (fsType == FsType.local) {
+    if (fsType == FsType.LOCAL) {
       fs = FileSystem.getLocal(conf);
-    } else if (fsType == FsType.hdfs || fsType == FsType.encrypted_hdfs
-        || fsType == FsType.erasure_coded_hdfs) {
+    } else if (fsType == FsType.HDFS || fsType == FsType.ENCRYPTED_HDFS
+        || fsType == FsType.ERASURE_CODED_HDFS) {
       int numDataNodes = 4;
 
       // Setup before getting dfs
       switch (fsType) {
-      case encrypted_hdfs:
+      case ENCRYPTED_HDFS:
         // Set the security key provider so that the MiniDFS cluster is initialized
         // with encryption
         conf.set(SECURITY_KEY_PROVIDER_URI_NAME, getKeyProviderURI());
         conf.setInt("fs.trash.interval", 50);
         break;
-      case erasure_coded_hdfs:
+      case ERASURE_CODED_HDFS:
         // We need more NameNodes for EC.
         // To fully exercise hdfs code paths we need 5 NameNodes for the RS-3-2-1024k policy.
         // With 6 NameNodes we can also run the RS-6-3-1024k policy.
@@ -506,12 +506,12 @@ public class QTestMiniClusters {
 
       // Setup after getting dfs
       switch (fsType) {
-      case encrypted_hdfs:
+      case ENCRYPTED_HDFS:
         // set up the java key provider for encrypted hdfs cluster
         hes = shims.createHdfsEncryptionShim(fs, conf);
         LOG.info("key provider is initialized");
         break;
-      case erasure_coded_hdfs:
+      case ERASURE_CODED_HDFS:
         // The Erasure policy can't be set in a q_test_init script as QTestUtil runs that code in
         // a mode that disallows test-only CommandProcessors.
         // Set the default policy on the root of the file system here.

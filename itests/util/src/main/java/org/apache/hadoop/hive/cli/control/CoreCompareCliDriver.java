@@ -28,6 +28,7 @@ import org.apache.hadoop.hive.ql.QTestArguments;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
+import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -135,8 +136,6 @@ public class CoreCompareCliDriver extends CliAdapter{
         qt.addFile(new File(queryDirectory, versionFile), true);
       }
 
-      int ecode = 0;
-
       qt.cliInit(new File(fpath));
 
       List<String> outputs = new ArrayList<>(versionFiles.size());
@@ -145,9 +144,9 @@ public class CoreCompareCliDriver extends CliAdapter{
         String versionStr = versionFile.substring(tname.length() + 1, versionFile.length() - 3);
         outputs.add(qt.cliInit(new File(queryDirectory, tname + "." + versionStr)));
         // TODO: will this work?
-        ecode = qt.executeClient(versionFile, fname);
-        if (ecode != 0) {
-          qt.failed(ecode, fname, QTestUtil.DEBUG_HINT);
+        CommandProcessorResponse response = qt.executeClient(versionFile, fname);
+        if (response.getResponseCode() != 0) {
+          qt.failedQuery(response.getException(), response.getResponseCode(), fname, QTestUtil.DEBUG_HINT);
         }
       }
 
@@ -158,7 +157,7 @@ public class CoreCompareCliDriver extends CliAdapter{
         qt.failedDiff(result.getReturnCode(), fname, message);
       }
     } catch (Exception e) {
-      qt.failed(e, fname, QTestUtil.DEBUG_HINT);
+      qt.failedWithException(e, fname, QTestUtil.DEBUG_HINT);
     }
 
     long elapsedTime = System.currentTimeMillis() - startTime;

@@ -122,7 +122,7 @@ public class CoreNegativeCliDriver extends CliAdapter{
       qt.addFile(fpath);
       qt.cliInit(new File(fpath));
 
-      int ecode = qt.executeClient(fname);
+      int ecode = qt.executeClient(fname).getResponseCode();
       if (ecode == 0) {
         qt.failed(fname, QTestUtil.DEBUG_HINT);
       }
@@ -141,7 +141,7 @@ public class CoreNegativeCliDriver extends CliAdapter{
         qt.failedDiff(qTestProcessExecResult.getReturnCode(), fname, message);
       }
     } catch (Exception e) {
-      qt.failed(e, fname, QTestUtil.DEBUG_HINT);
+      qt.failedWithException(e, fname, QTestUtil.DEBUG_HINT);
     }
 
     long elapsedTime = System.currentTimeMillis() - startTime;

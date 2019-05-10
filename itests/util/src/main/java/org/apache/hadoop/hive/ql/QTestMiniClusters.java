@@ -166,6 +166,10 @@ public class QTestMiniClusters {
         throw new RuntimeException(String.format("cannot recognize MiniClusterType from '%s'", type));
       }
     }
+
+    public String getQOutFileExtension() {
+      return toString().toLowerCase();
+    }
   }
 
   /**

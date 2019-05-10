@@ -870,7 +870,7 @@ public class QTestUtil {
     String ret = (new File(outDir, testName)).getPath();
     // List of configurations. Currently the list consists of hadoop version and execution mode only
     List<String> configs = new ArrayList<String>();
-    configs.add(miniClusters.getClusterType().toString());
+    configs.add(miniClusters.getClusterType().getQOutFileExtension());
 
     Deque<String> stack = new LinkedList<String>();
     StringBuilder sb = new StringBuilder();

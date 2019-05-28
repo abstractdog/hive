@@ -73,9 +73,6 @@ import org.junit.Before;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -136,11 +133,6 @@ public class TestObjectStore {
     public Long get() {
       return value;
     }
-  }
-
-  @Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[10][0]);
   }
 
   @Before
@@ -785,7 +777,7 @@ public class TestObjectStore {
   private static void dropAllStoreObjects(RawStore store)
       throws MetaException, InvalidObjectException, InvalidInputException {
     try {
-      Deadline.registerIfNot(150000);
+      Deadline.registerIfNot(100000);
       List<Function> functions = store.getAllFunctions(DEFAULT_CATALOG_NAME);
       for (Function func : functions) {
         store.dropFunction(DEFAULT_CATALOG_NAME, func.getDbName(), func.getFunctionName());

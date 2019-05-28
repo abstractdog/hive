@@ -27,7 +27,7 @@ import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.ql.io.AcidUtils;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
-import org.apache.hadoop.hive.ql.plan.AddPartitionDesc;
+import org.apache.hadoop.hive.ql.ddl.table.partition.AlterTableAddPartitionDesc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.cli.CliSessionState;
@@ -67,7 +67,7 @@ import java.util.Map;
  * Information about the hive end point (i.e. table or partition) to write to.
  * A light weight object that does NOT internally hold on to resources such as
  * network connections. It can be stored in Hashed containers such as sets and hash tables.
- * @deprecated as of Hive 3.0.0, replaced by {@link org.apache.hive.streaming.HiveStreamingConnection}
+ * @deprecated as of Hive 3.0.0, replaced by org.apache.hive.streaming.HiveStreamingConnection
  */
 @Deprecated
 public class HiveEndPoint {
@@ -467,7 +467,7 @@ public class HiveEndPoint {
         Map<String, String> partSpec =
             Warehouse.makeSpecFromValues(tableObject.getPartitionKeys(), ep.partitionVals);
 
-        AddPartitionDesc addPartitionDesc = new AddPartitionDesc(ep.database, ep.table, true);
+        AlterTableAddPartitionDesc addPartitionDesc = new AlterTableAddPartitionDesc(ep.database, ep.table, true);
         String partLocation = new Path(tableObject.getDataLocation(),
             Warehouse.makePartPath(partSpec)).toString();
         addPartitionDesc.addPartition(partSpec, partLocation);

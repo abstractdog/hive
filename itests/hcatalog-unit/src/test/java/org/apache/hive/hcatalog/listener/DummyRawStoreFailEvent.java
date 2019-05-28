@@ -338,8 +338,14 @@ public class DummyRawStoreFailEvent implements RawStore, Configurable {
   }
 
   @Override
-  public List<String> getTables(String catName, String dbName, String pattern, TableType tableType) throws MetaException {
-    return objectStore.getTables(catName, dbName, pattern, tableType);
+  public List<String> getTables(String catName, String dbName, String pattern, TableType tableType, int limit) throws MetaException {
+    return objectStore.getTables(catName, dbName, pattern, tableType, limit);
+  }
+
+  @Override
+  public List<Table> getAllMaterializedViewObjectsForRewriting(String catName)
+      throws MetaException {
+    return objectStore.getAllMaterializedViewObjectsForRewriting(catName);
   }
 
   @Override

@@ -50,6 +50,7 @@ import org.apache.hadoop.hive.metastore.api.DataOperationType;
 import org.apache.hadoop.hive.metastore.api.DefaultConstraintsRequest;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
+import org.apache.hadoop.hive.metastore.api.ExtendedTableInfo;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.FindSchemasByColsResp;
 import org.apache.hadoop.hive.metastore.api.FindSchemasByColsRqst;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hive.metastore.api.GetPrincipalsInRoleRequest;
 import org.apache.hadoop.hive.metastore.api.GetPrincipalsInRoleResponse;
 import org.apache.hadoop.hive.metastore.api.GetRoleGrantsForPrincipalRequest;
 import org.apache.hadoop.hive.metastore.api.GetRoleGrantsForPrincipalResponse;
+import org.apache.hadoop.hive.metastore.api.GetTablesExtRequestFields;
 import org.apache.hadoop.hive.metastore.api.HeartbeatTxnRangeResponse;
 import org.apache.hadoop.hive.metastore.api.HiveObjectPrivilege;
 import org.apache.hadoop.hive.metastore.api.HiveObjectRef;
@@ -333,6 +335,32 @@ public interface IMetaStoreClient {
    */
   List<String> getTables(String catName, String dbName, String tablePattern, TableType tableType)
       throws MetaException, TException, UnknownDBException;
+
+  /**
+   * Retrieve all materialized views that have rewriting enabled. This will use the default catalog.
+   * @return List of materialized views.
+   * @throws MetaException error fetching from the RDBMS
+   * @throws TException thrift transport error
+   * @throws UnknownDBException no such database
+   */
+  List<Table> getAllMaterializedViewObjectsForRewriting()
+      throws MetaException, TException, UnknownDBException;
+
+  /**
+   * Get the names of all the tables along with extended table metadata
+   * @param catName catalog name.
+   * @param dbName Name of the database to fetch tables from.
+   * @param tablePattern pattern to match the tables names.
+   * @param requestedFields An int bitmask to indicate the depth of the returned objects
+   * @param processorCapabilities A list of "capabilities" possessed by the caller, to be matched with table's params
+   * @param processorId Any string id to identify the caller/client, for logging purposes only.
+   * @param limit Maximum size of the result set. <=0 indicates no limit
+   * @return List of ExtendedTableInfo that match the input arguments.
+   * @throws MetaException Thrown if there is error on fetching from DBMS.
+   * @throws TException Thrown if there is a thrift transport exception.
+   */
+  public List<ExtendedTableInfo> getTablesExt(String catName, String dbName, String tablePattern, int requestedFields,
+      int limit) throws MetaException, TException;
 
   /**
    * Get materialized views that have rewriting enabled.  This will use the default catalog.
@@ -2708,7 +2736,6 @@ public interface IMetaStoreClient {
       throws MetaException, TException;
 
   /**
-   * @param revokePrivileges
    * @param authorizer
    * @param objToRefresh
    * @return true on success
@@ -2894,7 +2921,7 @@ public interface IMetaStoreClient {
 
   /**
    * Get a structure that details valid write ids.
-   * @param fullTableName full table name of format <db_name>.<table_name>
+   * @param fullTableName full table name of format &lt;db_name&gt;.&lt;table_name&gt;
    * @return list of valid write ids for the given table
    * @throws TException
    */
@@ -2902,7 +2929,7 @@ public interface IMetaStoreClient {
 
   /**
    * Get a structure that details valid write ids.
-   * @param fullTableName full table name of format <db_name>.<table_name>
+   * @param fullTableName full table name of format &lt;db_name&gt;.&lt;table_name&gt;
    * @param writeId The write id to get the corresponding txn
    * @return list of valid write ids for the given table
    * @throws TException
@@ -2911,7 +2938,7 @@ public interface IMetaStoreClient {
 
   /**
    * Get a structure that details valid write ids list for all tables read by current txn.
-   * @param tablesList list of tables (format: <db_name>.<table_name>) read from the current transaction
+   * @param tablesList list of tables (format: &lt;db_name&gt;.&lt;table_name&gt;) read from the current transaction
    *                   for which needs to populate the valid write ids
    * @param validTxnList snapshot of valid txns for the current txn
    * @return list of valid write ids for the given list of tables.

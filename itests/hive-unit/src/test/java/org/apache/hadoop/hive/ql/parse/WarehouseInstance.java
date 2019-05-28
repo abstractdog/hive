@@ -155,7 +155,7 @@ public class WarehouseInstance implements Closeable {
       hiveConf.set(entry.getKey(), entry.getValue());
     }
 
-    MetaStoreTestUtils.startMetaStoreWithRetry(hiveConf, true);
+    MetaStoreTestUtils.startMetaStoreWithRetry(hiveConf, true, true);
 
     // Add the below mentioned dependency in metastore/pom.xml file. For postgres need to copy postgresql-42.2.1.jar to
     // .m2//repository/postgresql/postgresql/9.3-1102.jdbc41/postgresql-9.3-1102.jdbc41.jar.
@@ -293,7 +293,7 @@ public class WarehouseInstance implements Closeable {
   }
 
   WarehouseInstance loadWithoutExplain(String replicatedDbName, String dumpLocation) throws Throwable {
-    run("REPL LOAD " + replicatedDbName + " FROM '" + dumpLocation + "'");
+    run("REPL LOAD " + replicatedDbName + " FROM '" + dumpLocation + "' with ('hive.exec.parallel'='true')");
     return this;
   }
 
@@ -483,19 +483,18 @@ public class WarehouseInstance implements Closeable {
    * Get statistics for given set of columns of a given table in the given database
    * @param dbName - the database where the table resides
    * @param tableName - tablename whose statistics are to be retrieved
-   * @param colNames - columns whose statistics is to be retrieved.
    * @return - list of ColumnStatisticsObj objects in the order of the specified columns
    */
   public Map<String, List<ColumnStatisticsObj>> getAllPartitionColumnStatistics(String dbName,
                                                                     String tableName) throws Exception {
     List<String> colNames = new ArrayList();
     client.getFields(dbName, tableName).forEach(fs -> colNames.add(fs.getName()));
-    return getAllPartitionColumnStatistics(dbName, tableName, colNames);
+    return client.getPartitionColumnStatistics(dbName, tableName,
+            client.listPartitionNames(dbName, tableName, (short) -1), colNames);
   }
 
   /**
-   * Get statistics for given set of columns for all the partitions of a given table in the given
-   * database.
+   * Get statistics for a given partition of the given table in the given database.
    * @param dbName - the database where the table resides
    * @param tableName - name of the partitioned table in the database
    * @param colNames - columns whose statistics is to be retrieved
@@ -503,12 +502,11 @@ public class WarehouseInstance implements Closeable {
    * ordered according to the given list of columns.
    * @throws Exception
    */
-  Map<String, List<ColumnStatisticsObj>> getAllPartitionColumnStatistics(String dbName,
-                                                                         String tableName,
-                                                                         List<String> colNames)
+  List<ColumnStatisticsObj> getPartitionColumnStatistics(String dbName, String tableName,
+                                                         String partName, List<String> colNames)
           throws Exception {
     return client.getPartitionColumnStatistics(dbName, tableName,
-            client.listPartitionNames(dbName, tableName, (short) -1), colNames);
+                                              Collections.singletonList(partName), colNames).get(0);
   }
 
   public List<Partition> getAllPartitions(String dbName, String tableName) throws Exception {
@@ -565,7 +563,11 @@ public class WarehouseInstance implements Closeable {
   }
 
   public boolean isAcidEnabled() {
-    return hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY);
+    if (hiveConf.getBoolVar(HiveConf.ConfVars.HIVE_SUPPORT_CONCURRENCY) &&
+        hiveConf.getVar(HiveConf.ConfVars.HIVE_TXN_MANAGER).equals("org.apache.hadoop.hive.ql.lockmgr.DbTxnManager")) {
+      return true;
+    }
+    return false;
   }
 
   @Override

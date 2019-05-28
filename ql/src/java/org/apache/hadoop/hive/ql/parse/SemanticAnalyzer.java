@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -100,9 +101,10 @@ import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.cache.results.CacheUsage;
 import org.apache.hadoop.hive.ql.cache.results.QueryResultsCache;
 import org.apache.hadoop.hive.ql.ddl.DDLWork2;
-import org.apache.hadoop.hive.ql.ddl.table.CreateTableDesc;
-import org.apache.hadoop.hive.ql.ddl.table.CreateTableLikeDesc;
-import org.apache.hadoop.hive.ql.ddl.table.PreInsertTableDesc;
+import org.apache.hadoop.hive.ql.ddl.table.creation.CreateTableDesc;
+import org.apache.hadoop.hive.ql.ddl.table.creation.CreateTableLikeDesc;
+import org.apache.hadoop.hive.ql.ddl.table.misc.PreInsertTableDesc;
+import org.apache.hadoop.hive.ql.ddl.view.CreateViewDesc;
 import org.apache.hadoop.hive.ql.exec.AbstractMapJoinOperator;
 import org.apache.hadoop.hive.ql.exec.ArchiveUtils;
 import org.apache.hadoop.hive.ql.exec.ColumnInfo;
@@ -195,7 +197,6 @@ import org.apache.hadoop.hive.ql.parse.WindowingSpec.WindowType;
 import org.apache.hadoop.hive.ql.plan.AggregationDesc;
 import org.apache.hadoop.hive.ql.plan.AlterTableDesc;
 import org.apache.hadoop.hive.ql.plan.AlterTableDesc.AlterTableTypes;
-import org.apache.hadoop.hive.ql.plan.CreateViewDesc;
 import org.apache.hadoop.hive.ql.plan.DDLWork;
 import org.apache.hadoop.hive.ql.plan.DynamicPartitionCtx;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
@@ -2710,6 +2711,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     case HiveParser.TOK_CHARSETLITERAL:
     case HiveParser.KW_TRUE:
     case HiveParser.KW_FALSE:
+    case HiveParser.TOK_DATELITERAL:
+    case HiveParser.TOK_TIMESTAMPLITERAL:
+    case HiveParser.TOK_TIMESTAMPLOCALTZLITERAL:
     case HiveParser.TOK_INTERVAL_DAY_LITERAL:
     case HiveParser.TOK_INTERVAL_DAY_TIME:
     case HiveParser.TOK_INTERVAL_DAY_TIME_LITERAL:
@@ -7175,6 +7179,23 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     return currUDF;
   }
 
+  private Path getDestinationFilePath(final String destinationFile, boolean isMmTable)
+      throws SemanticException {
+    if (this.isResultsCacheEnabled() && this.queryTypeCanUseCache()) {
+      assert (!isMmTable);
+      QueryResultsCache instance = QueryResultsCache.getInstance();
+      // QueryResultsCache should have been initialized by now
+      if (instance != null) {
+        Path resultCacheTopDir = instance.getCacheDirPath();
+        String dirName = UUID.randomUUID().toString();
+        Path resultDir = new Path(resultCacheTopDir, dirName);
+        this.ctx.setFsResultCacheDirs(resultDir);
+        return resultDir;
+      }
+    }
+    return new Path(destinationFile);
+  }
+
   @SuppressWarnings("nls")
   protected Operator genFileSinkPlan(String dest, QB qb, Operator input)
       throws SemanticException {
@@ -7439,7 +7460,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       isLocal = true;
       // fall through
     case QBMetaData.DEST_DFS_FILE: {
-      destinationPath = new Path(qbm.getDestFileForAlias(dest));
+      destinationPath = getDestinationFilePath(qbm.getDestFileForAlias(dest), isMmTable);
 
       // CTAS case: the file output format and serde are defined by the create
       // table command rather than taking the default value
@@ -7456,18 +7477,30 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         fileSinkColInfos = new ArrayList<>();
         destTableIsTemporary = tblDesc.isTemporary();
         destTableIsMaterialization = tblDesc.isMaterialization();
-        if (AcidUtils.isInsertOnlyTable(tblDesc.getTblProps(), true)) {
-          isMmTable = isMmCtas = true;
+        if (AcidUtils.isTablePropertyTransactional(tblDesc.getTblProps())) {
           try {
             if (ctx.getExplainConfig() != null) {
               writeId = 0L; // For explain plan, txn won't be opened and doesn't make sense to allocate write id
             } else {
-              writeId = txnMgr.getTableWriteId(tblDesc.getDatabaseName(), tblDesc.getTableName());
+              String dbName = tblDesc.getDatabaseName();
+              String tableName = tblDesc.getTableName();
+
+              // CreateTableDesc stores table name as db.table. So, need to decode it before allocating
+              // write id.
+              if (tableName.contains(".")) {
+                String[] names = Utilities.getDbTableName(tableName);
+                dbName = names[0];
+                tableName = names[1];
+              }
+              writeId = txnMgr.getTableWriteId(dbName, tableName);
             }
           } catch (LockException ex) {
             throw new SemanticException("Failed to allocate write Id", ex);
           }
-          tblDesc.setInitialMmWriteId(writeId);
+          if (AcidUtils.isInsertOnlyTable(tblDesc.getTblProps(), true)) {
+            isMmTable = isMmCtas = true;
+            tblDesc.setInitialMmWriteId(writeId);
+          }
         }
       } else if (viewDesc != null) {
         fieldSchemas = new ArrayList<>();
@@ -7980,16 +8013,18 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   }
 
   private void setWriteIdForSurrogateKeys(LoadTableDesc ltd, Operator input) throws SemanticException {
-    Map<String, ExprNodeDesc> columnExprMap = input.getConf().getColumnExprMap();
-    if (ltd == null || columnExprMap == null) {
+    if (ltd == null) {
       return;
     }
 
-    for (ExprNodeDesc desc : columnExprMap.values()) {
-      if (desc instanceof ExprNodeGenericFuncDesc) {
-        GenericUDF genericUDF = ((ExprNodeGenericFuncDesc)desc).getGenericUDF();
-        if (genericUDF instanceof GenericUDFSurrogateKey) {
-          ((GenericUDFSurrogateKey)genericUDF).setWriteId(ltd.getWriteId());
+    Map<String, ExprNodeDesc> columnExprMap = input.getConf().getColumnExprMap();
+    if (columnExprMap != null) {
+      for (ExprNodeDesc desc : columnExprMap.values()) {
+        if (desc instanceof ExprNodeGenericFuncDesc) {
+          GenericUDF genericUDF = ((ExprNodeGenericFuncDesc)desc).getGenericUDF();
+          if (genericUDF instanceof GenericUDFSurrogateKey) {
+            ((GenericUDFSurrogateKey)genericUDF).setWriteId(ltd.getWriteId());
+          }
         }
       }
     }
@@ -13750,8 +13785,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
           dbDotTable, cols, comment, tblProps, partColNames,
           ifNotExists, orReplace, isAlterViewAs, storageFormat.getInputFormat(),
           storageFormat.getOutputFormat(), storageFormat.getSerde());
-      rootTasks.add(TaskFactory.get(new DDLWork(getInputs(), getOutputs(),
-          createVwDesc)));
+      rootTasks.add(TaskFactory.get(new DDLWork2(getInputs(), getOutputs(), createVwDesc)));
       addDbAndTabToOutputs(qualTabName, TableType.VIRTUAL_VIEW, false, tblProps);
       queryState.setCommandType(HiveOperation.CREATEVIEW);
     }
@@ -15062,6 +15096,9 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * Some initial checks for a query to see if we can look this query up in the results cache.
    */
   private boolean queryTypeCanUseCache() {
+    if(this.qb == null || this.qb.getParseInfo() == null) {
+      return false;
+    }
     if (this instanceof ColumnStatsSemanticAnalyzer) {
       // Column stats generates "select compute_stats() .." queries.
       // Disable caching for these.
@@ -15072,13 +15109,13 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       return false;
     }
 
-    if (qb.getParseInfo().isAnalyzeCommand()) {
-      return false;
-    }
+      if (qb.getParseInfo().isAnalyzeCommand()) {
+        return false;
+      }
 
-    if (qb.getParseInfo().hasInsertTables()) {
-      return false;
-    }
+      if (qb.getParseInfo().hasInsertTables()) {
+        return false;
+      }
 
     // HIVE-19096 - disable for explain analyze
     if (ctx.getExplainAnalyze() != null) {
@@ -15279,6 +15316,20 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
    * INSERT INTO T PARTITION(partCol1,partCol2...) SELECT col1, ... partCol1,partCol2...
    */
   protected void addPartitionColsToInsert(List<FieldSchema> partCols, StringBuilder rewrittenQueryStr) {
+    addPartitionColsToInsert(partCols, null, rewrittenQueryStr);
+  }
+
+  /**
+   * Append list of partition columns to Insert statement. If user specified partition spec, then
+   * use it to get/set the value for partition column else use dynamic partition mode with no value.
+   * Static partition mode:
+   * INSERT INTO T PARTITION(partCol1=val1,partCol2...) SELECT col1, ... partCol1,partCol2...
+   * Dynamic partition mode:
+   * INSERT INTO T PARTITION(partCol1,partCol2...) SELECT col1, ... partCol1,partCol2...
+   */
+  protected void addPartitionColsToInsert(List<FieldSchema> partCols,
+                                          Map<String, String> partSpec,
+                                          StringBuilder rewrittenQueryStr) {
     // If the table is partitioned we have to put the partition() clause in
     if (partCols != null && partCols.size() > 0) {
       rewrittenQueryStr.append(" partition (");
@@ -15289,8 +15340,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         } else {
           rewrittenQueryStr.append(", ");
         }
-        //would be nice if there was a way to determine if quotes are needed
+        // Would be nice if there was a way to determine if quotes are needed
         rewrittenQueryStr.append(HiveUtils.unparseIdentifier(fschema.getName(), this.conf));
+        String partVal = (partSpec != null) ? partSpec.get(fschema.getName()) : null;
+        if (partVal != null) {
+          rewrittenQueryStr.append("=").append(partVal);
+        }
       }
       rewrittenQueryStr.append(")");
     }

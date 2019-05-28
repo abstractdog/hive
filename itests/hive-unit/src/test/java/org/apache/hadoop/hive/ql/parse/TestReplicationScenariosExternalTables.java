@@ -25,14 +25,14 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.InjectableBehaviourObjectStore;
 import org.apache.hadoop.hive.metastore.InjectableBehaviourObjectStore.BehaviourInjection;
 import org.apache.hadoop.hive.metastore.InjectableBehaviourObjectStore.CallerArguments;
-import org.apache.hadoop.hive.metastore.TableType;
+import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.messaging.json.gzip.GzipJSONMessageEncoder;
 import org.apache.hadoop.hive.ql.ErrorMsg;
+import org.apache.hadoop.hive.ql.exec.repl.ReplExternalTables;
 import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.Partition;
-import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.repl.PathBuilder;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.BeforeClass;
@@ -198,10 +198,10 @@ public class TestReplicationScenariosExternalTables extends BaseReplicationAcros
   private void assertTablePartitionLocation(String sourceTableName, String replicaTableName)
       throws HiveException {
     Hive hiveForPrimary = Hive.get(primary.hiveConf);
-    Table sourceTable = hiveForPrimary.getTable(sourceTableName);
+    org.apache.hadoop.hive.ql.metadata.Table sourceTable = hiveForPrimary.getTable(sourceTableName);
     Path sourceLocation = sourceTable.getDataLocation();
     Hive hiveForReplica = Hive.get(replica.hiveConf);
-    Table replicaTable = hiveForReplica.getTable(replicaTableName);
+    org.apache.hadoop.hive.ql.metadata.Table replicaTable = hiveForReplica.getTable(replicaTableName);
     Path dataLocation = replicaTable.getDataLocation();
     assertEquals(REPLICA_EXTERNAL_BASE + sourceLocation.toUri().getPath(),
         dataLocation.toUri().getPath());
@@ -364,6 +364,23 @@ public class TestReplicationScenariosExternalTables extends BaseReplicationAcros
         .run("use " + replicatedDbName)
         .run("select place from t2 where country='france'")
         .verifyResults(new String[] {});
+
+    // Changing location of one of the partitions shouldn't result in changing location of other
+    // partitions as well as that of the table.
+    assertTablePartitionLocation(primaryDbName + ".t2", replicatedDbName + ".t2");
+
+    // Changing location of the external table, should result in changes to the location of
+    // partition residing within the table location and not the partitions located outside.
+    String tmpLocation2 = "/tmp/" + System.nanoTime() + "_2";
+    primary.miniDFSCluster.getFileSystem().mkdirs(new Path(tmpLocation2), new FsPermission("777"));
+
+    tuple = primary.run("use " + primaryDbName)
+            .run("insert into table t2 partition(country='france') values ('lyon')")
+            .run("alter table t2 set location '" + tmpLocation2 + "'")
+            .dump(primaryDbName, tuple.lastReplicationId);
+
+    replica.load(replicatedDbName, tuple.dumpLocation, loadWithClause);
+    assertTablePartitionLocation(primaryDbName + ".t2", replicatedDbName + ".t2");
   }
 
   @Test
@@ -646,85 +663,82 @@ public class TestReplicationScenariosExternalTables extends BaseReplicationAcros
   }
 
   @Test
-  public void retryIncBootstrapExternalTablesFromDifferentDumpWithoutCleanTablesConfig() throws Throwable {
-    List<String> dumpWithClause = Collections.singletonList(
-            "'" + HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES.varname + "'='false'"
-    );
-    List<String> loadWithClause = externalTableBasePathWithClause();
+  public void testExternalTableDataPath() throws Exception {
+    HiveConf conf = primary.getConf();
+    Path basePath = new Path("/");
+    Path sourcePath = new Path("/abc/xyz");
+    Path dataPath = ReplExternalTables.externalTableDataPath(conf, basePath, sourcePath);
+    assertTrue(dataPath.toUri().getPath().equalsIgnoreCase("/abc/xyz"));
 
-    WarehouseInstance.Tuple tupleBootstrapWithoutExternal = primary
-            .dump(primaryDbName, null, dumpWithClause);
+    basePath = new Path("/tmp");
+    dataPath = ReplExternalTables.externalTableDataPath(conf, basePath, sourcePath);
+    assertTrue(dataPath.toUri().getPath().equalsIgnoreCase("/tmp/abc/xyz"));
 
-    replica.load(replicatedDbName, tupleBootstrapWithoutExternal.dumpLocation, loadWithClause);
+    basePath = new Path("/tmp/");
+    dataPath = ReplExternalTables.externalTableDataPath(conf, basePath, sourcePath);
+    assertTrue(dataPath.toUri().getPath().equalsIgnoreCase("/tmp/abc/xyz"));
 
-    dumpWithClause = Arrays.asList("'" + HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES.varname + "'='true'",
-            "'" + HiveConf.ConfVars.REPL_BOOTSTRAP_EXTERNAL_TABLES.varname + "'='true'");
-    WarehouseInstance.Tuple tupleIncWithExternalBootstrap = primary.run("use " + primaryDbName)
-            .run("create external table t1 (id int)")
-            .run("insert into table t1 values (1)")
-            .run("create table t2 as select * from t1")
-            .dump(primaryDbName, tupleBootstrapWithoutExternal.lastReplicationId, dumpWithClause);
-    WarehouseInstance.Tuple tupleNewIncWithExternalBootstrap
-            = primary.dump(primaryDbName, tupleBootstrapWithoutExternal.lastReplicationId, dumpWithClause);
-
-    replica.load(replicatedDbName, tupleIncWithExternalBootstrap.dumpLocation, loadWithClause);
-
-    // Re-bootstrapping from different bootstrap dump without clean tables config should fail.
-    replica.loadFailure(replicatedDbName, tupleNewIncWithExternalBootstrap.dumpLocation, loadWithClause,
-            ErrorMsg.REPL_BOOTSTRAP_LOAD_PATH_NOT_VALID.getErrorCode());
+    basePath = new Path("/tmp/tmp1//");
+    dataPath = ReplExternalTables.externalTableDataPath(conf, basePath, sourcePath);
+    assertTrue(dataPath.toUri().getPath().equalsIgnoreCase("/tmp/tmp1/abc/xyz"));
   }
 
   @Test
-  public void dynamicallyConvertManagedToExternalTable() throws Throwable {
+  public void testExternalTablesIncReplicationWithConcurrentDropTable() throws Throwable {
     List<String> dumpWithClause = Collections.singletonList(
             "'" + HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES.varname + "'='true'"
     );
     List<String> loadWithClause = externalTableBasePathWithClause();
-
-    WarehouseInstance.Tuple tupleBootstrapManagedTable = primary.run("use " + primaryDbName)
-            .run("create table t1 (id int)")
+    WarehouseInstance.Tuple tupleBootstrap = primary.run("use " + primaryDbName)
+            .run("create external table t1 (id int)")
             .run("insert into table t1 values (1)")
-            .run("create table t2 (id int) partitioned by (key int)")
-            .run("insert into table t2 partition(key=10) values (1)")
             .dump(primaryDbName, null, dumpWithClause);
 
-    replica.load(replicatedDbName, tupleBootstrapManagedTable.dumpLocation, loadWithClause);
+    replica.load(replicatedDbName, tupleBootstrap.dumpLocation, loadWithClause);
 
-    Hive hiveForReplica = Hive.get(replica.hiveConf);
-    Table replicaTable = hiveForReplica.getTable(replicatedDbName + ".t1");
-    Path oldTblLocT1 = replicaTable.getDataLocation();
+    // Insert a row into "t1" and create another external table using data from "t1".
+    primary.run("use " + primaryDbName)
+            .run("insert into table t1 values (2)")
+            .run("create external table t2 as select * from t1");
 
-    replicaTable = hiveForReplica.getTable(replicatedDbName + ".t2");
-    Path oldTblLocT2 = replicaTable.getDataLocation();
+    // Inject a behavior so that getTable returns null for table "t1". This ensures the table is
+    // skipped for data files listing.
+    BehaviourInjection<Table, Table> tableNuller = new BehaviourInjection<Table, Table>() {
+      @Nullable
+      @Override
+      public Table apply(@Nullable Table table) {
+        LOG.info("Performing injection on table " + table.getTableName());
+        if (table.getTableName().equalsIgnoreCase("t1")){
+          injectionPathCalled = true;
+          return null;
+        } else {
+          nonInjectedPathCalled = true;
+          return table;
+        }
+      }
+    };
+    InjectableBehaviourObjectStore.setGetTableBehaviour(tableNuller);
+    WarehouseInstance.Tuple tupleInc;
+    try {
+      // The t1 table will be skipped from data location listing.
+      tupleInc = primary.dump(primaryDbName, tupleBootstrap.lastReplicationId, dumpWithClause);
+      tableNuller.assertInjectionsPerformed(true, true);
+    } finally {
+      InjectableBehaviourObjectStore.resetGetTableBehaviour(); // reset the behaviour
+    }
 
-    WarehouseInstance.Tuple tupleIncConvertToExternalTbl = primary.run("use " + primaryDbName)
-            .run("alter table t1 set tblproperties('EXTERNAL'='true')")
-            .run("alter table t2 set tblproperties('EXTERNAL'='true')")
-            .dump(primaryDbName, tupleBootstrapManagedTable.lastReplicationId, dumpWithClause);
+    // Only table t2 should exist in the data location list file.
+    assertExternalFileInfo(Collections.singletonList("t2"),
+            new Path(tupleInc.dumpLocation, FILE_NAME));
 
-    assertExternalFileInfo(Arrays.asList("t1", "t2"),
-            new Path(tupleIncConvertToExternalTbl.dumpLocation, FILE_NAME));
-    replica.load(replicatedDbName, tupleIncConvertToExternalTbl.dumpLocation, loadWithClause)
+    // The newly inserted data "2" should be missing in table "t1". But, table t2 should exist and have
+    // inserted data.
+    replica.load(replicatedDbName, tupleInc.dumpLocation, loadWithClause)
             .run("use " + replicatedDbName)
-            .run("select id from t1")
+            .run("select id from t1 order by id")
             .verifyResult("1")
-            .run("select id from t2 where key=10")
-            .verifyResult("1");
-
-    // Check if the table type is set correctly in target.
-    replicaTable = hiveForReplica.getTable(replicatedDbName + ".t1");
-    assertTrue(TableType.EXTERNAL_TABLE.equals(replicaTable.getTableType()));
-
-    replicaTable = hiveForReplica.getTable(replicatedDbName + ".t2");
-    assertTrue(TableType.EXTERNAL_TABLE.equals(replicaTable.getTableType()));
-
-    // Verify if new table location is set inside the base directory.
-    assertTablePartitionLocation(primaryDbName + ".t1", replicatedDbName + ".t1");
-    assertTablePartitionLocation(primaryDbName + ".t2", replicatedDbName + ".t2");
-
-    // Old location should be removed and set to new location.
-    assertFalse(replica.miniDFSCluster.getFileSystem().exists(oldTblLocT1));
-    assertFalse(replica.miniDFSCluster.getFileSystem().exists(oldTblLocT2));
+            .run("select id from t2 order by id")
+            .verifyResults(Arrays.asList("1", "2"));
   }
 
   private List<String> externalTableBasePathWithClause() throws IOException, SemanticException {

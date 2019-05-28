@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hive.ql.optimizer.calcite;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.externalize.RelJsonWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.Pair;
+import org.apache.hadoop.hive.ql.plan.ColStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,26 +44,40 @@ public class HiveRelWriterImpl extends RelJsonWriter {
 
   //~ Methods ------------------------------------------------------------------
 
+  @Override
   protected void explain_(RelNode rel, List<Pair<String, Object>> values) {
     super.explain_(rel, values);
-    // TODO: The following is hackish since we do not have visibility over relList
-    // and we do not want to bring all the writer utilities from Calcite. It should
-    // be changed once we move to new Calcite version and relList is visible for
-    // subclasses.
-    try {
-      final RelMetadataQuery mq = rel.getCluster().getMetadataQuery();
-      Field fs = RelJsonWriter.class.getDeclaredField("relList");
-      fs.setAccessible(true);
-      List<Object> relList = (List<Object>) fs.get(this);
-      Map<String, Object> map = (Map<String, Object>) relList.get(relList.size() - 1);
-      map.put("rowCount", mq.getRowCount(rel));
-      if (rel.getInputs().size() == 0) {
-        // This is a leaf, we will print the average row size and schema
-        map.put("avgRowSize", mq.getAverageRowSize(rel));
-        map.put("rowType", rel.getRowType().toString());
+    RelMetadataQuery mq = rel.getCluster().getMetadataQuery();
+    Map<String, Object> map = (Map<String, Object>) relList.get(relList.size() - 1);
+    map.put("rowCount", mq.getRowCount(rel));
+    if (rel.getInputs().size() == 0) {
+      // This is a leaf, we will print the average row size and schema
+      map.put("avgRowSize", mq.getAverageRowSize(rel));
+      map.put("rowType", relJson.toJson(rel.getRowType()));
+      // We also include partition columns information
+      RelOptHiveTable table = (RelOptHiveTable) rel.getTable();
+      List<Object> list = jsonBuilder.list();
+      list.addAll(table.getHiveTableMD().getPartColNames());
+      if (!list.isEmpty()) {
+        map.put("partitionColumns", list);
       }
-    } catch (Exception e) {
-      LOG.warn("Failed to add additional fields in json writer", e);
+      // We also include column stats
+      List<ColStatistics> colStats = table.getColStat(
+          ImmutableBitSet.range(0, table.getNoOfNonVirtualCols()).asList(), true);
+      list = jsonBuilder.list();
+      for (ColStatistics cs : colStats) {
+        final Map<String, Object> csMap = jsonBuilder.map();
+        csMap.put("name", cs.getColumnName());
+        csMap.put("ndv", cs.getCountDistint());
+        if (cs.getRange() != null) {
+          csMap.put("minValue", cs.getRange().minValue);
+          csMap.put("maxValue", cs.getRange().maxValue);
+        }
+        list.add(csMap);
+      }
+      if (!list.isEmpty()) {
+        map.put("colStats", list);
+      }
     }
   }
 

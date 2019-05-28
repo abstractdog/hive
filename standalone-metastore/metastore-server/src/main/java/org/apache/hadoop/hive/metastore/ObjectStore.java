@@ -1291,17 +1291,17 @@ public class ObjectStore implements RawStore, Configurable {
   @Override
   public List<String> getTables(String catName, String dbName, String pattern)
       throws MetaException {
-    return getTables(catName, dbName, pattern, null);
+    return getTables(catName, dbName, pattern, null, -1);
   }
 
   @Override
-  public List<String> getTables(String catName, String dbName, String pattern, TableType tableType)
+  public List<String> getTables(String catName, String dbName, String pattern, TableType tableType, int limit)
       throws MetaException {
     try {
       // We only support pattern matching via jdo since pattern matching in Java
       // might be different than the one used by the metastore backends
       return getTablesInternal(catName, dbName, pattern, tableType,
-          (pattern == null || pattern.equals(".*")), true);
+          (pattern == null || pattern.equals(".*")), true, limit);
     } catch (NoSuchObjectException e) {
       throw new MetaException(ExceptionUtils.getStackTrace(e));
     }
@@ -1398,7 +1398,7 @@ public class ObjectStore implements RawStore, Configurable {
   }
 
   protected List<String> getTablesInternal(String catName, String dbName, String pattern,
-                                           TableType tableType, boolean allowSql, boolean allowJdo)
+                                           TableType tableType, boolean allowSql, boolean allowJdo, int limit)
       throws MetaException, NoSuchObjectException {
     final String db_name = normalizeIdentifier(dbName);
     final String cat_name = normalizeIdentifier(catName);
@@ -1406,19 +1406,19 @@ public class ObjectStore implements RawStore, Configurable {
       @Override
       protected List<String> getSqlResult(GetHelper<List<String>> ctx)
               throws MetaException {
-        return directSql.getTables(cat_name, db_name, tableType);
+        return directSql.getTables(cat_name, db_name, tableType, limit);
       }
 
       @Override
       protected List<String> getJdoResult(GetHelper<List<String>> ctx)
               throws MetaException, NoSuchObjectException {
-        return getTablesInternalViaJdo(cat_name, db_name, pattern, tableType);
+        return getTablesInternalViaJdo(cat_name, db_name, pattern, tableType, limit);
       }
     }.run(false);
   }
 
   private List<String> getTablesInternalViaJdo(String catName, String dbName, String pattern,
-                                               TableType tableType) throws MetaException {
+                                               TableType tableType, int limit) throws MetaException {
     boolean commited = false;
     Query query = null;
     List<String> tbls = null;
@@ -1442,6 +1442,8 @@ public class ObjectStore implements RawStore, Configurable {
       query = pm.newQuery(MTable.class, filterBuilder.toString());
       query.setResult("tableName");
       query.setOrdering("tableName ascending");
+      if (limit >= 0)
+        query.setRange(0, limit);
       Collection<String> names = (Collection<String>) query.executeWithArray(parameterVals.toArray(new String[0]));
       tbls = new ArrayList<>(names);
       commited = commitTransaction();
@@ -1449,6 +1451,33 @@ public class ObjectStore implements RawStore, Configurable {
       rollbackAndCleanup(commited, query);
     }
     return tbls;
+  }
+
+  @Override
+  public List<Table> getAllMaterializedViewObjectsForRewriting(String catName) throws MetaException {
+    List<Table> allMaterializedViews = new ArrayList<>();
+    boolean commited = false;
+    Query query = null;
+    try {
+      openTransaction();
+      catName = normalizeIdentifier(catName);
+      query = pm.newQuery(MTable.class);
+      query.setFilter("database.catalogName == catName && tableType == tt && rewriteEnabled == re");
+      query.declareParameters("java.lang.String catName, java.lang.String tt, boolean re");
+      Collection<MTable> mTbls = (Collection<MTable>) query.executeWithArray(
+          catName, TableType.MATERIALIZED_VIEW.toString(), true);
+      for (MTable mTbl : mTbls) {
+        Table tbl = convertToTable(mTbl);
+        tbl.setCreationMetadata(
+            convertToCreationMetadata(
+                getCreationMetadata(tbl.getCatName(), tbl.getDbName(), tbl.getTableName())));
+        allMaterializedViews.add(tbl);
+      }
+      commited = commitTransaction();
+    } finally {
+      rollbackAndCleanup(commited, query);
+    }
+    return allMaterializedViews;
   }
 
   @Override
@@ -2673,8 +2702,7 @@ public class ObjectStore implements RawStore, Configurable {
     return new GetListHelper<Partition>(catName, dbName, tblName, allowSql, allowJdo) {
       @Override
       protected List<Partition> getSqlResult(GetHelper<List<Partition>> ctx) throws MetaException {
-        Integer max = (maxParts < 0) ? null : maxParts;
-        return directSql.getPartitions(catName, dbName, tblName, max);
+        return directSql.getPartitions(catName, dbName, tblName, maxParts);
       }
       @Override
       protected List<Partition> getJdoResult(
@@ -4180,8 +4208,8 @@ public class ObjectStore implements RawStore, Configurable {
       boolean isToTxn = isTxn && !TxnUtils.isTransactionalTable(oldt.getParameters());
       if (!isToTxn && isTxn && areTxnStatsSupported) {
         // Transactional table is altered without a txn. Make sure there are no changes to the flag.
-        String errorMsg = verifyStatsChangeCtx(oldt.getParameters(), newTable.getParameters(),
-            newTable.getWriteId(), queryValidWriteIds, false);
+        String errorMsg = verifyStatsChangeCtx(TableName.getDbTable(name, dbname), oldt.getParameters(),
+                newTable.getParameters(), newTable.getWriteId(), queryValidWriteIds, false);
         if (errorMsg != null) {
           throw new MetaException(errorMsg);
         }
@@ -4238,8 +4266,8 @@ public class ObjectStore implements RawStore, Configurable {
    * Verifies that the stats JSON string is unchanged for alter table (txn stats).
    * @return Error message with the details of the change, or null if the value has not changed.
    */
-  public static String verifyStatsChangeCtx(Map<String, String> oldP, Map<String, String> newP,
-      long writeId, String validWriteIds, boolean isColStatsChange) {
+  public static String verifyStatsChangeCtx(String fullTableName, Map<String, String> oldP, Map<String, String> newP,
+                                            long writeId, String validWriteIds, boolean isColStatsChange) {
     if (validWriteIds != null && writeId > 0) return null; // We have txn context.
     String oldVal = oldP == null ? null : oldP.get(StatsSetupConst.COLUMN_STATS_ACCURATE);
     String newVal = newP == null ? null : newP.get(StatsSetupConst.COLUMN_STATS_ACCURATE);
@@ -4255,9 +4283,10 @@ public class ObjectStore implements RawStore, Configurable {
     // Some change to the stats state is being made; it can only be made with a write ID.
     // Note - we could do this:  if (writeId > 0 && (validWriteIds != null || !StatsSetupConst.areBasicStatsUptoDate(newP))) { return null;
     //       However the only way ID list can be absent is if WriteEntity wasn't generated for the alter, which is a separate bug.
-    return "Cannot change stats state for a transactional table without providing the transactional"
-        + " write state for verification (new write ID " + writeId + ", valid write IDs "
-        + validWriteIds + "; current state " + oldVal + "; new state " + newVal;
+    return "Cannot change stats state for a transactional table " + fullTableName + " without " +
+            "providing the transactional write state for verification (new write ID " +
+            writeId + ", valid write IDs " + validWriteIds + "; current state " + oldVal + "; new" +
+            " state " + newVal;
   }
 
   @Override
@@ -4319,8 +4348,9 @@ public class ObjectStore implements RawStore, Configurable {
     boolean isTxn = TxnUtils.isTransactionalTable(table.getParameters());
     if (isTxn && areTxnStatsSupported) {
       // Transactional table is altered without a txn. Make sure there are no changes to the flag.
-      String errorMsg = verifyStatsChangeCtx(oldp.getParameters(), newPart.getParameters(),
-          newPart.getWriteId(), validWriteIds, false);
+      String errorMsg = verifyStatsChangeCtx(TableName.getDbTable(dbname, name),
+              oldp.getParameters(),
+              newPart.getParameters(), newPart.getWriteId(), validWriteIds, false);
       if (errorMsg != null) {
         throw new MetaException(errorMsg);
       }
@@ -8525,7 +8555,7 @@ public class ObjectStore implements RawStore, Configurable {
         if (!areTxnStatsSupported) {
           StatsSetupConst.setBasicStatsState(newParams, StatsSetupConst.FALSE);
         } else {
-          String errorMsg = verifyStatsChangeCtx(
+          String errorMsg = verifyStatsChangeCtx(TableName.getDbTable(dbname, name),
               oldt.getParameters(), newParams, writeId, validWriteIds, true);
           if (errorMsg != null) {
             throw new MetaException(errorMsg);
@@ -8620,8 +8650,9 @@ public class ObjectStore implements RawStore, Configurable {
         if (!areTxnStatsSupported) {
           StatsSetupConst.setBasicStatsState(newParams, StatsSetupConst.FALSE);
         } else {
-          String errorMsg = verifyStatsChangeCtx(
-              mPartition.getParameters(), newParams, writeId, validWriteIds, true);
+          String errorMsg = verifyStatsChangeCtx(TableName.getDbTable(statsDesc.getDbName(),
+                                                                      statsDesc.getTableName()),
+                  mPartition.getParameters(), newParams, writeId, validWriteIds, true);
           if (errorMsg != null) {
             throw new MetaException(errorMsg);
           }

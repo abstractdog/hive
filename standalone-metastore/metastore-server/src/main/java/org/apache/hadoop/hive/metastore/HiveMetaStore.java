@@ -33,6 +33,7 @@ import static org.apache.hadoop.hive.metastore.utils.MetaStoreUtils.prependNotNu
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -40,6 +41,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -78,6 +80,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.common.TableName;
+import org.apache.hadoop.hive.common.ValidReaderWriteIdList;
+import org.apache.hadoop.hive.common.ValidWriteIdList;
 import org.apache.hadoop.hive.common.ZooKeeperHiveHelper;
 import org.apache.hadoop.hive.common.ZKDeRegisterWatcher;
 import org.apache.hadoop.hive.metastore.api.*;
@@ -275,6 +279,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     private FileMetadataManager fileMetadataManager;
     private PartitionExpressionProxy expressionProxy;
     private StorageSchemaReader storageSchemaReader;
+    private IMetaStoreMetadataTransformer transformer;
 
     // Variables for metrics
     // Package visible so that HMSMetricsListener can see them.
@@ -626,6 +631,26 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
       isServerFilterEnabled = getIfServerFilterenabled();
       filterHook = isServerFilterEnabled ? loadFilterHooks() : null;
+
+      String className = MetastoreConf.getVar(conf, MetastoreConf.ConfVars.METASTORE_METADATA_TRANSFORMER_CLASS);
+      Class<?> clazz;
+      try {
+        clazz = conf.getClassByName(className);
+      } catch (ClassNotFoundException e) {
+        LOG.error("Unable to load class " + className, e);
+        throw new IllegalArgumentException(e);
+      }
+      Constructor<?> constructor;
+      try {
+        constructor = clazz.getConstructor(IHMSHandler.class);
+        if (Modifier.isPrivate(constructor.getModifiers()))
+          throw new IllegalArgumentException("Illegal implementation for metadata transformer. Constructor is private");
+        transformer = (IMetaStoreMetadataTransformer) constructor.newInstance(this);
+      } catch (NoSuchMethodException | InstantiationException | IllegalAccessException
+          | IllegalArgumentException | InvocationTargetException e) {
+        LOG.error("Unable to create instance of class " + className, e);
+        throw new IllegalArgumentException(e);
+      }
     }
 
     /**
@@ -1894,6 +1919,16 @@ public class HiveMetaStore extends ThriftHiveMetastore {
                                    List<SQLCheckConstraint> checkConstraints)
         throws AlreadyExistsException, MetaException,
         InvalidObjectException, NoSuchObjectException, InvalidInputException {
+
+      ColumnStatistics colStats = null;
+      // If the given table has column statistics, save it here. We will update it later.
+      // We don't want it to be part of the Table object being created, lest the create table
+      // event will also have the col stats which we don't want.
+      if (tbl.isSetColStats()) {
+        colStats = tbl.getColStats();
+        tbl.unsetColStats();
+      }
+
       // To preserve backward compatibility throw MetaException in case of null database
       if (tbl.getDbName() == null) {
         throw new MetaException("Null database name is not allowed");
@@ -2128,13 +2163,23 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         }
       }
 
-      // If the table has column statistics, update it into the metastore. This feature is used
-      // by replication to replicate table level statistics.
-      if (tbl.isSetColStats()) {
-        // We do not replicate statistics for a transactional table right now and hence we do not
-        // expect a transactional table to have column statistics here. So passing null
-        // validWriteIds is fine for now.
-        updateTableColumnStatsInternal(tbl.getColStats(), null, tbl.getWriteId());
+      // If the table has column statistics, update it into the metastore. We need a valid
+      // writeId list to update column statistics for a transactional table. But during bootstrap
+      // replication, where we use this feature, we do not have a valid writeId list which was
+      // used to update the stats. But we know for sure that the writeId associated with the
+      // stats was valid then (otherwise stats update would have failed on the source). So, craft
+      // a valid transaction list with only that writeId and use it to update the stats.
+      if (colStats != null) {
+        long writeId = tbl.getWriteId();
+        String validWriteIds = null;
+        if (writeId > 0) {
+          ValidWriteIdList validWriteIdList =
+                  new ValidReaderWriteIdList(TableName.getDbTable(tbl.getDbName(),
+                                                                  tbl.getTableName()),
+                                              new long[0], new BitSet(), writeId);
+          validWriteIds = validWriteIdList.toString();
+        }
+        updateTableColumnStatsInternal(colStats, validWriteIds, tbl.getWriteId());
       }
     }
 
@@ -3006,15 +3051,85 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     }
 
     @Override
+    public List<ExtendedTableInfo> get_tables_ext(final GetTablesExtRequest req) throws MetaException {
+      List<String> tables = new ArrayList<String>();
+      List<ExtendedTableInfo> ret = new ArrayList<ExtendedTableInfo>();
+      String catalog  = req.getCatalog();
+      String database = req.getDatabase();
+      String pattern  = req.getTableNamePattern();
+      List<String> processorCapabilities = req.getProcessorCapabilities();
+      int limit = req.getLimit();
+      String processorId  = req.getProcessorIdentifier();
+      List<Table> tObjects = new ArrayList<>();
+
+      startTableFunction("get_tables_ext", catalog, database, pattern);
+      Exception ex = null;
+      try {
+        tables = getMS().getTables(catalog, database, pattern, null, limit);
+        LOG.debug("get_tables_ext:getTables() returned " + tables.size());
+        tables = FilterUtils.filterTableNamesIfEnabled(isServerFilterEnabled, filterHook,
+                catalog, database, tables);
+
+        if (tables.size() > 0) {
+          tObjects = getMS().getTableObjectsByName(catalog, database, tables);
+          LOG.debug("get_tables_ext:getTableObjectsByName() returned " + tObjects.size());
+          if (processorCapabilities != null && processorCapabilities.size() > 0) {
+            if (transformer != null) {
+              Map<Table, List<String>> retMap = transformer.transform(tObjects, processorCapabilities, processorId);
+
+              for (Map.Entry<Table, List<String>> entry : retMap.entrySet())  {
+                ret.add(convertTableToExtendedTable(entry.getKey(), entry.getValue(), req.getRequestedFields()));
+              }
+            } else {
+              for (Table table : tObjects) {
+                ret.add(convertTableToExtendedTable(table, processorCapabilities, req.getRequestedFields()));
+              }
+            }
+          }
+        }
+      } catch (MetaException e) {
+        ex = e;
+        throw e;
+      } catch (Exception e) {
+        ex = e;
+        throw newMetaException(e);
+      } finally {
+        endFunction("get_tables_ext", ret != null, ex);
+      }
+      return ret;
+    }
+
+    private ExtendedTableInfo convertTableToExtendedTable (Table table,
+          List<String> processorCapabilities, int mask) {
+      ExtendedTableInfo extTable = new ExtendedTableInfo(table.getTableName());
+      if ((mask & GetTablesExtRequestFields.ACCESS_TYPE.getValue()) == GetTablesExtRequestFields.ACCESS_TYPE.getValue())
+        extTable.setAccessType(table.getAccessType());
+
+      if ((mask & GetTablesExtRequestFields.PROCESSOR_CAPABILITIES.getValue())
+             == GetTablesExtRequestFields.PROCESSOR_CAPABILITIES.getValue())
+        extTable.setProcessorCapabilities(processorCapabilities);
+
+      return extTable;
+    }
+
+    @Override
     public GetTableResult get_table_req(GetTableRequest req) throws MetaException,
         NoSuchObjectException {
       String catName = req.isSetCatName() ? req.getCatName() : getDefaultCatalog(conf);
       return new GetTableResult(getTableInternal(catName, req.getDbName(), req.getTblName(),
-          req.getCapabilities(), req.getValidWriteIdList(), req.isGetColumnStats()));
+          req.getCapabilities(), req.getValidWriteIdList(), req.isGetColumnStats(),
+          req.getProcessorCapabilities(), req.getProcessorIdentifier()));
     }
 
     private Table getTableInternal(String catName, String dbname, String name,
         ClientCapabilities capabilities, String writeIdList, boolean getColumnStats)
+        throws MetaException, NoSuchObjectException {
+      return getTableInternal(catName, dbname, name, capabilities, writeIdList, getColumnStats, null, null);
+    }
+
+    private Table getTableInternal(String catName, String dbname, String name,
+        ClientCapabilities capabilities, String writeIdList, boolean getColumnStats,
+        List<String> processorCapabilities, String processorId)
         throws MetaException, NoSuchObjectException {
       if (isInTest) {
         assertClientHasCapability(capabilities, ClientCapability.TEST_CAPABILITY,
@@ -3031,6 +3146,17 @@ public class HiveMetaStore extends ThriftHiveMetastore {
               "insert-only tables", "get_table_req");
         }
 
+        if (processorCapabilities != null && processorCapabilities.size() > 0 && transformer != null) {
+          List<Table> tList = new ArrayList<>();
+          tList.add(t);
+          Map<Table, List<String>> ret = transformer.transform(tList, processorCapabilities, processorId);
+          if (ret.size() > 1) {
+            LOG.warn("Unexpected resultset size:" + ret.size());
+            throw new MetaException("Unexpected result from metadata transformer:return list size=" + ret.size());
+          }
+          t = (Table)(ret.keySet().iterator().next());
+        }
+
         firePreEvent(new PreReadTableEvent(t, this));
       } catch (MetaException | NoSuchObjectException e) {
         ex = e;
@@ -3040,7 +3166,6 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       }
       return t;
     }
-
 
     @Override
     public List<TableMeta> get_table_meta(String dbnames, String tblNames, List<String> tblTypes)
@@ -3476,6 +3601,9 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       Map<String, String> transactionalListenerResponses = Collections.emptyMap();
       Database db = null;
 
+      List<ColumnStatistics> partsColStats = new ArrayList<>(parts.size());
+      List<Long> partsWriteIds = new ArrayList<>(parts.size());
+
       try {
         ms.openTransaction();
         tbl = ms.getTable(catName, dbName, tblName, null);
@@ -3495,6 +3623,16 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         List<Partition> partitionsToAdd = new ArrayList<>(parts.size());
         List<FieldSchema> partitionKeys = tbl.getPartitionKeys();
         for (final Partition part : parts) {
+          // Collect partition column stats to be updated if present. Partition objects passed down
+          // here at the time of replication may have statistics in them, which is required to be
+          // updated in the metadata. But we don't want it to be part of the Partition object when
+          // it's being created or altered, lest it becomes part of the notification event.
+          if (part.isSetColStats()) {
+            partsColStats.add(part.getColStats());
+            part.unsetColStats();
+            partsWriteIds.add(part.getWriteId());
+          }
+
           // Iterate through the partitions and validate them. If one of the partitions is
           // incorrect, an exception will be thrown before the threads which create the partition
           // folders are submitted. This way we can be sure that no partition and no partition
@@ -3538,11 +3676,24 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           }
         }
 
-        // Update partition column statistics if available
-        for (Partition newPart : newParts) {
-          if (newPart.isSetColStats()) {
-            updatePartitonColStatsInternal(tbl, newPart.getColStats(), null, newPart.getWriteId());
+        // Update partition column statistics if available. We need a valid writeId list to
+        // update column statistics for a transactional table. But during bootstrap replication,
+        // where we use this feature, we do not have a valid writeId list which was used to
+        // update the stats. But we know for sure that the writeId associated with the stats was
+        // valid then (otherwise stats update would have failed on the source). So, craft a valid
+        // transaction list with only that writeId and use it to update the stats.
+        int cnt = 0;
+        for (ColumnStatistics partColStats: partsColStats) {
+          long writeId = partsWriteIds.get(cnt++);
+          String validWriteIds = null;
+          if (writeId > 0) {
+            ValidWriteIdList validWriteIdList =
+                    new ValidReaderWriteIdList(TableName.getDbTable(tbl.getDbName(),
+                            tbl.getTableName()),
+                            new long[0], new BitSet(), writeId);
+            validWriteIds = validWriteIdList.toString();
           }
+          updatePartitonColStatsInternal(tbl, partColStats, validWriteIds, writeId);
         }
 
         success = ms.commitTransaction();
@@ -4875,6 +5026,13 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         List<Partition> partitions = getMS()
             .getPartitionSpecsByFilterAndProjection(table, request.getProjectionSpec(),
                 request.getFilterSpec());
+        List<String> processorCapabilities = request.getProcessorCapabilities();
+        String processorId = request.getProcessorIdentifier();
+        if (processorCapabilities != null && processorCapabilities.size() > 0) {
+          if (transformer != null) {
+            partitions = transformer.transformPartitions(partitions, processorCapabilities, processorId);
+          }
+        }
         List<PartitionSpec> partitionSpecs =
             MetaStoreServerUtils.getPartitionspecsGroupedByStorageDescriptor(table, partitions);
         response = new GetPartitionsResponse();
@@ -5312,7 +5470,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       List<String> ret = null;
       Exception ex = null;
       try {
-        ret = getMS().getTables(catName, dbname, pattern, TableType.valueOf(tableType));
+        ret = getMS().getTables(catName, dbname, pattern, TableType.valueOf(tableType), -1);
       } catch (MetaException e) {
         ex = e;
         throw e;
@@ -5321,6 +5479,27 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         throw newMetaException(e);
       } finally {
         endFunction("getTablesByTypeCore", ret != null, ex);
+      }
+      return ret;
+    }
+
+    @Override
+    public List<Table> get_all_materialized_view_objects_for_rewriting()
+        throws MetaException {
+      startFunction("get_all_materialized_view_objects_for_rewriting");
+
+      List<Table> ret = null;
+      Exception ex = null;
+      try {
+        ret = getMS().getAllMaterializedViewObjectsForRewriting(DEFAULT_CATALOG_NAME);
+      } catch (MetaException e) {
+        ex = e;
+        throw e;
+      } catch (Exception e) {
+        ex = e;
+        throw newMetaException(e);
+      } finally {
+        endFunction("get_all_materialized_view_objects_for_rewriting", ret != null, ex);
       }
       return ret;
     }
@@ -6384,12 +6563,19 @@ public class HiveMetaStore extends ThriftHiveMetastore {
             throws TException {
       List<Partition> partitions = get_partitions_by_names(gpbnr.getDb_name(),
               gpbnr.getTbl_name(), gpbnr.getNames(),
-              gpbnr.isSetGet_col_stats() && gpbnr.isGet_col_stats());
+              gpbnr.isSetGet_col_stats() && gpbnr.isGet_col_stats(), gpbnr.getProcessorCapabilities(),
+              gpbnr.getProcessorIdentifier());
       return new GetPartitionsByNamesResult(partitions);
     }
 
     public List<Partition> get_partitions_by_names(final String dbName, final String tblName,
            final List<String> partNames, boolean getColStats) throws TException {
+      return get_partitions_by_names(dbName, tblName, partNames, getColStats, null, null);
+    }
+ 
+    public List<Partition> get_partitions_by_names(final String dbName, final String tblName,
+           final List<String> partNames, boolean getColStats, List<String> processorCapabilities,
+           String processorId) throws TException {
 
       String[] dbNameParts = parseDbName(dbName, conf);
       String parsedCatName = dbNameParts[CAT_NAME];
@@ -6428,6 +6614,11 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           }
         }
 
+        if (transformer != null) {
+          if (processorCapabilities != null && processorCapabilities.size() > 0) {
+            ret = transformer.transformPartitions(ret, processorCapabilities, processorId);
+          }
+        }
         success = getMS().commitTransaction();
       } catch (Exception e) {
         ex = e;

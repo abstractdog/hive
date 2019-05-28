@@ -35,7 +35,7 @@ import java.util.List;
  *
  *<p>
  *
- * Implementations can use {@link MetaStoreUtils#isExternalTable} to
+ * Implementations can use {@link org.apache.hadoop.hive.metastore.utils.MetaStoreUtils#isExternalTable} to
  * distinguish external tables from managed tables.
  */
 @InterfaceAudience.Public
@@ -44,7 +44,9 @@ public interface HiveMetaHook {
 
   public String ALTER_TABLE_OPERATION_TYPE = "alterTableOpType";
 
+  // These should remain in sync with AlterTableDesc::AlterTableType enum
   public List<String> allowedAlterTypes = ImmutableList.of("ADDPROPS", "DROPPROPS");
+  String ALTERLOCATION = "ALTERLOCATION";
 
   /**
    * Called before a new table definition is added to the metastore

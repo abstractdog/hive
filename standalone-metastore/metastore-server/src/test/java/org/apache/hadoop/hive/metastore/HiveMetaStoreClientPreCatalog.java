@@ -1453,6 +1453,15 @@ public class HiveMetaStoreClientPreCatalog implements IMetaStoreClient, AutoClos
 
   /** {@inheritDoc} */
   @Override
+  public List<ExtendedTableInfo> getTablesExt(String catName, String dbName, String tablePattern,
+                 int requestedFields, int limit) throws MetaException, TException {
+    GetTablesExtRequest req = new GetTablesExtRequest(catName, dbName, tablePattern, requestedFields);
+    req.setLimit(limit);
+    return client.get_tables_ext(req);
+  }
+
+  /** {@inheritDoc} */
+  @Override
   public Materialization getMaterializationInvalidationInfo(CreationMetadata cm, String validTxnList)
       throws MetaException, InvalidOperationException, UnknownDBException, TException {
     return client.get_materialization_invalidation_info(cm, validTxnList);
@@ -1502,6 +1511,17 @@ public class HiveMetaStoreClientPreCatalog implements IMetaStoreClient, AutoClos
     try {
       return filterHook.filterTableNames(null, dbname,
           client.get_tables_by_type(dbname, tablePattern, tableType.toString()));
+    } catch (Exception e) {
+      MetaStoreUtils.logAndThrowMetaException(e);
+    }
+    return null;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public List<Table> getAllMaterializedViewObjectsForRewriting() throws MetaException {
+    try {
+      return filterHook.filterTables(client.get_all_materialized_view_objects_for_rewriting());
     } catch (Exception e) {
       MetaStoreUtils.logAndThrowMetaException(e);
     }

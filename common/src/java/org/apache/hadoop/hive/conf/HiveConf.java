@@ -470,12 +470,12 @@ public class HiveConf extends Configuration {
     REPL_DUMP_METADATA_ONLY("hive.repl.dump.metadata.only", false,
         "Indicates whether replication dump only metadata information or data + metadata. \n"
           + "This config makes hive.repl.include.external.tables config ineffective."),
-    REPL_DUMP_INCLUDE_ACID_TABLES("hive.repl.dump.include.acid.tables", false,
-        "Indicates if repl dump should include information about ACID tables. It should be \n"
-            + "used in conjunction with 'hive.repl.dump.metadata.only' to enable copying of \n"
-            + "metadata for acid tables which do not require the corresponding transaction \n"
-            + "semantics to be applied on target. This can be removed when ACID table \n"
-            + "replication is supported."),
+    REPL_BOOTSTRAP_ACID_TABLES("hive.repl.bootstrap.acid.tables", false,
+        "Indicates if repl dump should bootstrap the information about ACID tables along with \n"
+            + "incremental dump for replication. It is recommended to keep this config parameter \n"
+            + "as false always and should be set to true only via WITH clause of REPL DUMP \n"
+            + "command. It should be set to true only once for incremental repl dump on \n"
+            + "each of the existing replication policies after enabling acid tables replication."),
     REPL_BOOTSTRAP_DUMP_OPEN_TXN_TIMEOUT("hive.repl.bootstrap.dump.open.txn.timeout", "1h",
         new TimeValidator(TimeUnit.HOURS),
         "Indicates the timeout for all transactions which are opened before triggering bootstrap REPL DUMP. "
@@ -627,10 +627,26 @@ public class HiveConf extends Configuration {
         "internal usage only, used only in test mode. If set false, the operation logs, and the " +
         "operation log directory will not be removed, so they can be found after the test runs."),
 
+    HIVE_TEST_LOAD_HOSTNAMES("hive.test.load.hostnames", "",
+        "Specify host names for load testing. (e.g., \"host1,host2,host3\"). Leave it empty if no " +
+        "load generation is needed (eg. for production)."),
+    HIVE_TEST_LOAD_INTERVAL("hive.test.load.interval", "10ms", new TimeValidator(TimeUnit.MILLISECONDS),
+        "The interval length used for load and idle periods in milliseconds."),
+    HIVE_TEST_LOAD_UTILIZATION("hive.test.load.utilization", 0.2f,
+        "Specify processor load utilization between 0.0 (not loaded on all threads) and 1.0 " +
+        "(fully loaded on all threads). Comparing this with a random value the load generator creates " +
+        "hive.test.load.interval length active loops or idle periods"),
+
     HIVE_IN_TEZ_TEST("hive.in.tez.test", false, "internal use only, true when in testing tez",
         true),
     HIVE_MAPJOIN_TESTING_NO_HASH_TABLE_LOAD("hive.mapjoin.testing.no.hash.table.load", false, "internal use only, true when in testing map join",
         true),
+    HIVE_ADDITIONAL_PARTIAL_MASKS_PATTERN("hive.qtest.additional.partial.mask.pattern", "",
+        "internal use only, used in only qtests. Provide additional partial masks pattern" +
+         "for qtests as a ',' separated list"),
+    HIVE_ADDITIONAL_PARTIAL_MASKS_REPLACEMENT_TEXT("hive.qtest.additional.partial.mask.replacement.text", "",
+        "internal use only, used in only qtests. Provide additional partial masks replacement" +
+        "text for qtests as a ',' separated list"),
 
     HIVE_IN_REPL_TEST_FILES_SORTED("hive.in.repl.test.files.sorted", false,
       "internal usage only, set to true if the file listing is required in sorted order during bootstrap load", true),
@@ -1690,6 +1706,10 @@ public class HiveConf extends Configuration {
         "tries to modify the original materialization contents to reflect the latest changes to the\n" +
         "materialized view source tables, instead of rebuilding the contents fully. Incremental rebuild\n" +
         "is based on the materialized view algebraic incremental rewriting."),
+    HIVE_MATERIALIZED_VIEW_REBUILD_INCREMENTAL_FACTOR("hive.materializedview.rebuild.incremental.factor", 0.1f,
+        "The estimated cost of the resulting plan for incremental maintenance of materialization\n" +
+        "with aggregations will be multiplied by this value. Reducing the value can be useful to\n" +
+        "favour incremental rebuild over full rebuild."),
     HIVE_MATERIALIZED_VIEW_FILE_FORMAT("hive.materializedview.fileformat", "ORC",
         new StringSet("none", "TextFile", "SequenceFile", "RCfile", "ORC"),
         "Default file format for CREATE MATERIALIZED VIEW statement"),
@@ -1972,6 +1992,12 @@ public class HiveConf extends Configuration {
     HIVE_PARQUET_TIMESTAMP_SKIP_CONVERSION("hive.parquet.timestamp.skip.conversion", false,
       "Current Hive implementation of parquet stores timestamps to UTC, this flag allows skipping of the conversion" +
       "on reading parquet files from other tools"),
+    HIVE_AVRO_TIMESTAMP_SKIP_CONVERSION("hive.avro.timestamp.skip.conversion", false,
+        "Some older Hive implementations (pre-3.1) wrote Avro timestamps in a UTC-normalized" +
+        "manner, while from version 3.1 until now Hive wrote time zone agnostic timestamps. " +
+        "Setting this flag to true will treat legacy timestamps as time zone agnostic. Setting " +
+        "it to false will treat legacy timestamps as UTC-normalized. This flag will not affect " +
+        "timestamps written after this change."),
     HIVE_INT_TIMESTAMP_CONVERSION_IN_SECONDS("hive.int.timestamp.conversion.in.seconds", false,
         "Boolean/tinyint/smallint/int/bigint value is interpreted as milliseconds during the timestamp conversion.\n" +
         "Set this flag to true to interpret the value as seconds to be consistent with float/double." ),
@@ -2158,6 +2184,17 @@ public class HiveConf extends Configuration {
         "This named is used by Tez to set the dag name. This name in turn will appear on \n" +
         "the Tez UI representing the work that was done. Used by Spark to set the query name, will show up in the\n" +
         "Spark UI."),
+
+    SYSLOG_INPUT_FORMAT_FILE_PRUNING("hive.syslog.input.format.file.pruning", true,
+      "Whether syslog input format should prune files based on timestamp (ts) column in sys.logs table."),
+    SYSLOG_INPUT_FORMAT_FILE_TIME_SLICE("hive.syslog.input.format.file.time.slice", "300s",
+      new TimeValidator(TimeUnit.SECONDS, 0L, false, Long.MAX_VALUE, false),
+      "Files stored in sys.logs typically are chunked with time interval. For example: depending on the\n" +
+        "logging library used this represents the flush interval/time slice. \n" +
+        "If time slice/flust interval is set to 5 minutes, then the expectation is that the filename \n" +
+        "2019-01-02-10-00_0.log represent time range from 10:00 to 10:05.\n" +
+        "This time slice should align with the flush interval of the logging library else file pruning may\n" +
+        "incorrectly prune files leading to incorrect results from sys.logs table."),
 
     HIVEOPTIMIZEBUCKETINGSORTING("hive.optimize.bucketingsorting", true,
         "Don't create a reducer for enforcing \n" +
@@ -4026,6 +4063,10 @@ public class HiveConf extends Configuration {
     LLAP_ALLOCATOR_DEFRAG_HEADROOM("hive.llap.io.allocator.defrag.headroom", "1Mb",
         "How much of a headroom to leave to allow allocator more flexibility to defragment.\n" +
         "The allocator would further cap it to a fraction of total memory."),
+    LLAP_ALLOCATOR_MAX_FORCE_EVICTED("hive.llap.io.allocator.max.force.eviction", "16Mb",
+        "Fragmentation can lead to some cases where more eviction has to happen to accommodate allocations\n" +
+            " This configuration puts a limit on how many bytes to force evict before using Allocator Discard method."
+            + " Higher values will allow allocator more flexibility and will lead to better caching."),
     LLAP_TRACK_CACHE_USAGE("hive.llap.io.track.cache.usage", true,
          "Whether to tag LLAP cache contents, mapping them to Hive entities (paths for\n" +
          "partitions and tables) for reporting."),
@@ -4676,7 +4717,11 @@ public class HiveConf extends Configuration {
             "This parameter enables a number of optimizations when running on blobstores:\n" +
             "(1) If hive.blobstore.use.blobstore.as.scratchdir is false, force the last Hive job to write to the blobstore.\n" +
             "This is a performance optimization that forces the final FileSinkOperator to write to the blobstore.\n" +
-            "See HIVE-15121 for details.");
+            "See HIVE-15121 for details."),
+
+    HIVE_ADDITIONAL_CONFIG_FILES("hive.additional.config.files", "",
+            "The names of additional config files, such as ldap-site.xml," +
+                    "spark-site.xml, etc in comma separated list.");
 
     public final String varname;
     public final String altName;
@@ -5447,6 +5492,18 @@ public class HiveConf extends Configuration {
       addResource(hiveServer2SiteUrl);
     }
 
+    String val = this.getVar(HiveConf.ConfVars.HIVE_ADDITIONAL_CONFIG_FILES);
+    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+
+    if (val != null && !val.isEmpty()) {
+      String[] configFiles = val.split(",");
+      for (String config : configFiles) {
+        URL configURL = findConfigFile(classLoader, config, true);
+        if (configURL != null) {
+          addResource(configURL);
+        }
+      }
+    }
     // Overlay the values of any system properties and manual overrides
     applySystemProperties();
 

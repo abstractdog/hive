@@ -29,6 +29,10 @@ namespace php metastore
 namespace cpp Apache.Hadoop.Hive
 
 const string DDL_TIME = "transient_lastDdlTime"
+const byte ACCESSTYPE_NONE       = 1;
+const byte ACCESSTYPE_READONLY   = 2;
+const byte ACCESSTYPE_WRITEONLY  = 4;
+const byte ACCESSTYPE_READWRITE  = 8;
 
 struct Version {
   1: string version,
@@ -424,6 +428,15 @@ struct StorageDescriptor {
   12: optional bool   storedAsSubDirectories       // stored as subdirectories or not
 }
 
+struct CreationMetadata {
+    1: required string catName
+    2: required string dbName,
+    3: required string tblName,
+    4: required set<string> tablesUsed,
+    5: optional string validTxnList,
+    6: optional i64 materializationTime
+}
+
 // table information
 struct Table {
   1: optional i64 id,                 // id of the table. It will be ignored if set. It's only for
@@ -448,7 +461,8 @@ struct Table {
   19: optional PrincipalType ownerType = PrincipalType.USER, // owner type of this table (default to USER for backward compatibility)
   20: optional i64 writeId=-1,
   21: optional bool isStatsCompliant,
-  22: optional ColumnStatistics colStats // column statistics for table
+  22: optional ColumnStatistics colStats, // column statistics for table
+  23: optional byte accessType
 }
 
 struct Partition {
@@ -480,20 +494,6 @@ struct PartitionSpecWithSharedSD {
   2: StorageDescriptor sd,
 }
 
-struct PartitionListComposingSpec {
-  1: list<Partition> partitions
-}
-
-struct PartitionSpec {
-  1: string dbName,
-  2: string tableName,
-  3: string rootPath,
-  4: optional PartitionSpecWithSharedSD sharedSDPartitionSpec,
-  5: optional PartitionListComposingSpec partitionList,
-  6: optional string catName,
-  7: optional i64 writeId=-1,
-  8: optional bool isStatsCompliant
-}
 
 // column statistics
 struct BooleanColumnStatsData {
@@ -590,6 +590,21 @@ struct ColumnStatistics {
 2: required list<ColumnStatisticsObj> statsObj,
 3: optional bool isStatsCompliant // Are the stats isolation-level-compliant with the
                                                       // the calling query?
+}
+
+struct PartitionListComposingSpec {
+  1: list<Partition> partitions
+}
+
+struct PartitionSpec {
+  1: string dbName,
+  2: string tableName,
+  3: string rootPath,
+  4: optional PartitionSpecWithSharedSD sharedSDPartitionSpec,
+  5: optional PartitionListComposingSpec partitionList,
+  6: optional string catName,
+  7: optional i64 writeId=-1,
+  8: optional bool isStatsCompliant
 }
 
 struct AggrStats {
@@ -831,7 +846,9 @@ struct GetPartitionsByNamesRequest {
   1: required string db_name,
   2: required string tbl_name,
   3: optional list<string> names,
-  4: optional bool get_col_stats
+  4: optional bool get_col_stats,
+  5: optional list<string> processorCapabilities,
+  6: optional string processorIdentifier
 }
 
 struct GetPartitionsByNamesResult {
@@ -853,6 +870,13 @@ enum TxnType {
     REPL_CREATED = 1,
     READ_ONLY    = 2,
     COMPACTION   = 3
+}
+
+// specifies which info to return with GetTablesExtRequest
+enum GetTablesExtRequestFields {
+  ACCESS_TYPE = 1,      // return accessType
+  PROCESSOR_CAPABILITIES = 2,    // return ALL Capabilities for each Tables
+  ALL = 2147483647
 }
 
 struct ResourceUri {
@@ -927,17 +951,14 @@ struct CommitTxnKeyValue {
     3: required string value,
 }
 
-struct CommitTxnRequest {
-    1: required i64 txnid,
-    2: optional string replPolicy,
-    // Information related to write operations done in this transaction.
-    3: optional list<WriteEventInfo> writeEventInfos,
-
-    // An optional key/value to store atomically with the transaction
-    4: optional CommitTxnKeyValue keyValue,
-
-    // Information to update the last repl id of table/partition along with commit txn (replication from 2.6 to 3.0)
-    5: optional ReplLastIdInfo replLastIdInfo,
+struct WriteEventInfo {
+    1: required i64    writeId,
+    2: required string database,
+    3: required string table,
+    4: required string files,
+    5: optional string partition,
+    6: optional string tableObj, // repl txn task does not need table object for commit
+    7: optional string partitionObj,
 }
 
 struct ReplLastIdInfo {
@@ -949,14 +970,17 @@ struct ReplLastIdInfo {
     6: optional bool needUpdateDBReplId,
 }
 
-struct WriteEventInfo {
-    1: required i64    writeId,
-    2: required string database,
-    3: required string table,
-    4: required string files,
-    5: optional string partition,
-    6: optional string tableObj, // repl txn task does not need table object for commit
-    7: optional string partitionObj,
+struct CommitTxnRequest {
+    1: required i64 txnid,
+    2: optional string replPolicy,
+    // Information related to write operations done in this transaction.
+    3: optional list<WriteEventInfo> writeEventInfos,
+
+    // An optional key/value to store atomically with the transaction
+    4: optional CommitTxnKeyValue keyValue,
+
+    // Information to update the last repl id of table/partition along with commit txn (replication from 2.6 to 3.0)
+    5: optional ReplLastIdInfo replLastIdInfo,
 }
 
 struct ReplTblWriteIdStateRequest {
@@ -989,6 +1013,12 @@ struct GetValidWriteIdsResponse {
     1: required list<TableValidWriteIds> tblValidWriteIds,
 }
 
+// Map for allocated write id against the txn for which it is allocated
+struct TxnToWriteId {
+    1: required i64 txnId,
+    2: required i64 writeId,
+}
+
 // Request msg to allocate table write ids for the given list of txns
 struct AllocateTableWriteIdsRequest {
     1: required string dbName,
@@ -999,12 +1029,6 @@ struct AllocateTableWriteIdsRequest {
     4: optional string replPolicy,
     // The list is assumed to be sorted by both txnids and write ids. The write id list is assumed to be contiguous.
     5: optional list<TxnToWriteId> srcTxnToWriteIdList,
-}
-
-// Map for allocated write id against the txn for which it is allocated
-struct TxnToWriteId {
-    1: required i64 txnId,
-    2: required i64 writeId,
 }
 
 struct AllocateTableWriteIdsResponse {
@@ -1099,10 +1123,6 @@ struct CompactionRequest {
     6: optional map<string, string> properties
 }
 
-struct OptionalCompactionInfoStruct {
-    1: optional CompactionInfoStruct ci,
-}
-
 struct CompactionInfoStruct {
     1: required i64 id,
     2: required string dbname,
@@ -1116,6 +1136,10 @@ struct CompactionInfoStruct {
     10: optional string workerId
     11: optional i64 start
     12: optional i64 highestWriteId
+}
+
+struct OptionalCompactionInfoStruct {
+    1: optional CompactionInfoStruct ci,
 }
 
 struct CompactionResponse {
@@ -1165,14 +1189,6 @@ struct BasicTxnInfo {
     6: optional string partitionname
 }
 
-struct CreationMetadata {
-    1: required string catName
-    2: required string dbName,
-    3: required string tblName,
-    4: required set<string> tablesUsed,
-    5: optional string validTxnList,
-    6: optional i64 materializationTime
-}
 
 struct NotificationEventRequest {
     1: required i64 lastEvent,
@@ -1329,7 +1345,6 @@ enum ClientCapability {
   INSERT_ONLY_TABLES = 2
 }
 
-
 struct ClientCapabilities {
   1: required list<ClientCapability> values
 }
@@ -1340,7 +1355,9 @@ struct GetTableRequest {
   3: optional ClientCapabilities capabilities,
   4: optional string catName,
   6: optional string validWriteIdList,
-  7: optional bool getColumnStats
+  7: optional bool getColumnStats,
+  8: optional list<string> processorCapabilities,
+  9: optional string processorIdentifier
 }
 
 struct GetTableResult {
@@ -1352,11 +1369,30 @@ struct GetTablesRequest {
   1: required string dbName,
   2: optional list<string> tblNames,
   3: optional ClientCapabilities capabilities,
-  4: optional string catName
+  4: optional string catName,
+  5: optional list<string> processorCapabilities,
+  6: optional string processorIdentifier
 }
 
 struct GetTablesResult {
   1: required list<Table> tables
+}
+
+struct GetTablesExtRequest {
+ 1: required string catalog,
+ 2: required string database,
+ 3: required string tableNamePattern,            // table name matching pattern
+ 4: required i32 requestedFields,               // ORed GetTablesExtRequestFields
+ 5: optional i32 limit,                          // maximum number of tables returned (0=all)
+ 6: optional list<string> processorCapabilities, // list of capabilities “possessed” by the client
+ 7: optional string processorIdentifier
+}
+
+// response to GetTablesExtRequest call
+struct ExtendedTableInfo {
+ 1: required string tblName,                     // always returned
+ 2: optional i32 accessType,              // if AccessType set
+ 3: optional list<string> processorCapabilities  // if ProcessorCapabilities set
 }
 
 // Request type for cm_recycle
@@ -1787,7 +1823,9 @@ struct GetPartitionsRequest {
    5: optional string user,
    6: optional list<string> groupNames,
    7: GetPartitionsProjectionSpec projectionSpec
-   8: GetPartitionsFilterSpec filterSpec // TODO not yet implemented. Must be present but ignored
+   8: GetPartitionsFilterSpec filterSpec, // TODO not yet implemented. Must be present but ignored
+   9: optional list<string> processorCapabilities,
+   10: optional string processorIdentifier
 }
 
 // Exceptions.
@@ -1937,6 +1975,7 @@ service ThriftHiveMetastore extends fb303.FacebookService
   TruncateTableResponse truncate_table_req(1:TruncateTableRequest req) throws(1:MetaException o1)
   list<string> get_tables(1: string db_name, 2: string pattern) throws (1: MetaException o1)
   list<string> get_tables_by_type(1: string db_name, 2: string pattern, 3: string tableType) throws (1: MetaException o1)
+  list<Table> get_all_materialized_view_objects_for_rewriting() throws (1:MetaException o1)
   list<string> get_materialized_views_for_rewriting(1: string db_name) throws (1: MetaException o1)
   list<TableMeta> get_table_meta(1: string db_patterns, 2: string tbl_patterns, 3: list<string> tbl_types)
                        throws (1: MetaException o1)
@@ -1945,6 +1984,7 @@ service ThriftHiveMetastore extends fb303.FacebookService
   Table get_table(1:string dbname, 2:string tbl_name)
                        throws (1:MetaException o1, 2:NoSuchObjectException o2)
   list<Table> get_table_objects_by_name(1:string dbname, 2:list<string> tbl_names)
+  list<ExtendedTableInfo> get_tables_ext(1: GetTablesExtRequest req) throws (1: MetaException o1)
   GetTableResult get_table_req(1:GetTableRequest req) throws (1:MetaException o1, 2:NoSuchObjectException o2)
   GetTablesResult get_table_objects_by_name_req(1:GetTablesRequest req)
 				   throws (1:MetaException o1, 2:InvalidOperationException o2, 3:UnknownDBException o3)

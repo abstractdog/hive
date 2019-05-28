@@ -53,7 +53,7 @@ import org.apache.hadoop.hive.metastore.api.LockType;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.apache.hadoop.hive.ql.ddl.table.CreateTableDesc;
+import org.apache.hadoop.hive.ql.ddl.table.creation.CreateTableDesc;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.hooks.Entity;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
@@ -267,6 +267,35 @@ public class AcidUtils {
   }
 
   /**
+   * Return a base or delta directory path according to the given "options".
+   */
+  public static Path baseOrDeltaSubdirPath(Path directory, AcidOutputFormat.Options options) {
+    String subdir;
+    if (options.isWritingBase()) {
+      subdir = BASE_PREFIX + String.format(DELTA_DIGITS,
+              options.getMaximumWriteId());
+    } else if(options.getStatementId() == -1) {
+      //when minor compaction runs, we collapse per statement delta files inside a single
+      //transaction so we no longer need a statementId in the file name
+      subdir = options.isWritingDeleteDelta() ?
+              deleteDeltaSubdir(options.getMinimumWriteId(),
+                      options.getMaximumWriteId())
+              : deltaSubdir(options.getMinimumWriteId(),
+              options.getMaximumWriteId());
+    } else {
+      subdir = options.isWritingDeleteDelta() ?
+              deleteDeltaSubdir(options.getMinimumWriteId(),
+                      options.getMaximumWriteId(),
+                      options.getStatementId())
+              : deltaSubdir(options.getMinimumWriteId(),
+              options.getMaximumWriteId(),
+              options.getStatementId());
+    }
+    subdir = addVisibilitySuffix(subdir, options.getVisibilityTxnId());
+    return new Path(directory, subdir);
+  }
+
+  /**
    * Create a filename for a bucket file.
    * @param directory the partition directory
    * @param options the options for writing the bucket
@@ -274,32 +303,12 @@ public class AcidUtils {
    */
   public static Path createFilename(Path directory,
                                     AcidOutputFormat.Options options) {
-    String subdir;
     if (options.getOldStyle()) {
       return new Path(directory, String.format(LEGACY_FILE_BUCKET_DIGITS,
           options.getBucketId()) + "_0");
-    } else if (options.isWritingBase()) {
-      subdir = BASE_PREFIX + String.format(DELTA_DIGITS,
-          options.getMaximumWriteId());
-    } else if(options.getStatementId() == -1) {
-      //when minor compaction runs, we collapse per statement delta files inside a single
-      //transaction so we no longer need a statementId in the file name
-      subdir = options.isWritingDeleteDelta() ?
-          deleteDeltaSubdir(options.getMinimumWriteId(),
-                            options.getMaximumWriteId())
-          : deltaSubdir(options.getMinimumWriteId(),
-                        options.getMaximumWriteId());
     } else {
-      subdir = options.isWritingDeleteDelta() ?
-          deleteDeltaSubdir(options.getMinimumWriteId(),
-                            options.getMaximumWriteId(),
-                            options.getStatementId())
-          : deltaSubdir(options.getMinimumWriteId(),
-                        options.getMaximumWriteId(),
-                        options.getStatementId());
+      return createBucketFile(baseOrDeltaSubdirPath(directory, options), options.getBucketId());
     }
-    subdir = addVisibilitySuffix(subdir, options.getVisibilityTxnId());
-    return createBucketFile(new Path(directory, subdir), options.getBucketId());
   }
 
   /**
@@ -723,7 +732,10 @@ public class AcidUtils {
     }
   }
 
-  public static interface Directory {
+  /**
+   * Interface used to provide ACID directory information.
+   */
+  public interface Directory {
 
     /**
      * Get the base directory.
@@ -1080,12 +1092,15 @@ public class AcidUtils {
 
   /**
    * Is the given directory in ACID format?
-   * @param fileSystem file system instance
    * @param directory the partition directory to check
    * @param conf the query configuration
    * @return true, if it is an ACID directory
    * @throws IOException
    */
+  public static boolean isAcid(Path directory, Configuration conf) throws IOException {
+    return isAcid(null, directory, conf);
+  }
+
   public static boolean isAcid(FileSystem fileSystem, Path directory,
                                Configuration conf) throws IOException {
     FileSystem fs = fileSystem == null ? directory.getFileSystem(conf) : fileSystem;
@@ -1105,9 +1120,8 @@ public class AcidUtils {
   @VisibleForTesting
   public static Directory getAcidState(Path directory,
       Configuration conf,
-      ValidWriteIdList writeIdList
-      ) throws IOException {
-    return getAcidState(null, directory, conf, writeIdList, false, false);
+      ValidWriteIdList writeIdList) throws IOException {
+    return getAcidState(directory, conf, writeIdList, false, false);
   }
 
   /** State class for getChildState; cannot modify 2 things in a method. */
@@ -1123,24 +1137,35 @@ public class AcidUtils {
    * base and diff directories. Note that because major compactions don't
    * preserve the history, we can't use a base directory that includes a
    * write id that we must exclude.
-   * @param fileSystem file system instance
    * @param directory the partition directory to analyze
    * @param conf the configuration
    * @param writeIdList the list of write ids that we are reading
    * @return the state of the directory
    * @throws IOException
    */
-  public static Directory getAcidState(FileSystem fileSystem, Path directory,
-                                       Configuration conf,
+  public static Directory getAcidState(Path directory, Configuration conf,
                                        ValidWriteIdList writeIdList,
                                        boolean useFileIds,
-                                       boolean ignoreEmptyFiles
-                                       ) throws IOException {
+                                       boolean ignoreEmptyFiles) throws IOException {
+    return getAcidState(directory, conf, writeIdList, Ref.from(useFileIds), ignoreEmptyFiles, null);
+  }
+
+  public static Directory getAcidState(FileSystem fileSystem, Path directory, Configuration conf,
+                                       ValidWriteIdList writeIdList,
+                                       boolean useFileIds,
+                                       boolean ignoreEmptyFiles) throws IOException {
     return getAcidState(fileSystem, directory, conf, writeIdList, Ref.from(useFileIds), ignoreEmptyFiles, null);
   }
 
-  public static Directory getAcidState(FileSystem fileSystem, Path directory,
-                                       Configuration conf,
+  public static Directory getAcidState(Path directory, Configuration conf,
+                                       ValidWriteIdList writeIdList,
+                                       Ref<Boolean> useFileIds,
+                                       boolean ignoreEmptyFiles,
+                                       Map<String, String> tblproperties) throws IOException {
+    return getAcidState(null, directory, conf, writeIdList, useFileIds, ignoreEmptyFiles, tblproperties);
+  }
+
+  public static Directory getAcidState(FileSystem fileSystem, Path directory, Configuration conf,
                                        ValidWriteIdList writeIdList,
                                        Ref<Boolean> useFileIds,
                                        boolean ignoreEmptyFiles,
@@ -1169,21 +1194,8 @@ public class AcidUtils {
     List<Path> originalDirectories = new ArrayList<>();
     final List<Path> obsolete = new ArrayList<>();
     final List<Path> abortedDirectories = new ArrayList<>();
-    List<HdfsFileStatusWithId> childrenWithId = null;
-    Boolean val = useFileIds.value;
-    if (val == null || val) {
-      try {
-        childrenWithId = SHIMS.listLocatedHdfsStatus(fs, directory, hiddenFileFilter);
-        if (val == null) {
-          useFileIds.value = true;
-        }
-      } catch (Throwable t) {
-        LOG.error("Failed to get files with ID; using regular API: " + t.getMessage());
-        if (val == null && t instanceof UnsupportedOperationException) {
-          useFileIds.value = false;
-        }
-      }
-    }
+    List<HdfsFileStatusWithId> childrenWithId = tryListLocatedHdfsStatus(useFileIds, fs, directory);
+
     TxnBase bestBase = new TxnBase();
     final List<HdfsFileStatusWithId> original = new ArrayList<>();
     if (childrenWithId != null) {
@@ -1452,21 +1464,7 @@ public class AcidUtils {
   public static void findOriginals(FileSystem fs, Path dir,
       List<HdfsFileStatusWithId> original, Ref<Boolean> useFileIds,
       boolean ignoreEmptyFiles, boolean recursive) throws IOException {
-    List<HdfsFileStatusWithId> childrenWithId = null;
-    Boolean val = useFileIds.value;
-    if (val == null || val) {
-      try {
-        childrenWithId = SHIMS.listLocatedHdfsStatus(fs, dir, hiddenFileFilter);
-        if (val == null) {
-          useFileIds.value = true;
-        }
-      } catch (Throwable t) {
-        LOG.error("Failed to get files with ID; using regular API: " + t.getMessage());
-        if (val == null && t instanceof UnsupportedOperationException) {
-          useFileIds.value = false;
-        }
-      }
-    }
+    List<HdfsFileStatusWithId> childrenWithId = tryListLocatedHdfsStatus(useFileIds, fs, dir);
     if (childrenWithId != null) {
       for (HdfsFileStatusWithId child : childrenWithId) {
         if (child.getFileStatus().isDirectory()) {
@@ -1496,6 +1494,25 @@ public class AcidUtils {
     }
   }
 
+  private static List<HdfsFileStatusWithId> tryListLocatedHdfsStatus(Ref<Boolean> useFileIds,
+                                                                     FileSystem fs, Path directory) {
+    Boolean val = useFileIds.value;
+    List<HdfsFileStatusWithId> childrenWithId = null;
+    if (val == null || val) {
+      try {
+        childrenWithId = SHIMS.listLocatedHdfsStatus(fs, directory, hiddenFileFilter);
+        if (val == null) {
+          useFileIds.value = true;
+        }
+      } catch (Throwable t) {
+        LOG.error("Failed to get files with ID; using regular API: " + t.getMessage());
+        if (val == null && t instanceof UnsupportedOperationException) {
+          useFileIds.value = false;
+        }
+      }
+    }
+    return childrenWithId;
+  }
 
   public static boolean isTablePropertyTransactional(Properties props) {
     String resultStr = props.getProperty(hive_metastoreConstants.TABLE_IS_TRANSACTIONAL);
@@ -2580,6 +2597,9 @@ public class AcidUtils {
 
   private static void validateAcidFiles(FileStatus[] srcs, FileSystem fs) throws SemanticException {
     try {
+      if (srcs == null) {
+        return;
+      }
       for (FileStatus oneSrc : srcs) {
         if (!AcidUtils.MetaDataFile.isRawFormatFile(oneSrc.getPath(), fs)) {
           throw new SemanticException(ErrorMsg.LOAD_DATA_ACID_FILE, oneSrc.getPath().toString());

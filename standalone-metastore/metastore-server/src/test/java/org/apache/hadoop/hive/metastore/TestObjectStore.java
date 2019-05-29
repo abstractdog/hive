@@ -140,6 +140,8 @@ public class TestObjectStore {
     MetaStoreTestUtils.setConfForStandloneMode(conf);
 
     setupRandomObjectStoreUrl();
+    Deadline.registerIfNot(100000);
+
     objectStore = new ObjectStore();
     objectStore.setConf(conf);
 

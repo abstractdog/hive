@@ -3127,7 +3127,21 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
 
     if (isRenameAllowed) {
-      while (!destFs.rename(sourcePath, destFilePath)) {
+      /**
+       * FileSystem.rename() doesn't provide a reason why it failed, just a boolean.  It makes
+       * sense to loop around if it fails because destPath already exists but not if srcP
+       * disappeared.  The later may actually happen due to query being cancelled and
+       * then clean up logic deleting temp artifacts.  Then relying solely on rename() return
+       * value will make this loop spin forever.
+       * Having a separate loop checking
+       * destFs.exists(destPath) until a unique file name is found creates a problem in
+       * case of 2 concurrent writes to the same partition (w/o Hive locking or acid)
+       * since then it makes generating new file name and actual rename() not atomic.
+       *
+       * A better solution is to make sure all ThreadPoolS are properly terminated (shutdownAll)
+       * on cancel but that should be a comprehensive change.
+       */
+      while (destFs.exists(sourcePath) && !destFs.rename(sourcePath, destFilePath)) {
         destFilePath =  new Path(destDirPath, name + (Utilities.COPY_KEYWORD + counter) + (!type.isEmpty() ? "." + type : ""));
         counter++;
       }

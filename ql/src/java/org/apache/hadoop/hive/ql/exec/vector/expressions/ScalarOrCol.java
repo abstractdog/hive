@@ -199,7 +199,7 @@ public class ScalarOrCol extends VectorExpression {
             VectorExpressionDescriptor.Mode.PROJECTION)
         .setNumArguments(2)
         .setArgumentTypes(
-            VectorExpressionDescriptor.ArgumentType.getType("long"),
+            VectorExpressionDescriptor.ArgumentType.INT_FAMILY,
             VectorExpressionDescriptor.ArgumentType.getType("long"))
         .setInputExpressionTypes(
             VectorExpressionDescriptor.InputExpressionType.SCALAR,

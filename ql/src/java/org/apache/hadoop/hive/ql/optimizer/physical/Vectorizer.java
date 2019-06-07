@@ -3228,7 +3228,7 @@ public class Vectorizer implements PhysicalPlanResolver {
     boolean result = supportedDataTypesPattern.matcher(type).matches();
     if (result && !allowVoidProjection &&
         mode == VectorExpressionDescriptor.Mode.PROJECTION && type.equals("void")) {
-      return false;
+      //return false;
     }
 
     if (!result) {

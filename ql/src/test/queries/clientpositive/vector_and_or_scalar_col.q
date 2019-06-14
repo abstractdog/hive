@@ -18,3 +18,7 @@ select null or dt1 is not null from vector_and_or;
 
 explain vectorization detail select false or dt1 is not null from vector_and_or;
 select false or dt1 is not null from vector_and_or;
+
+explain vectorization detail
+select dt1 = dt1 from vector_and_or;
+select dt1 = dt1 from vector_and_or;

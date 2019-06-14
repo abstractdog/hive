@@ -26,9 +26,8 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 
 /**
- * This class performs OR expression on two input columns and stores,
- * the boolean output in a separate output column. The boolean values
- * are supposed to be represented as 0/1 in a long vector.
+ * This class performs OR expression on a scalar input and an input column and stores
+ * the boolean output in a separate output column.
  */
 public class ScalarOrCol extends VectorExpression {
 
@@ -36,11 +35,13 @@ public class ScalarOrCol extends VectorExpression {
 
   private final int colNum;
   private final long scalarVal;
+  private boolean nullScalar;
 
-  public ScalarOrCol(long scalarVal, int colNum, int outputColumnNum) {
+  public ScalarOrCol(ConstantVectorExpression expression, int colNum, int outputColumnNum) {
     super(outputColumnNum);
     this.colNum = colNum;
-    this.scalarVal = scalarVal;
+    this.scalarVal = expression.getLongValue();
+    this.nullScalar = expression.getIsNullValue();
   }
 
   public ScalarOrCol() {
@@ -75,9 +76,6 @@ public class ScalarOrCol extends VectorExpression {
 
     // We do not need to do a column reset since we are carefully changing the output.
     outV.isRepeating = false;
-
-    long vectorValue = vector[0];
-    boolean nullScalar = scalarVal == LongColumnVector.NULL_VALUE;
 
     if (inputColVector.noNulls && !nullScalar) {
       if (inputColVector.isRepeating) {

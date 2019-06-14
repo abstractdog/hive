@@ -1940,7 +1940,7 @@ import com.google.common.annotations.VisibleForTesting;
       } else if (child instanceof ExprNodeConstantDesc) {
         if (isNullConst(child)) {
           // Cannot handle NULL scalar parameter.
-          return null;
+          //return null;
         }
         builder.setInputExpressionType(i, InputExpressionType.SCALAR);
       } else if (child instanceof ExprNodeDynamicValueDesc) {
@@ -3988,6 +3988,9 @@ import com.google.common.annotations.VisibleForTesting;
     } else if (varcharTypePattern.matcher(typeString).matches()) {
       return ((HiveVarchar) constDesc.getValue()).getValue().getBytes(StandardCharsets.UTF_8);
     } else if (typeString.equalsIgnoreCase("boolean")) {
+      if (constDesc.getValue() == null) {
+        return null;
+      }
       if (constDesc.getValue().equals(Boolean.TRUE)) {
         return 1;
       } else {

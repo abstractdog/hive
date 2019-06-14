@@ -81,8 +81,8 @@ STAGE PLANS:
                     Select Vectorization:
                         className: VectorSelectOperator
                         native: true
-                        projectedOutputColumnNums: [4]
-                        selectExpressions: VectorUDFAdaptor((null or dt1 is not null))(children: IsNotNull(col 0:date) -> 3:boolean) -> 4:boolean
+                        projectedOutputColumnNums: [5]
+                        selectExpressions: ScalarOrCol(col 4:boolean, val 0:boolean)(children: IsNotNull(col 0:date) -> 4:boolean) -> 5:boolean
                     Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                     File Output Operator
                       compressed: false
@@ -103,14 +103,14 @@ STAGE PLANS:
                 featureSupportInUse: [DECIMAL_64]
                 inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
                 allNative: false
-                usesVectorUDFAdaptor: true
+                usesVectorUDFAdaptor: false
                 vectorized: true
                 rowBatchContext:
                     dataColumnCount: 2
                     includeColumns: [0]
                     dataColumns: dt1:date, dt2:date
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [bigint, bigint]
+                    scratchColumnTypeNames: [bigint, bigint, bigint]
 
   Stage: Stage-0
     Fetch Operator
@@ -118,6 +118,17 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
+PREHOOK: query: select null or dt1 is not null from vector_and_or
+PREHOOK: type: QUERY
+PREHOOK: Input: default@vector_and_or
+#### A masked pattern was here ####
+POSTHOOK: query: select null or dt1 is not null from vector_and_or
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@vector_and_or
+#### A masked pattern was here ####
+true
+true
+NULL
 PREHOOK: query: select null or dt1 is not null from vector_and_or
 PREHOOK: type: QUERY
 PREHOOK: Input: default@vector_and_or
@@ -212,13 +223,22 @@ POSTHOOK: Input: default@vector_and_or
 true
 true
 false
-PREHOOK: query: explain vectorization detail
-select dt1 = dt1 from vector_and_or
+PREHOOK: query: select false or dt1 is not null from vector_and_or
 PREHOOK: type: QUERY
 PREHOOK: Input: default@vector_and_or
 #### A masked pattern was here ####
-POSTHOOK: query: explain vectorization detail
-select dt1 = dt1 from vector_and_or
+POSTHOOK: query: select false or dt1 is not null from vector_and_or
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@vector_and_or
+#### A masked pattern was here ####
+true
+true
+false
+PREHOOK: query: explain vectorization detail select dt1 = dt1 from vector_and_or
+PREHOOK: type: QUERY
+PREHOOK: Input: default@vector_and_or
+#### A masked pattern was here ####
+POSTHOOK: query: explain vectorization detail select dt1 = dt1 from vector_and_or
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@vector_and_or
 #### A masked pattern was here ####
@@ -249,8 +269,8 @@ STAGE PLANS:
                     Select Vectorization:
                         className: VectorSelectOperator
                         native: true
-                        projectedOutputColumnNums: [4]
-                        selectExpressions: VectorUDFAdaptor((null or dt1 is not null))(children: IsNotNull(col 0:date) -> 3:boolean) -> 4:boolean
+                        projectedOutputColumnNums: [5]
+                        selectExpressions: ScalarOrCol(col 4:boolean, val 0:boolean)(children: IsNotNull(col 0:date) -> 4:boolean) -> 5:boolean
                     Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                     File Output Operator
                       compressed: false
@@ -271,14 +291,14 @@ STAGE PLANS:
                 featureSupportInUse: [DECIMAL_64]
                 inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
                 allNative: false
-                usesVectorUDFAdaptor: true
+                usesVectorUDFAdaptor: false
                 vectorized: true
                 rowBatchContext:
                     dataColumnCount: 2
                     includeColumns: [0]
                     dataColumns: dt1:date, dt2:date
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [bigint, bigint]
+                    scratchColumnTypeNames: [bigint, bigint, bigint]
 
   Stage: Stage-0
     Fetch Operator
@@ -286,6 +306,17 @@ STAGE PLANS:
       Processor Tree:
         ListSink
 
+PREHOOK: query: select dt1 = dt1 from vector_and_or
+PREHOOK: type: QUERY
+PREHOOK: Input: default@vector_and_or
+#### A masked pattern was here ####
+POSTHOOK: query: select dt1 = dt1 from vector_and_or
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@vector_and_or
+#### A masked pattern was here ####
+true
+true
+NULL
 PREHOOK: query: select dt1 = dt1 from vector_and_or
 PREHOOK: type: QUERY
 PREHOOK: Input: default@vector_and_or

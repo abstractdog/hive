@@ -348,6 +348,14 @@ public class Hive {
     return (session == null) ? new HiveConf(Hive.class) : session.getConf();
   }
 
+  public void setHMSClientCapabilities(String[] capabilities) {
+    HiveMetaStoreClient.setProcessorCapabilities(capabilities);
+  }
+
+  public void setHMSClientIdentifier(final String id) {
+    HiveMetaStoreClient.setProcessorIdentifier(id);
+  }
+
   private static boolean isCompatible(Hive db, HiveConf c, boolean isFastCheck) {
     if (isFastCheck) {
       return (db.metaStoreClient == null || db.metaStoreClient.isSameConfObj(c))
@@ -2181,7 +2189,7 @@ public class Hive {
 
       // column stats will be inaccurate
       if (resetStatistics) {
-        StatsSetupConst.clearColumnStatsState(newTPart.getParameters());
+        StatsSetupConst.setBasicStatsState(newTPart.getParameters(), StatsSetupConst.FALSE);
       }
 
       // recreate the partition if it existed before

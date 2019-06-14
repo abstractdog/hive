@@ -3058,13 +3058,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       String database = req.getDatabase();
       String pattern  = req.getTableNamePattern();
       List<String> processorCapabilities = req.getProcessorCapabilities();
+      int limit = req.getLimit();
       String processorId  = req.getProcessorIdentifier();
       List<Table> tObjects = new ArrayList<>();
 
       startTableFunction("get_tables_ext", catalog, database, pattern);
       Exception ex = null;
       try {
-        tables = getMS().getTables(catalog, database, pattern, null);
+        tables = getMS().getTables(catalog, database, pattern, null, limit);
         LOG.debug("get_tables_ext:getTables() returned " + tables.size());
         tables = FilterUtils.filterTableNamesIfEnabled(isServerFilterEnabled, filterHook,
                 catalog, database, tables);
@@ -3072,11 +3073,15 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         if (tables.size() > 0) {
           tObjects = getMS().getTableObjectsByName(catalog, database, tables);
           LOG.debug("get_tables_ext:getTableObjectsByName() returned " + tObjects.size());
-          if (processorCapabilities != null && processorCapabilities.size() > 0) {
+          if (processorCapabilities == null || processorCapabilities.size() == 0 ||
+                processorCapabilities.contains("MANAGERAWMETADATA")) {
+            LOG.info("Skipping translation for processor with " + processorId);
+          } else {
             if (transformer != null) {
               Map<Table, List<String>> retMap = transformer.transform(tObjects, processorCapabilities, processorId);
 
               for (Map.Entry<Table, List<String>> entry : retMap.entrySet())  {
+                LOG.debug("Table " + entry.getKey().getTableName() + " requires " + Arrays.toString((entry.getValue()).toArray()));
                 ret.add(convertTableToExtendedTable(entry.getKey(), entry.getValue(), req.getRequestedFields()));
               }
             } else {
@@ -3145,15 +3150,21 @@ public class HiveMetaStore extends ThriftHiveMetastore {
               "insert-only tables", "get_table_req");
         }
 
-        if (processorCapabilities != null && processorCapabilities.size() > 0 && transformer != null) {
-          List<Table> tList = new ArrayList<>();
-          tList.add(t);
-          Map<Table, List<String>> ret = transformer.transform(tList, processorCapabilities, processorId);
-          if (ret.size() > 1) {
-            LOG.warn("Unexpected resultset size:" + ret.size());
-            throw new MetaException("Unexpected result from metadata transformer:return list size=" + ret.size());
+        if (processorCapabilities == null || processorCapabilities.size() == 0 ||
+              processorCapabilities.contains("MANAGERAWMETADATA")) {
+          LOG.info("Skipping translation for processor with " + processorId);
+        } else {
+          if (transformer != null) {
+            List<Table> tList = new ArrayList<>();
+            tList.add(t);
+            Map<Table, List<String>> ret = transformer.transform(tList, processorCapabilities, processorId);
+            if (ret.size() > 1) {
+              LOG.warn("Unexpected resultset size:" + ret.size());
+              throw new MetaException("Unexpected result from metadata transformer:return list size is " + ret.size());
+            }
+            t = (Table)(ret.keySet().iterator().next());
+            LOG.debug("Table " + t.getTableName() + " requires " + Arrays.toString((ret.get(t)).toArray()));
           }
-          t = (Table)(ret.keySet().iterator().next());
         }
 
         firePreEvent(new PreReadTableEvent(t, this));
@@ -5027,7 +5038,10 @@ public class HiveMetaStore extends ThriftHiveMetastore {
                 request.getFilterSpec());
         List<String> processorCapabilities = request.getProcessorCapabilities();
         String processorId = request.getProcessorIdentifier();
-        if (processorCapabilities != null && processorCapabilities.size() > 0) {
+        if (processorCapabilities == null || processorCapabilities.size() == 0 ||
+              processorCapabilities.contains("MANAGERAWMETADATA")) {
+          LOG.info("Skipping translation for processor with " + processorId);
+        } else {
           if (transformer != null) {
             partitions = transformer.transformPartitions(partitions, processorCapabilities, processorId);
           }
@@ -5469,7 +5483,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       List<String> ret = null;
       Exception ex = null;
       try {
-        ret = getMS().getTables(catName, dbname, pattern, TableType.valueOf(tableType));
+        ret = getMS().getTables(catName, dbname, pattern, TableType.valueOf(tableType), -1);
       } catch (MetaException e) {
         ex = e;
         throw e;
@@ -6613,8 +6627,11 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           }
         }
 
-        if (transformer != null) {
-          if (processorCapabilities != null && processorCapabilities.size() > 0) {
+        if (processorCapabilities == null || processorCapabilities.size() == 0 ||
+              processorCapabilities.contains("MANAGERAWMETADATA")) {
+          LOG.info("Skipping translation for processor with " + processorId);
+        } else {
+          if (transformer != null) {
             ret = transformer.transformPartitions(ret, processorCapabilities, processorId);
           }
         }

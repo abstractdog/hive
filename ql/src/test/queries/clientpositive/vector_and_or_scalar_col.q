@@ -14,3 +14,7 @@ insert into table vector_and_or
   select date '2001-01-01', date '2001-06-01' from src limit 1;
 
 explain vectorization detail select null or dt1 is not null from vector_and_or;
+select null or dt1 is not null from vector_and_or;
+
+explain vectorization detail select false or dt1 is not null from vector_and_or;
+select false or dt1 is not null from vector_and_or;

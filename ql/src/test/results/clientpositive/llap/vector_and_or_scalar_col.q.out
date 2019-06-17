@@ -81,8 +81,8 @@ STAGE PLANS:
                     Select Vectorization:
                         className: VectorSelectOperator
                         native: true
-                        projectedOutputColumnNums: [5]
-                        selectExpressions: ScalarOrCol(col 4:boolean, val 0:boolean)(children: IsNotNull(col 0:date) -> 4:boolean) -> 5:boolean
+                        projectedOutputColumnNums: [4]
+                        selectExpressions: VectorUDFAdaptor((null or dt1 is not null))(children: IsNotNull(col 0:date) -> 3:boolean) -> 4:boolean
                     Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                     File Output Operator
                       compressed: false
@@ -103,14 +103,14 @@ STAGE PLANS:
                 featureSupportInUse: [DECIMAL_64]
                 inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
                 allNative: false
-                usesVectorUDFAdaptor: false
+                usesVectorUDFAdaptor: true
                 vectorized: true
                 rowBatchContext:
                     dataColumnCount: 2
                     includeColumns: [0]
                     dataColumns: dt1:date, dt2:date
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [bigint, bigint, bigint]
+                    scratchColumnTypeNames: [bigint, bigint]
 
   Stage: Stage-0
     Fetch Operator
@@ -269,8 +269,8 @@ STAGE PLANS:
                     Select Vectorization:
                         className: VectorSelectOperator
                         native: true
-                        projectedOutputColumnNums: [5]
-                        selectExpressions: ScalarOrCol(col 4:boolean, val 0:boolean)(children: IsNotNull(col 0:date) -> 4:boolean) -> 5:boolean
+                        projectedOutputColumnNums: [4]
+                        selectExpressions: VectorUDFAdaptor((null or dt1 is not null))(children: IsNotNull(col 0:date) -> 3:boolean) -> 4:boolean
                     Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                     File Output Operator
                       compressed: false
@@ -291,14 +291,14 @@ STAGE PLANS:
                 featureSupportInUse: [DECIMAL_64]
                 inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
                 allNative: false
-                usesVectorUDFAdaptor: false
+                usesVectorUDFAdaptor: true
                 vectorized: true
                 rowBatchContext:
                     dataColumnCount: 2
                     includeColumns: [0]
                     dataColumns: dt1:date, dt2:date
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [bigint, bigint, bigint]
+                    scratchColumnTypeNames: [bigint, bigint]
 
   Stage: Stage-0
     Fetch Operator

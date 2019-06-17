@@ -33,15 +33,13 @@ public class ScalarOrCol extends VectorExpression {
 
   private static final long serialVersionUID = 1L;
 
-  private final int colNum;
+  protected final int colNum;
   private final long scalarVal;
-  private boolean nullScalar;
 
-  public ScalarOrCol(ConstantVectorExpression expression, int colNum, int outputColumnNum) {
+  public ScalarOrCol(long scalarVal, int colNum, int outputColumnNum) {
     super(outputColumnNum);
     this.colNum = colNum;
-    this.scalarVal = expression.getLongValue();
-    this.nullScalar = expression.getIsNullValue();
+    this.scalarVal = scalarVal;
   }
 
   public ScalarOrCol() {
@@ -49,7 +47,7 @@ public class ScalarOrCol extends VectorExpression {
 
     // Dummy final assignments.
     colNum = -1;
-    scalarVal = LongColumnVector.NULL_VALUE;
+    scalarVal = LongColumnVector.SCALAR_NULL_VALUE;
   }
 
   @Override
@@ -77,7 +75,7 @@ public class ScalarOrCol extends VectorExpression {
     // We do not need to do a column reset since we are carefully changing the output.
     outV.isRepeating = false;
 
-    if (inputColVector.noNulls && !nullScalar) {
+    if (inputColVector.noNulls) {
       if (inputColVector.isRepeating) {
 
         // All must be selected otherwise size would be zero
@@ -110,29 +108,7 @@ public class ScalarOrCol extends VectorExpression {
      */
     outV.noNulls = false;
 
-    if (inputColVector.noNulls && nullScalar) {
-      // only input 2 side has nulls
-      if (inputColVector.isRepeating) {
-        // All must be selected otherwise size would be zero
-        // Repeating property will not change.
-        outV.isRepeating = true;
-        outputVector[0] = vector[0] | scalarVal;
-        outputIsNull[0] = (vector[0] == 0) && nullScalar;
-      } else if (!inputColVector.isRepeating) {
-        if (batch.selectedInUse) {
-          for (int j = 0; j != n; j++) {
-            int i = sel[j];
-            outputVector[i] = vector[i] | scalarVal;
-            outputIsNull[i] = (vector[i] == 0) && nullScalar;
-          }
-        } else {
-          for (int i = 0; i != n; i++) {
-            outputVector[i] = vector[i] | scalarVal;
-            outputIsNull[i] = (vector[i] == 0) && nullScalar;
-          }
-        }
-      }
-    } else if (!inputColVector.noNulls && !nullScalar) {
+    if (!inputColVector.noNulls) {
       // only input 1 side has nulls
       if (inputColVector.isRepeating) {
         // All must be selected otherwise size would be zero
@@ -154,31 +130,25 @@ public class ScalarOrCol extends VectorExpression {
           }
         }
       }
-    } else /* !inputColVector1.noNulls && nullScalar */{
+    } else /* !inputColVector1.noNulls && nullScalar */ {
       // either input 1 or input 2 may have nulls
       if (inputColVector.isRepeating) {
         // All must be selected otherwise size would be zero
         // Repeating property will not change.
         outV.isRepeating = true;
         outputVector[0] = vector[0] | scalarVal;
-        outputIsNull[0] = ((vector[0] == 0) && nullScalar)
-            || (inputColVector.isNull[0] && (scalarVal == 0))
-            || (inputColVector.isNull[0] && nullScalar);
+        outputIsNull[0] = inputColVector.isNull[0] && (scalarVal == 0);
       } else if (!inputColVector.isRepeating) {
         if (batch.selectedInUse) {
           for (int j = 0; j != n; j++) {
             int i = sel[j];
             outputVector[i] = vector[i] | scalarVal;
-            outputIsNull[i] = ((vector[i] == 0) && nullScalar)
-                || (inputColVector.isNull[i] && (scalarVal == 0))
-                || (inputColVector.isNull[i] && nullScalar);
+            outputIsNull[i] = inputColVector.isNull[i] && (scalarVal == 0);
           }
         } else {
           for (int i = 0; i != n; i++) {
             outputVector[i] = vector[i] | scalarVal;
-            outputIsNull[i] = ((vector[i] == 0) && nullScalar)
-                || (inputColVector.isNull[i] && (scalarVal == 0))
-                || (inputColVector.isNull[i] && nullScalar);
+            outputIsNull[i] = inputColVector.isNull[i] && (scalarVal == 0);
           }
         }
       }
@@ -192,15 +162,12 @@ public class ScalarOrCol extends VectorExpression {
 
   @Override
   public VectorExpressionDescriptor.Descriptor getDescriptor() {
-    return (new VectorExpressionDescriptor.Builder())
-        .setMode(
-            VectorExpressionDescriptor.Mode.PROJECTION)
+    return (new VectorExpressionDescriptor.Builder()).setMode(VectorExpressionDescriptor.Mode.PROJECTION)
         .setNumArguments(2)
-        .setArgumentTypes(
-            VectorExpressionDescriptor.ArgumentType.getType("long"),
+        .setArgumentTypes(VectorExpressionDescriptor.ArgumentType.getType("long"),
             VectorExpressionDescriptor.ArgumentType.getType("long"))
-        .setInputExpressionTypes(
-            VectorExpressionDescriptor.InputExpressionType.SCALAR,
-            VectorExpressionDescriptor.InputExpressionType.COLUMN).build();
+        .setInputExpressionTypes(VectorExpressionDescriptor.InputExpressionType.SCALAR,
+            VectorExpressionDescriptor.InputExpressionType.COLUMN)
+        .build();
   }
 }

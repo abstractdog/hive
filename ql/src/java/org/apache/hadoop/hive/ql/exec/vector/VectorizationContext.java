@@ -3989,12 +3989,9 @@ import com.google.common.annotations.VisibleForTesting;
       return ((HiveVarchar) constDesc.getValue()).getValue().getBytes(StandardCharsets.UTF_8);
     } else if (typeString.equalsIgnoreCase("boolean")) {
       if (constDesc.getValue() == null) {
-        return LongColumnVector.SCALAR_NULL_VALUE;
-      }
-      if (constDesc.getValue().equals(Boolean.TRUE)) {
-        return 1;
-      } else {
-        return 0;
+        return null;
+      }else{
+        return constDesc.getValue().equals(Boolean.TRUE) ? 1 : 0;
       }
     } else if (decimalTypePattern.matcher(typeString).matches()) {
       return constDesc.getValue();

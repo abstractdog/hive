@@ -5,7 +5,7 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 
-public class ScalarNullOrCol extends ScalarOrCol{
+public class ScalarNullOrCol extends ScalarOrCol {
   private static final long serialVersionUID = 1L;
 
   public ScalarNullOrCol(long scalarVal, int colNum, int outputColumnNum) {
@@ -22,7 +22,6 @@ public class ScalarNullOrCol extends ScalarOrCol{
     long[] outputVector = outV.vector;
     boolean[] outputIsNull = outV.isNull;
 
-    
     // null or "anything" is null
     outV.isRepeating = true;
     outputVector[0] = LongColumnVector.NULL_VALUE;

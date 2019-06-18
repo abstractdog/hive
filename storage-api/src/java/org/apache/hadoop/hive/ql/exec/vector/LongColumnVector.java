@@ -33,7 +33,6 @@ import java.util.Arrays;
 public class LongColumnVector extends ColumnVector {
   public long[] vector;
   public static final long NULL_VALUE = 1;
-  public static final long SCALAR_NULL_VALUE = -1;
 
   /**
    * Use this constructor by default. All column vectors

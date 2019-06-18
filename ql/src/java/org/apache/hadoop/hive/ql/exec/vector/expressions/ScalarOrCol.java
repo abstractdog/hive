@@ -47,7 +47,7 @@ public class ScalarOrCol extends VectorExpression {
 
     // Dummy final assignments.
     colNum = -1;
-    scalarVal = LongColumnVector.SCALAR_NULL_VALUE;
+    scalarVal = LongColumnVector.NULL_VALUE;
   }
 
   @Override

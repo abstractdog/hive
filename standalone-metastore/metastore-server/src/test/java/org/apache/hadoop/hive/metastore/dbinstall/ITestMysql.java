@@ -77,6 +77,6 @@ public class ITestMysql extends DbInstallBase {
 
   @Override
   protected String getHivePassword() {
-    return "hivepassword";
+    return HIVE_PASSWORD;
   }
 }

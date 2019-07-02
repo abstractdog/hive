@@ -19,11 +19,6 @@ package org.apache.hadoop.hive.metastore.dbinstall;
 
 public class ITestPostgres extends DbInstallBase {
   @Override
-  protected String getDockerContainerName() {
-    return "metastore-test-postgres-install";
-  }
-
-  @Override
   protected String getDockerImageName() {
     return "postgres:9.3";
   }
@@ -77,6 +72,6 @@ public class ITestPostgres extends DbInstallBase {
 
   @Override
   protected String getHivePassword() {
-    return "hivepassword";
+    return HIVE_PASSWORD;
   }
 }

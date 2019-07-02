@@ -40,11 +40,11 @@ public abstract class DbInstallBase {
   private static final Logger LOG = LoggerFactory.getLogger(DbInstallBase.class);
 
   private static final String HIVE_USER = "hiveuser";
+  protected static final String HIVE_PASSWORD = "hivepassword"; // used in most of the RDBMS configs, except MSSQL
   protected static final String HIVE_DB = "hivedb";
   private static final String FIRST_VERSION = "1.2.0";
   private static final int MAX_STARTUP_WAIT = 5 * 60 * 1000;
 
-  protected abstract String getDockerContainerName();
   protected abstract String getDockerImageName();
   protected abstract String[] getDockerAdditionalArgs();
   protected abstract String getDbType();
@@ -52,6 +52,11 @@ public abstract class DbInstallBase {
   protected abstract String getDbRootPassword();
   protected abstract String getJdbcDriver();
   protected abstract String getJdbcUrl();
+
+  protected String getDockerContainerName(){
+    return String.format("metastore-test-%s-install", getDbType());
+  };
+
   /**
    * URL to use when connecting as root rather than Hive
    * @return URL

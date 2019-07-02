@@ -19,11 +19,6 @@ package org.apache.hadoop.hive.metastore.dbinstall;
 
 public class ITestSqlServer extends DbInstallBase {
   @Override
-  protected String getDockerContainerName() {
-    return "metastore-test-mssql-install";
-  }
-
-  @Override
   protected String getDockerImageName() {
     return "microsoft/mssql-server-linux:2017-GA";
   }

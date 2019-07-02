@@ -19,11 +19,6 @@ package org.apache.hadoop.hive.metastore.dbinstall;
 
 public class ITestOracle extends DbInstallBase {
   @Override
-  protected String getDockerContainerName() {
-    return "metastore-test-oracle-install";
-  }
-
-  @Override
   protected String getDockerImageName() {
     return "orangehrm/oracle-xe-11g";
   }
@@ -78,6 +73,6 @@ public class ITestOracle extends DbInstallBase {
 
   @Override
   protected String getHivePassword() {
-    return "hivepassword";
+    return HIVE_PASSWORD;
   }
 }

@@ -158,6 +158,9 @@ public class QTestUtil {
 
     // Plug verifying metastore in for testing DirectSQL.
     conf.setVar(ConfVars.METASTORE_RAW_STORE_IMPL, "org.apache.hadoop.hive.metastore.VerifyingObjectStore");
+    if (System.getProperty("hive.metastore.rawstore.impl") != null){
+      conf.setVar(ConfVars.METASTORE_RAW_STORE_IMPL, System.getProperty("hive.metastore.rawstore.impl"));
+    }
 
     miniClusters.initConf(conf);
   }

@@ -16,6 +16,7 @@ CREATE TABLE TXN_WRITE_NOTIFICATION_LOG (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 INSERT INTO `SEQUENCE_TABLE` (`SEQUENCE_NAME`, `NEXT_VAL`) VALUES ('org.apache.hadoop.hive.metastore.model.MTxnWriteNotificationLog', 1);
 
+<<<<<<< HEAD
 -- HIVE-20221
 ALTER TABLE PARTITION_PARAMS MODIFY PARAM_VALUE MEDIUMTEXT;
 
@@ -23,6 +24,8 @@ ALTER TABLE PARTITION_PARAMS MODIFY PARAM_VALUE MEDIUMTEXT;
 ALTER TABLE `DBS` ADD `CREATE_TIME` INT(11);
 ALTER TABLE `CTLGS` ADD `CREATE_TIME` INT(11);
 
+=======
+>>>>>>> parent of d3b036920a... HIVE-20221: Increase column width for partition_params (Zoltan Haindrich reviewed by Alan Gates)
 -- These lines need to be last.  Insert any changes above.
 UPDATE VERSION SET SCHEMA_VERSION='3.2.0', VERSION_COMMENT='Hive release version 3.2.0' where VER_ID=1;
 SELECT 'Finished upgrading MetaStore schema from 3.1.0 to 3.2.0' AS MESSAGE;

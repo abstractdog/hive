@@ -1,11 +1,7 @@
 PREHOOK: query: drop table if exists my_table
 PREHOOK: type: DROPTABLE
-PREHOOK: Input: default@my_table
-PREHOOK: Output: default@my_table
 POSTHOOK: query: drop table if exists my_table
 POSTHOOK: type: DROPTABLE
-POSTHOOK: Input: default@my_table
-POSTHOOK: Output: default@my_table
 PREHOOK: query: create external table my_table (col1 int, col3 int) partitioned by (col2 string) STORED AS TEXTFILE TBLPROPERTIES ("serialization.format" = "1")
 PREHOOK: type: CREATETABLE
 PREHOOK: Output: database:default
@@ -24,17 +20,6 @@ POSTHOOK: Input: _dummy_database@_dummy_table
 POSTHOOK: Output: default@my_table@col2=F
 POSTHOOK: Lineage: my_table PARTITION(col2=F).col1 SCRIPT []
 POSTHOOK: Lineage: my_table PARTITION(col2=F).col3 SCRIPT []
-PREHOOK: query: SELECT * from my_table
-PREHOOK: type: QUERY
-PREHOOK: Input: default@my_table
-PREHOOK: Input: default@my_table@col2=F
-#### A masked pattern was here ####
-POSTHOOK: query: SELECT * from my_table
-POSTHOOK: type: QUERY
-POSTHOOK: Input: default@my_table
-POSTHOOK: Input: default@my_table@col2=F
-#### A masked pattern was here ####
-11	201	F
 PREHOOK: query: describe formatted my_table
 PREHOOK: type: DESCTABLE
 PREHOOK: Input: default@my_table
@@ -56,16 +41,16 @@ Retention:          	0
 #### A masked pattern was here ####
 Table Type:         	EXTERNAL_TABLE      	 
 Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
 	EXTERNAL            	TRUE                
 	bucketing_version   	2                   
 	discover.partitions 	true                
-	numFiles            	17446               
-	numFilesErasureCoded	17448               
+	numFiles            	1                   
 	numPartitions       	1                   
-	numRows             	17449               
-	rawDataSize         	17450               
+	numRows             	1                   
+	rawDataSize         	6                   
 	serialization.format	1                   
-	totalSize           	17443               
+	totalSize           	7                   
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 

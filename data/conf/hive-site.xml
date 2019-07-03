@@ -76,22 +76,22 @@
 
 <property>
   <name>javax.jdo.option.ConnectionURL</name>
-  <value>jdbc:postgresql:hivedb</value>
+  <value>jdbc:derby:memory:${test.tmp.dir}/junit_metastore_db;create=true</value>
 </property>
 
 <property>
   <name>javax.jdo.option.ConnectionDriverName</name>
-  <value>org.postgresql.Driver</value>
+  <value>org.apache.derby.jdbc.EmbeddedDriver</value>
 </property>
 
 <property>
   <name>javax.jdo.option.ConnectionUserName</name>
-  <value>hiveuser</value>
+  <value>APP</value>
 </property>
 
 <property>
   <name>javax.jdo.option.ConnectionPassword</name>
-  <value>hivepassword</value>
+  <value>mine</value>
 </property>
 
 <property>

@@ -1,0 +1,34 @@
+PREHOOK: query: create table src_multi1 like src
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@src_multi1
+POSTHOOK: query: create table src_multi1 like src
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@src_multi1
+PREHOOK: query: create table src_multi2 like src
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@src_multi2
+POSTHOOK: query: create table src_multi2 like src
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@src_multi2
+PREHOOK: query: from src
+insert overwrite table src_multi1 select * where key < 10
+insert overwrite table src_multi2 select * where key > 10 and key < 20
+PREHOOK: type: QUERY
+PREHOOK: Input: default@src
+PREHOOK: Output: default@src_multi1
+PREHOOK: Output: default@src_multi2
+POSTHOOK: query: from src
+insert overwrite table src_multi1 select * where key < 10
+insert overwrite table src_multi2 select * where key > 10 and key < 20
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@src
+POSTHOOK: Output: default@src_multi1
+POSTHOOK: Output: default@src_multi2
+POSTHOOK: Lineage: src_multi1.key SIMPLE [(src)src.FieldSchema(name:key, type:string, comment:default), ]
+POSTHOOK: Lineage: src_multi1.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]
+POSTHOOK: Lineage: src_multi2.key SIMPLE [(src)src.FieldSchema(name:key, type:string, comment:default), ]
+POSTHOOK: Lineage: src_multi2.value SIMPLE [(src)src.FieldSchema(name:value, type:string, comment:default), ]

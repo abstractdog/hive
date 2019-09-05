@@ -18,8 +18,6 @@
 package org.apache.hadoop.hive.common.repl;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -29,8 +27,12 @@ import java.util.regex.Pattern;
 public class ReplScope implements Serializable {
   private String dbName;
   private Pattern dbNamePattern;
-  private List<Pattern> includedTableNamePatterns; // Only for REPL DUMP and exist only if tableName == null.
-  private List<Pattern> excludedTableNamePatterns; // Only for REPL DUMP and exist only if tableName == null.
+
+  // Include and exclude table names/patterns exist only for REPL DUMP.
+  private String includedTableNames;
+  private String excludedTableNames;
+  private Pattern includedTableNamePattern;
+  private Pattern excludedTableNamePattern;
 
   public ReplScope() {
   }
@@ -49,17 +51,27 @@ public class ReplScope implements Serializable {
     return dbName;
   }
 
-  public void setIncludedTablePatterns(List<String> includedTableNamePatterns) {
-    this.includedTableNamePatterns = compilePatterns(includedTableNamePatterns);
+  public void setIncludedTablePatterns(String includedTableNames) {
+    this.includedTableNames = includedTableNames;
+    this.includedTableNamePattern = compilePattern(includedTableNames);
   }
 
-  public void setExcludedTablePatterns(List<String> excludedTableNamePatterns) {
-    this.excludedTableNamePatterns = compilePatterns(excludedTableNamePatterns);
+  public String getIncludedTableNames() {
+    return includedTableNames;
+  }
+
+  public void setExcludedTablePatterns(String excludedTableNames) {
+    this.excludedTableNames = excludedTableNames;
+    this.excludedTableNamePattern = compilePattern(excludedTableNames);
+  }
+
+  public String getExcludedTableNames() {
+    return excludedTableNames;
   }
 
   public boolean includeAllTables() {
-    return ((includedTableNamePatterns == null)
-            && (excludedTableNamePatterns == null));
+    return ((includedTableNamePattern == null)
+            && (excludedTableNamePattern == null));
   }
 
   public boolean includedInReplScope(final String dbName, final String tableName) {
@@ -79,42 +91,29 @@ public class ReplScope implements Serializable {
     return (inTableIncludedList(tableName) && !inTableExcludedList(tableName));
   }
 
-  private List<Pattern> compilePatterns(List<String> patterns) {
-    if (patterns == null || patterns.isEmpty()) {
+  private Pattern compilePattern(String pattern) {
+    if (pattern == null) {
       return null;
     }
-    List<Pattern> compiledPatterns = new ArrayList<>();
-    for (String pattern : patterns) {
-      // Convert the pattern to lower case because events/HMS will have table names in lower case.
-      compiledPatterns.add(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE));
-    }
-    return compiledPatterns;
-  }
 
-  private boolean tableMatchAnyPattern(final String tableName, List<Pattern> tableNamePatterns) {
-    assert(tableNamePatterns != null);
-    for (Pattern tableNamePattern : tableNamePatterns) {
-      if (tableNamePattern.matcher(tableName).matches()) {
-        return true;
-      }
-    }
-    return false;
+    // Convert the pattern to lower case because events/HMS will have table names in lower case.
+    return Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
   }
 
   private boolean inTableIncludedList(final String tableName) {
-    if (includedTableNamePatterns == null) {
+    if (includedTableNamePattern == null) {
       // If included list is empty, repl policy should be full db replication.
       // So, all tables must be included.
       return true;
     }
-    return tableMatchAnyPattern(tableName, includedTableNamePatterns);
+    return includedTableNamePattern.matcher(tableName).matches();
   }
 
   private boolean inTableExcludedList(final String tableName) {
-    if (excludedTableNamePatterns == null) {
+    if (excludedTableNamePattern == null) {
       // If excluded tables list is empty means, all tables in included list must be accepted.
       return false;
     }
-    return tableMatchAnyPattern(tableName, excludedTableNamePatterns);
+    return excludedTableNamePattern.matcher(tableName).matches();
   }
 }

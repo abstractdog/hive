@@ -288,29 +288,28 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.directory.client.ldap</groupId>
-      <artifactId>ldap-client-api</artifactId>
-      <version>${apache-directory-clientapi.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-server-integ</artifactId>
       <version>${apache-directory-server.version}</version>
       <scope>test</scope>
-        <exclusions>
-            <exclusion>
-                <groupId>org.apache.directory.client.ldap</groupId>
-                <artifactId>ldap-client-api</artifactId>
-            </exclusion>
-        </exclusions>
     </dependency>
 
     <dependency>
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-test-framework</artifactId>
       <version>${apache-directory-server.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-module-junit4</artifactId>
+      <version>${powermock.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-api-mockito</artifactId>
+      <version>${powermock.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

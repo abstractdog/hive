@@ -44,7 +44,6 @@ import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.ddl.DDLDesc;
-import org.apache.hadoop.hive.ql.ddl.DDLTask2;
 import org.apache.hadoop.hive.ql.ddl.DDLUtils;
 import org.apache.hadoop.hive.ql.io.HiveFileFormatUtils;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
@@ -74,10 +73,6 @@ import org.slf4j.LoggerFactory;
 public class CreateTableDesc implements DDLDesc, Serializable {
   private static final long serialVersionUID = 1L;
   private static final Logger LOG = LoggerFactory.getLogger(CreateTableDesc.class);
-
-  static {
-    DDLTask2.registerOperation(CreateTableDesc.class, CreateTableOperation.class);
-  }
 
   String databaseName;
   String tableName;
@@ -252,7 +247,7 @@ public class CreateTableDesc implements DDLDesc, Serializable {
     return tableName;
   }
 
-  public String getDatabaseName(){
+  public String getDatabaseName() {
     return databaseName;
   }
 
@@ -611,7 +606,7 @@ public class CreateTableDesc implements DDLDesc, Serializable {
         } catch (Exception err) {
           LOG.error("Failed to get type info", err);
         }
-        if(null == pti){
+        if (null == pti) {
           throw new SemanticException(ErrorMsg.PARTITION_COLUMN_NON_PRIMITIVE.getMsg() + " Found "
               + partCol + " of type: " + fs.getType());
         }
@@ -716,8 +711,8 @@ public class CreateTableDesc implements DDLDesc, Serializable {
    * @return what kind of replication scope this drop is running under.
    * This can result in a "CREATE/REPLACE IF NEWER THAN" kind of semantic
    */
-  public ReplicationSpec getReplicationSpec(){
-    if (replicationSpec == null){
+  public ReplicationSpec getReplicationSpec() {
+    if (replicationSpec == null) {
       this.replicationSpec = new ReplicationSpec();
     }
     return this.replicationSpec;
@@ -899,7 +894,7 @@ public class CreateTableDesc implements DDLDesc, Serializable {
       colStatsDesc.setCatName(tbl.getCatName());
       colStatsDesc.setDbName(tbl.getDbName());
       colStatsDesc.setTableName(tbl.getTableName());
-      tbl.getTTable().setColStats(new ColumnStatistics(colStatsDesc, colStats.getStatsObj()));
+      tbl.getTTable().setColStats(new ColumnStatistics(colStatsDesc, colStats.getStatsObj(), colStats.getEngine()));
       // Statistics will have an associated write Id for a transactional table. We need it to
       // update column statistics.
       if (replWriteId > 0) {

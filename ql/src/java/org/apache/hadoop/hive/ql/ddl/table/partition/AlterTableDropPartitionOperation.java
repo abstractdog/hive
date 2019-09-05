@@ -38,12 +38,9 @@ import com.google.common.collect.Iterables;
 /**
  * Operation process of dropping some partitions of a table.
  */
-public class AlterTableDropPartitionOperation extends DDLOperation {
-  private final AlterTableDropPartitionDesc desc;
-
+public class AlterTableDropPartitionOperation extends DDLOperation<AlterTableDropPartitionDesc> {
   public AlterTableDropPartitionOperation(DDLOperationContext context, AlterTableDropPartitionDesc desc) {
-    super(context);
-    this.desc = desc;
+    super(context, desc);
   }
 
   @Override
@@ -87,14 +84,14 @@ public class AlterTableDropPartitionOperation extends DDLOperation {
       return;
     }
 
-    for (AlterTableDropPartitionDesc.PartitionDesc partSpec : desc.getPartSpecs()){
+    for (AlterTableDropPartitionDesc.PartitionDesc partSpec : desc.getPartSpecs()) {
       List<Partition> partitions = new ArrayList<>();
       try {
         context.getDb().getPartitionsByExpr(tbl, partSpec.getPartSpec(), context.getConf(), partitions);
         for (Partition p : Iterables.filter(partitions, replicationSpec.allowEventReplacementInto())) {
           context.getDb().dropPartition(tbl.getDbName(), tbl.getTableName(), p.getValues(), true);
         }
-      } catch (NoSuchObjectException e){
+      } catch (NoSuchObjectException e) {
         // ignore NSOE because that means there's nothing to drop.
       } catch (Exception e) {
         throw new HiveException(e.getMessage(), e);

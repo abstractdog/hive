@@ -30,26 +30,27 @@ import org.apache.hadoop.hive.metastore.api.GetOpenTxnsInfoResponse;
 import org.apache.hadoop.hive.metastore.api.TxnInfo;
 import org.apache.hadoop.hive.ql.ddl.DDLOperation;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
+import org.apache.hadoop.hive.ql.session.SessionState;
 
 /**
  * Operation process of showing transactions.
  */
-public class ShowTransactionsOperation extends DDLOperation {
-  private final ShowTransactionsDesc desc;
-
+public class ShowTransactionsOperation extends DDLOperation<ShowTransactionsDesc> {
   public ShowTransactionsOperation(DDLOperationContext context, ShowTransactionsDesc desc) {
-    super(context);
-    this.desc = desc;
+    super(context, desc);
   }
 
   @Override
   public int execute() throws HiveException {
+    SessionState sessionState = SessionState.get();
     // Call the metastore to get the currently queued and running compactions.
     GetOpenTxnsInfoResponse rsp = context.getDb().showTransactions();
 
     // Write the results into the file
     try (DataOutputStream os = DDLUtils.getOutputStream(new Path(desc.getResFile()), context)) {
-      writeHeader(os);
+      if (!sessionState.isHiveServerQuery()) {
+        writeHeader(os);
+      }
 
       for (TxnInfo txn : rsp.getOpen_txns()) {
         writeRow(os, txn);

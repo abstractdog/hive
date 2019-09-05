@@ -228,7 +228,8 @@ STAGE PLANS:
           Table: default.cmv_mat_view_n3
 
   Stage: Stage-5
-    Materialized View Work
+    Materialized View Update
+      name: default.cmv_mat_view_n3
 
   Stage: Stage-0
     Move Operator
@@ -279,7 +280,7 @@ Table Parameters:
 	numRows             	2                   
 	rawDataSize         	232                 
 	rewriting.time.window	5min                
-	totalSize           	608                 
+	totalSize           	606                 
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -469,9 +470,9 @@ STAGE DEPENDENCIES:
 
 STAGE PLANS:
   Stage: Stage-0
-    Alter Materialized View
+    Alter Materialized View Rewrite
       name: default.cmv_mat_view_n3
-      operation: UPDATE_REWRITE_FLAG
+      enable: true
 
 PREHOOK: query: ALTER MATERIALIZED VIEW cmv_mat_view_n3 ENABLE REWRITE
 PREHOOK: type: ALTER_MATERIALIZED_VIEW_REWRITE
@@ -504,7 +505,7 @@ Table Parameters:
 	numRows             	2                   
 	rawDataSize         	232                 
 	rewriting.time.window	5min                
-	totalSize           	608                 
+	totalSize           	606                 
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 
@@ -645,7 +646,7 @@ STAGE PLANS:
                   filterExpr: ((c > 10) and (ROW__ID.writeid > 1L) and a is not null) (type: boolean)
                   Statistics: Num rows: 3 Data size: 348 Basic stats: COMPLETE Column stats: COMPLETE
                   Filter Operator
-                    predicate: ((ROW__ID.writeid > 1L) and (c > 10) and a is not null) (type: boolean)
+                    predicate: ((c > 10) and (ROW__ID.writeid > 1L) and a is not null) (type: boolean)
                     Statistics: Num rows: 1 Data size: 116 Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
                       expressions: a (type: int), c (type: decimal(10,2))
@@ -792,7 +793,9 @@ STAGE PLANS:
           Table: default.cmv_mat_view_n3
 
   Stage: Stage-4
-    Materialized View Work
+    Materialized View Update
+      name: default.cmv_mat_view_n3
+      updateCreationMetadata: true
 
 PREHOOK: query: ALTER MATERIALIZED VIEW cmv_mat_view_n3 REBUILD
 PREHOOK: type: QUERY
@@ -831,7 +834,7 @@ Table Parameters:
 	numRows             	3                   
 	rawDataSize         	348                 
 	rewriting.time.window	5min                
-	totalSize           	628                 
+	totalSize           	636                 
 #### A masked pattern was here ####
 	 	 
 # Storage Information	 	 

@@ -36,12 +36,9 @@ import com.google.common.collect.ImmutableSet;
 /**
  * Operation process of creating a view.
  */
-public class CreateViewOperation extends DDLOperation {
-  private final CreateViewDesc desc;
-
+public class CreateViewOperation extends DDLOperation<CreateViewDesc> {
   public CreateViewOperation(DDLOperationContext context, CreateViewDesc desc) {
-    super(context);
-    this.desc = desc;
+    super(context, desc);
   }
 
   @Override
@@ -51,7 +48,7 @@ public class CreateViewOperation extends DDLOperation {
       // Check whether we are replicating
       if (desc.getReplicationSpec().isInReplicationScope()) {
         // if this is a replication spec, then replace-mode semantics might apply.
-        if (desc.getReplicationSpec().allowEventReplacementInto(oldview.getParameters())){
+        if (desc.getReplicationSpec().allowEventReplacementInto(oldview.getParameters())) {
           desc.setReplace(true); // we replace existing view.
         } else {
           LOG.debug("DDLTask: Create View is skipped as view {} is newer than update",

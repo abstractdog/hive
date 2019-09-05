@@ -59,7 +59,7 @@ STAGE PLANS:
                   filterExpr: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
                   Filter Operator
-                    predicate: (cbigint is not null and cint BETWEEN 1000000 AND 3000000) (type: boolean)
+                    predicate: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                     Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
                       expressions: ctinyint (type: tinyint), csmallint (type: smallint), cint (type: int), cbigint (type: bigint), cfloat (type: float), cdouble (type: double), cstring1 (type: string), cstring2 (type: string), ctimestamp1 (type: timestamp), ctimestamp2 (type: timestamp), cboolean1 (type: boolean), cboolean2 (type: boolean)
@@ -196,7 +196,7 @@ STAGE PLANS:
                   filterExpr: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
                   Filter Operator
-                    predicate: (cbigint is not null and cint BETWEEN 1000000 AND 3000000) (type: boolean)
+                    predicate: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                     Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
                       expressions: cint (type: int)
@@ -332,7 +332,7 @@ STAGE PLANS:
                   filterExpr: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
                   Filter Operator
-                    predicate: (cbigint is not null and cint BETWEEN 1000000 AND 3000000) (type: boolean)
+                    predicate: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                     Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
                     Select Operator
                       expressions: cint (type: int)
@@ -359,7 +359,7 @@ STAGE PLANS:
                 Group By Operator
                   aggregations: count()
                   keys: _col0 (type: smallint)
-                  minReductionHashAggr: 0.49950933
+                  minReductionHashAggr: 0.49951172
                   mode: hash
                   outputColumnNames: _col0, _col1
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: COMPLETE
@@ -490,7 +490,7 @@ STAGE PLANS:
                   filterExpr: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                   Filter Operator
-                    predicate: (cbigint is not null and cint BETWEEN 1000000 AND 3000000) (type: boolean)
+                    predicate: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                     Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                     Select Operator
                       expressions: ctinyint (type: tinyint), csmallint (type: smallint), cint (type: int), cbigint (type: bigint), cfloat (type: float), cdouble (type: double), cstring1 (type: string), cstring2 (type: string), ctimestamp1 (type: timestamp), ctimestamp2 (type: timestamp), cboolean1 (type: boolean), cboolean2 (type: boolean)
@@ -518,7 +518,6 @@ STAGE PLANS:
                   1 Map 4
                 Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                 DynamicPartitionHashJoin: true
-                HybridGraceHashJoin: true
                 Reduce Output Operator
                   key expressions: _col2 (type: int)
                   sort order: +
@@ -631,7 +630,7 @@ STAGE PLANS:
                   filterExpr: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                   Filter Operator
-                    predicate: (cbigint is not null and cint BETWEEN 1000000 AND 3000000) (type: boolean)
+                    predicate: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                     Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                     Select Operator
                       expressions: cint (type: int)
@@ -657,7 +656,6 @@ STAGE PLANS:
                   1 Map 4
                 Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                 DynamicPartitionHashJoin: true
-                HybridGraceHashJoin: true
                 Group By Operator
                   aggregations: count()
                   minReductionHashAggr: 0.99
@@ -771,7 +769,7 @@ STAGE PLANS:
                   filterExpr: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                   Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                   Filter Operator
-                    predicate: (cbigint is not null and cint BETWEEN 1000000 AND 3000000) (type: boolean)
+                    predicate: (cint BETWEEN 1000000 AND 3000000 and cbigint is not null) (type: boolean)
                     Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                     Select Operator
                       expressions: cint (type: int)
@@ -798,7 +796,6 @@ STAGE PLANS:
                   1 Map 5
                 Statistics: Num rows: ###Masked### Data size: ###Masked### Basic stats: COMPLETE Column stats: NONE
                 DynamicPartitionHashJoin: true
-                HybridGraceHashJoin: true
                 Group By Operator
                   aggregations: count()
                   keys: _col0 (type: smallint)

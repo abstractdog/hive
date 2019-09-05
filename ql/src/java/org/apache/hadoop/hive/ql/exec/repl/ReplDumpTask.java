@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hive.ql.exec.repl;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.common.FileUtils;
 import org.apache.hadoop.hive.common.ValidTxnList;
 import org.apache.hadoop.hive.common.ValidWriteIdList;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
+import org.apache.hadoop.hive.metastore.ReplChangeManager;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.Function;
@@ -69,12 +72,17 @@ import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.login.LoginException;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import static org.apache.hadoop.hive.ql.exec.repl.ReplExternalTables.Writer;
 
@@ -82,6 +90,7 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
   private static final String dumpSchema = "dump_dir,last_repl_id#string,string";
   private static final String FUNCTION_METADATA_FILE_NAME = EximUtil.METADATA_NAME;
   private static final long SLEEP_TIME = 60000;
+  Set<String> tablesForBootstrap = new HashSet<>();
 
   public enum ConstraintFileType {COMMON("common", "c_"), FOREIGNKEY("fk", "f_");
     private final String name;
@@ -108,11 +117,13 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
   }
 
   @Override
-  protected int execute(DriverContext driverContext) {
+  public int execute(DriverContext driverContext) {
     try {
       Hive hiveDb = getHive();
       Path dumpRoot = new Path(conf.getVar(HiveConf.ConfVars.REPLDIR), getNextDumpDir());
       DumpMetaData dmd = new DumpMetaData(dumpRoot, conf);
+      // Initialize ReplChangeManager instance since we will require it to encode file URI.
+      ReplChangeManager.getInstance(conf);
       Path cmRoot = new Path(conf.getVar(HiveConf.ConfVars.REPLCMDIR));
       Long lastReplId;
       if (work.isBootStrapDump()) {
@@ -134,7 +145,7 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
     for (String s : values) {
       LOG.debug("    > " + s);
     }
-    Utils.writeOutput(values, new Path(work.resultTempPath), conf);
+    Utils.writeOutput(Collections.singletonList(values), new Path(work.resultTempPath), conf);
   }
 
   /**
@@ -143,31 +154,95 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
    * locations.
    * 2. External or ACID tables are being bootstrapped for the first time : so that we can dump
    * those tables as a whole.
-   * @return
+   * 3. If replication policy is changed/replaced, then need to examine all the tables to see if
+   * any of them need to be bootstrapped as old policy doesn't include it but new one does.
+   * 4. Some tables are renamed and the new name satisfies the table list filter while old name was not.
+   * @return true if need to examine tables for dump and false if not.
+   */
+  private boolean shouldExamineTablesToDump() {
+    return (work.oldReplScope != null)
+            || !tablesForBootstrap.isEmpty()
+            || conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES)
+            || conf.getBoolVar(HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES);
+  }
+
+  /**
+   * Decide whether to dump external tables data. If external tables are enabled for replication,
+   * then need to dump it's data in all the incremental dumps.
+   * @return true if need to dump external table data and false if not.
    */
   private boolean shouldDumpExternalTableLocation() {
     return conf.getBoolVar(HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES)
-            && (!conf.getBoolVar(HiveConf.ConfVars.REPL_DUMP_METADATA_ONLY)
-            || conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_EXTERNAL_TABLES));
+            && !conf.getBoolVar(HiveConf.ConfVars.REPL_DUMP_METADATA_ONLY);
   }
 
-  private boolean shouldExamineTablesToDump() {
-    return shouldDumpExternalTableLocation() ||
-            conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES);
+  /**
+   * Decide whether to dump external tables.
+   * @param tableName - Name of external table to be replicated
+   * @return true if need to bootstrap dump external table and false if not.
+   */
+  private boolean shouldBootstrapDumpExternalTable(String tableName) {
+    // Note: If repl policy is replaced, then need to dump external tables if table is getting replicated
+    // for the first time in current dump. So, need to check if table is included in old policy.
+    return conf.getBoolVar(HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES)
+            && (conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_EXTERNAL_TABLES)
+            || !ReplUtils.tableIncludedInReplScope(work.oldReplScope, tableName));
+  }
+
+  /**
+   * Decide whether to dump ACID tables.
+   * @param tableName - Name of ACID table to be replicated
+   * @return true if need to bootstrap dump ACID table and false if not.
+   */
+  private boolean shouldBootstrapDumpAcidTable(String tableName) {
+    // Note: If repl policy is replaced, then need to dump ACID tables if table is getting replicated
+    // for the first time in current dump. So, need to check if table is included in old policy.
+    return ReplUtils.includeAcidTableInDump(conf)
+            && (conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES)
+            || !ReplUtils.tableIncludedInReplScope(work.oldReplScope, tableName));
   }
 
   private boolean shouldBootstrapDumpTable(Table table) {
-    if (conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_EXTERNAL_TABLES) &&
-            TableType.EXTERNAL_TABLE.equals(table.getTableType())) {
+    // Note: If control reaches here, it means, table is already included in new replication policy.
+    if (TableType.EXTERNAL_TABLE.equals(table.getTableType())
+            && shouldBootstrapDumpExternalTable(table.getTableName())) {
       return true;
     }
 
-    if (conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES) &&
-           AcidUtils.isTransactionalTable(table)) {
+    if (AcidUtils.isTransactionalTable(table)
+            && shouldBootstrapDumpAcidTable(table.getTableName())) {
       return true;
     }
 
-    return false;
+    // If the table is renamed and the new name satisfies the filter but the old name does not then the table needs to
+    // be bootstrapped.
+    if (tablesForBootstrap.contains(table.getTableName().toLowerCase())) {
+      return true;
+    }
+
+    // If replication policy is changed with new included/excluded tables list, then tables which
+    // are not included in old policy but included in new policy should be bootstrapped along with
+    // the current incremental replication dump.
+    // Control reaches for Non-ACID tables.
+    return !ReplUtils.tableIncludedInReplScope(work.oldReplScope, table.getTableName());
+  }
+
+  private boolean isTableSatifiesConfig(Table table) {
+    if (table == null) {
+      return false;
+    }
+
+    if (TableType.EXTERNAL_TABLE.equals(table.getTableType())
+            && !conf.getBoolVar(HiveConf.ConfVars.REPL_INCLUDE_EXTERNAL_TABLES)) {
+      return false;
+    }
+
+    if (AcidUtils.isTransactionalTable(table)
+            && !ReplUtils.includeAcidTableInDump(conf)) {
+      return false;
+    }
+
+    return true;
   }
 
   private Long incrementalDump(Path dumpRoot, DumpMetaData dmd, Path cmRoot, Hive hiveDb) throws Exception {
@@ -177,11 +252,13 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
     long waitUntilTime = 0;
     long bootDumpBeginReplId = -1;
 
+    List<String> tableList = work.replScope.includeAllTables() ? null : new ArrayList<>();
+
     // If we are bootstrapping ACID tables, we need to perform steps similar to a regular
     // bootstrap (See bootstrapDump() for more details. Only difference here is instead of
     // waiting for the concurrent transactions to finish, we start dumping the incremental events
     // and wait only for the remaining time if any.
-    if (conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES)) {
+    if (needBootstrapAcidTablesDuringIncrementalDump()) {
       bootDumpBeginReplId = queryState.getConf().getLong(ReplUtils.LAST_REPL_ID_KEY, -1L);
       assert (bootDumpBeginReplId >= 0);
       LOG.info("Dump for bootstrapping ACID tables during an incremental dump for db {}",
@@ -219,9 +296,10 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
     String dbName = (null != work.dbNameOrPattern && !work.dbNameOrPattern.isEmpty())
         ? work.dbNameOrPattern
         : "?";
+    int maxEventLimit = work.maxEventLimit();
     replLogger = new IncrementalDumpLogger(dbName, dumpRoot.toString(),
-            evFetcher.getDbNotificationEventsCount(work.eventFrom, dbName, work.eventTo,
-                    work.maxEventLimit()));
+            evFetcher.getDbNotificationEventsCount(work.eventFrom, dbName, work.eventTo, maxEventLimit),
+            work.eventFrom, work.eventTo, maxEventLimit);
     replLogger.startLog();
     while (evIter.hasNext()) {
       NotificationEvent ev = evIter.next();
@@ -233,24 +311,23 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
     replLogger.endLog(lastReplId.toString());
 
     LOG.info("Done dumping events, preparing to return {},{}", dumpRoot.toUri(), lastReplId);
-    Utils.writeOutput(
-        Arrays.asList(
-            "incremental",
-            String.valueOf(work.eventFrom),
-            String.valueOf(lastReplId)
-        ),
-        dmd.getDumpFilePath(), conf);
     dmd.setDump(DumpType.INCREMENTAL, work.eventFrom, lastReplId, cmRoot);
+
+    // If repl policy is changed (oldReplScope is set), then pass the current replication policy,
+    // so that REPL LOAD would drop the tables which are not included in current policy.
+    if (work.oldReplScope != null) {
+      dmd.setReplScope(work.replScope);
+    }
     dmd.write();
 
-    // If required wait more for any transactions open at the time of starting the ACID bootstrap.
-    if (conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES)) {
-      assert (waitUntilTime > 0);
-      validTxnList = getValidTxnListForReplDump(hiveDb, waitUntilTime);
-    }
-
     // Examine all the tables if required.
-    if (shouldExamineTablesToDump()) {
+    if (shouldExamineTablesToDump() || (tableList != null)) {
+      // If required wait more for any transactions open at the time of starting the ACID bootstrap.
+      if (needBootstrapAcidTablesDuringIncrementalDump()) {
+        assert (waitUntilTime > 0);
+        validTxnList = getValidTxnListForReplDump(hiveDb, waitUntilTime);
+      }
+
       Path dbRoot = getBootstrapDbRoot(dumpRoot, dbName, true);
 
       try (Writer writer = new Writer(dumpRoot, conf)) {
@@ -259,8 +336,8 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
             Table table = hiveDb.getTable(dbName, tableName);
 
             // Dump external table locations if required.
-            if (shouldDumpExternalTableLocation() &&
-                    TableType.EXTERNAL_TABLE.equals(table.getTableType())) {
+            if (TableType.EXTERNAL_TABLE.equals(table.getTableType())
+                  && shouldDumpExternalTableLocation()) {
               writer.dataLocationDump(table);
             }
 
@@ -270,6 +347,9 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
               dumpTable(dbName, tableName, validTxnList, dbRoot, bootDumpBeginReplId, hiveDb,
                       tableTuple);
             }
+            if (tableList != null && isTableSatifiesConfig(table)) {
+              tableList.add(tableName);
+            }
           } catch (InvalidTableException te) {
             // Repl dump shouldn't fail if the table is dropped/renamed while dumping it.
             // Just log a debug message and skip it.
@@ -277,9 +357,25 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
           }
         }
       }
+      dumpTableListToDumpLocation(tableList, dumpRoot, dbName, conf);
     }
 
     return lastReplId;
+  }
+
+  private boolean needBootstrapAcidTablesDuringIncrementalDump() {
+    // If acid table dump is not enabled, then no neeed to check further.
+    if (!ReplUtils.includeAcidTableInDump(conf)) {
+      return false;
+    }
+
+    // If old table level policy is available or the policy has filter based on table name then it is possible that some
+    // of the ACID tables might be included for bootstrap during incremental dump. For old policy, its because the table
+    // may not satisfying the old policy but satisfying the new policy. For filter, it may happen that the table
+    // is renamed and started satisfying the policy.
+    return ((!work.replScope.includeAllTables())
+            || (work.oldReplScope != null)
+            || conf.getBoolVar(HiveConf.ConfVars.REPL_BOOTSTRAP_ACID_TABLES));
   }
 
   private Path getBootstrapDbRoot(Path dumpRoot, String dbName, boolean isIncrementalPhase) {
@@ -296,7 +392,9 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
         db,
         conf,
         getNewEventOnlyReplicationSpec(ev.getEventId()),
-        work.replScope
+        work.replScope,
+        work.oldReplScope,
+        tablesForBootstrap
     );
     EventHandler eventHandler = EventHandlerFactory.handlerFor(ev);
     eventHandler.handle(context);
@@ -311,13 +409,61 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
     return rspec;
   }
 
-  Long bootStrapDump(Path dumpRoot, DumpMetaData dmd, Path cmRoot, Hive hiveDb) throws Exception {
+  private void dumpTableListToDumpLocation(List<String> tableList, Path dbRoot, String dbName,
+                                           HiveConf hiveConf) throws IOException, LoginException {
+    // Empty list will create an empty file to distinguish it from db level replication. If no file is there, that means
+    // db level replication. If empty file is there, means no table satisfies the policy.
+    if (tableList == null) {
+      LOG.debug("Table list file is not created for db level replication.");
+      return;
+    }
+
+    // The table list is dumped in _tables/dbname file
+    Path tableListFile = new Path(dbRoot, ReplUtils.REPL_TABLE_LIST_DIR_NAME);
+    tableListFile = new Path(tableListFile, dbName.toLowerCase());
+
+    int count = 0;
+    while (count < FileUtils.MAX_IO_ERROR_RETRY) {
+      try (FSDataOutputStream writer = FileSystem.get(hiveConf).create(tableListFile)) {
+        for (String tableName : tableList) {
+          String line = tableName.toLowerCase().concat("\n");
+          writer.write(line.getBytes(StandardCharsets.UTF_8));
+        }
+        // Close is called explicitly as close also calls the actual file system write,
+        // so there is chance of i/o exception thrown by close.
+        writer.close();
+        break;
+      } catch (IOException e) {
+        LOG.info("File operation failed", e);
+        if (count >= (FileUtils.MAX_IO_ERROR_RETRY - 1)) {
+          //no need to wait in the last iteration
+          LOG.error("File " + tableListFile.toUri() + " creation failed even after " +
+                  FileUtils.MAX_IO_ERROR_RETRY + " attempts.");
+          throw new IOException(ErrorMsg.REPL_FILE_SYSTEM_OPERATION_RETRY.getMsg());
+        }
+        int sleepTime = FileUtils.getSleepTime(count);
+        LOG.info("Sleep for " + sleepTime + " milliseconds before retry " + (count+1));
+        try {
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException timerEx) {
+          LOG.info("Sleep interrupted", timerEx.getMessage());
+        }
+        FileSystem.closeAllForUGI(org.apache.hadoop.hive.shims.Utils.getUGI());
+      }
+      count++;
+    }
+    LOG.info("Table list file " + tableListFile.toUri() + " is created for table list - " + tableList);
+  }
+
+  Long bootStrapDump(Path dumpRoot, DumpMetaData dmd, Path cmRoot, Hive hiveDb)
+          throws Exception {
     // bootstrap case
     // Last repl id would've been captured during compile phase in queryState configs before opening txn.
     // This is needed as we dump data on ACID/MM tables based on read snapshot or else we may lose data from
     // concurrent txns when bootstrap dump in progress. If it is not available, then get it from metastore.
     Long bootDumpBeginReplId = queryState.getConf().getLong(ReplUtils.LAST_REPL_ID_KEY, -1L);
     assert (bootDumpBeginReplId >= 0L);
+    List<String> tableList;
 
     LOG.info("Bootstrap Dump for db {}", work.dbNameOrPattern);
     long timeoutInMs = HiveConf.getTimeVar(conf,
@@ -326,7 +472,10 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
 
     String validTxnList = getValidTxnListForReplDump(hiveDb, waitUntilTime);
     for (String dbName : Utils.matchesDb(hiveDb, work.dbNameOrPattern)) {
-      LOG.debug("ReplicationSemanticAnalyzer: analyzeReplDump dumping db: " + dbName);
+      LOG.debug("Dumping db: " + dbName);
+
+      // TODO : Currently we don't support separate table list for each database.
+      tableList = work.replScope.includeAllTables() ? null : new ArrayList<>();
       Database db = hiveDb.getDatabase(dbName);
       if ((db != null) && (ReplUtils.isFirstIncPending(db.getParameters()))) {
         // For replicated (target) database, until after first successful incremental load, the database will not be
@@ -348,18 +497,12 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
                       && !conf.getBoolVar(HiveConf.ConfVars.REPL_DUMP_METADATA_ONLY);
       try (Writer writer = new Writer(dbRoot, conf)) {
         for (String tblName : Utils.matchesTbl(hiveDb, dbName, work.replScope)) {
-          LOG.debug(
-              "analyzeReplDump dumping table: " + tblName + " to db root " + dbRoot.toUri());
+          LOG.debug("Dumping table: " + tblName + " to db root " + dbRoot.toUri());
+          Table table = null;
 
           try {
             HiveWrapper.Tuple<Table> tableTuple = new HiveWrapper(hiveDb, dbName).table(tblName, conf);
-            Table table = tableTuple != null ? tableTuple.object : null;
-            if (table != null && ReplUtils.isFirstIncPending(table.getParameters())) {
-              // For replicated (target) table, until after first successful incremental load, the table will not be
-              // in a consistent state. Avoid allowing replicating this table to a new target.
-              throw new HiveException("Replication dump not allowed for replicated table" +
-                      " with first incremental dump pending : " + tblName);
-            }
+            table = tableTuple != null ? tableTuple.object : null;
             if (shouldWriteExternalTableLocationInfo
                     && TableType.EXTERNAL_TABLE.equals(tableTuple.object.getTableType())) {
               LOG.debug("Adding table {} to external tables list", tblName);
@@ -373,7 +516,11 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
             LOG.debug(te.getMessage());
           }
           dumpConstraintMetadata(dbName, tblName, dbRoot, hiveDb);
+          if (tableList != null && isTableSatifiesConfig(table)) {
+            tableList.add(tblName);
+          }
         }
+        dumpTableListToDumpLocation(tableList, dumpRoot, dbName, conf);
       } catch (Exception e) {
         caught = e;
       } finally {
@@ -421,6 +568,7 @@ public class ReplDumpTask extends Task<ReplDumpWork> implements Serializable {
 
   void dumpTable(String dbName, String tblName, String validTxnList, Path dbRoot, long lastReplId,
       Hive hiveDb, HiveWrapper.Tuple<Table> tuple) throws Exception {
+    LOG.info("Bootstrap Dump for table " + tblName);
     TableSpec tableSpec = new TableSpec(tuple.object);
     TableExport.Paths exportPaths =
         new TableExport.Paths(work.astRepresentationForErrorMsg, dbRoot, tblName, conf, true);

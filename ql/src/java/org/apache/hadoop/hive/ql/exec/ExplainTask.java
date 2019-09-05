@@ -46,7 +46,6 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.LockComponent;
-import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
 import org.apache.hadoop.hive.ql.io.AcidUtils;
@@ -66,6 +65,7 @@ import org.apache.hadoop.hive.ql.plan.SparkWork;
 import org.apache.hadoop.hive.ql.plan.TezWork;
 import org.apache.hadoop.hive.ql.plan.api.StageType;
 import org.apache.hadoop.hive.ql.security.authorization.AuthorizationFactory;
+import org.apache.hadoop.hive.ql.security.authorization.command.CommandAuthorizer;
 import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hive.common.util.AnnotationUtils;
@@ -525,7 +525,7 @@ public class ExplainTask extends Task<ExplainWork> implements Serializable {
 
       SessionState.get().setActiveAuthorizer(authorizer);
       try {
-        Driver.doAuthorization(queryState.getHiveOperation(), analyzer, "");
+        CommandAuthorizer.doAuthorization(queryState.getHiveOperation(), analyzer, "");
       } finally {
         SessionState.get().setActiveAuthorizer(delegate);
       }
@@ -957,14 +957,8 @@ public class ExplainTask extends Task<ExplainWork> implements Serializable {
 
           Object val = null;
           try {
-            if(postProcess(xpl_note)) {
-              val = m.invoke(work, inTest);
-            }
-            else{
-              val = m.invoke(work);
-            }
-          }
-          catch (InvocationTargetException ex) {
+            val = m.invoke(work);
+          } catch (InvocationTargetException ex) {
             // Ignore the exception, this may be caused by external jars
             val = null;
           }
@@ -1081,15 +1075,6 @@ public class ExplainTask extends Task<ExplainWork> implements Serializable {
       return json;
     }
     return null;
-  }
-
-  /**
-   * use case: this is only use for testing purposes. For instance, we might
-   * want to sort the expressions in a filter so we get deterministic comparable
-   * golden files
-   */
-  private boolean postProcess(Explain exp) {
-    return exp.postProcess();
   }
 
   /**

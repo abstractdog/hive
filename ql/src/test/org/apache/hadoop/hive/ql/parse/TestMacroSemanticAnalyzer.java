@@ -22,6 +22,7 @@ import java.util.List;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.ql.Context;
+import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
@@ -56,6 +57,8 @@ public class TestMacroSemanticAnalyzer {
     List<Task<?>> rootTasks = analyzer.getRootTasks();
     Assert.assertEquals(1, rootTasks.size());
     for (Task<?> task : rootTasks) {
+      task.setDriverContext(new DriverContext(context));
+      task.setConf(conf);
       Assert.assertEquals(0, task.executeTask(null));
     }
   }
@@ -65,7 +68,7 @@ public class TestMacroSemanticAnalyzer {
   }
   @Test
   public void testDropMacroExistsDoNotIgnoreErrors() throws Exception {
-    conf.setBoolVar(ConfVars.DROPIGNORESNONEXISTENT, false);
+    conf.setBoolVar(ConfVars.DROP_IGNORES_NON_EXISTENT, false);
     FunctionRegistry.registerTemporaryUDF("SOME_MACRO", GenericUDFMacro.class);
     analyze(parse("DROP TEMPORARY MACRO SOME_MACRO"));
   }
@@ -76,7 +79,7 @@ public class TestMacroSemanticAnalyzer {
   }
   @Test(expected = SemanticException.class)
   public void testDropMacroNonExistent() throws Exception {
-    conf.setBoolVar(ConfVars.DROPIGNORESNONEXISTENT, false);
+    conf.setBoolVar(ConfVars.DROP_IGNORES_NON_EXISTENT, false);
     analyze(parse("DROP TEMPORARY MACRO SOME_MACRO"));
   }
   @Test
@@ -85,7 +88,7 @@ public class TestMacroSemanticAnalyzer {
   }
   @Test
   public void testDropMacroNonExistentWithIfExistsDoNotIgnoreNonExistent() throws Exception {
-    conf.setBoolVar(ConfVars.DROPIGNORESNONEXISTENT, false);
+    conf.setBoolVar(ConfVars.DROP_IGNORES_NON_EXISTENT, false);
     analyze(parse("DROP TEMPORARY MACRO IF EXISTS SOME_MACRO"));
   }
   @Test

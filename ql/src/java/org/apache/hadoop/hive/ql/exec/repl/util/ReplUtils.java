@@ -18,14 +18,18 @@
 package org.apache.hadoop.hive.ql.exec.repl.util;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hive.common.repl.ReplConst;
+import org.apache.hadoop.hive.common.repl.ReplScope;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
 import org.apache.hadoop.hive.metastore.api.EnvironmentContext;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.ql.ErrorMsg;
+import org.apache.hadoop.hive.ql.ddl.DDLWork;
+import org.apache.hadoop.hive.ql.ddl.table.misc.AlterTableSetPropertiesDesc;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.exec.repl.ReplStateLogWork;
@@ -34,9 +38,7 @@ import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.parse.DDLSemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.repl.ReplLogger;
-import org.apache.hadoop.hive.ql.plan.AlterTableDesc;
 import org.apache.hadoop.hive.ql.plan.ColumnStatsUpdateWork;
-import org.apache.hadoop.hive.ql.plan.DDLWork;
 import org.apache.hadoop.hive.ql.plan.ReplTxnWork;
 import org.apache.hadoop.hive.ql.plan.ExprNodeColumnDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
@@ -59,11 +61,10 @@ import java.io.Serializable;
 
 import static org.apache.hadoop.hive.ql.util.HiveStrictManagedMigration.TableMigrationOption.MANAGED;
 
-
 public class ReplUtils {
 
   public static final String LAST_REPL_ID_KEY = "hive.repl.last.repl.id";
-  public static final String REPL_CHECKPOINT_KEY = "hive.repl.ckpt.key";
+  public static final String REPL_CHECKPOINT_KEY = ReplConst.REPL_TARGET_DB_PROPERTY;
   public static final String REPL_FIRST_INC_PENDING_FLAG = "hive.repl.first.inc.pending";
 
   // write id allocated in the current execution context which will be passed through config to be used by different
@@ -79,6 +80,10 @@ public class ReplUtils {
 
   // Root directory for dumping bootstrapped tables along with incremental events dump.
   public static final String INC_BOOTSTRAP_ROOT_DIR_NAME = "_bootstrap";
+
+  // Name of the directory which stores the list of tables included in the policy in case of table level replication.
+  // One file per database, named after the db name. The directory is not created for db level replication.
+  public static final String REPL_TABLE_LIST_DIR_NAME = "_tables";
 
   // Migrating to transactional tables in bootstrap load phase.
   // It is enough to copy all the original files under base_1 dir and so write-id is hardcoded to 1.
@@ -144,13 +149,9 @@ public class ReplUtils {
     HashMap<String, String> mapProp = new HashMap<>();
     mapProp.put(REPL_CHECKPOINT_KEY, dumpRoot);
 
-    AlterTableDesc alterTblDesc =  new AlterTableDesc(AlterTableDesc.AlterTableTypes.ADDPROPS);
-    alterTblDesc.setProps(mapProp);
-    alterTblDesc.setOldName(
-            StatsUtils.getFullyQualifiedTableName(tableDesc.getDatabaseName(), tableDesc.getTableName()));
-    if (partSpec != null) {
-      alterTblDesc.setPartSpec(partSpec);
-    }
+    String fqTableName = StatsUtils.getFullyQualifiedTableName(tableDesc.getDatabaseName(), tableDesc.getTableName());
+    AlterTableSetPropertiesDesc alterTblDesc =  new AlterTableSetPropertiesDesc(fqTableName, partSpec, null, false,
+        mapProp, false, false, null);
     return TaskFactory.get(new DDLWork(new HashSet<>(), new HashSet<>(), alterTblDesc), conf);
   }
 
@@ -236,7 +237,18 @@ public class ReplUtils {
   public static PathFilter getEventsDirectoryFilter(final FileSystem fs) {
     return p -> {
       try {
-        return fs.isDirectory(p) && !p.getName().equalsIgnoreCase(ReplUtils.INC_BOOTSTRAP_ROOT_DIR_NAME);
+        return fs.isDirectory(p) && !p.getName().equalsIgnoreCase(ReplUtils.INC_BOOTSTRAP_ROOT_DIR_NAME)
+                && !p.getName().equalsIgnoreCase(ReplUtils.REPL_TABLE_LIST_DIR_NAME);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    };
+  }
+
+  public static PathFilter getBootstrapDirectoryFilter(final FileSystem fs) {
+    return p -> {
+      try {
+        return fs.isDirectory(p) && !p.getName().equalsIgnoreCase(ReplUtils.REPL_TABLE_LIST_DIR_NAME);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
@@ -276,5 +288,9 @@ public class ReplUtils {
     }
 
     return true;
+  }
+
+  public static boolean tableIncludedInReplScope(ReplScope replScope, String tableName) {
+    return ((replScope == null) || replScope.tableIncludedInReplScope(tableName));
   }
 }

@@ -58,18 +58,18 @@ import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.REPL_MOVE_OPTIMIZED_
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_DBNAME;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_FROM;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_LIMIT;
-import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_NULL;
+import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPLACE;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_CONFIG;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_DUMP;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_LOAD;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_STATUS;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_TABLES;
-import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_REPL_TABLES_LIST;
 import static org.apache.hadoop.hive.ql.parse.HiveParser.TOK_TO;
 
 public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
   // Replication Scope
   private ReplScope replScope = new ReplScope();
+  private ReplScope oldReplScope = null;
 
   private Long eventFrom;
   private Long eventTo;
@@ -130,34 +130,54 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
     }
   }
 
-  private void setReplDumpTablesList(Tree replTablesNode) throws HiveException {
+  private void setReplDumpTablesList(Tree replTablesNode, ReplScope replScope) throws HiveException {
     int childCount = replTablesNode.getChildCount();
     assert(childCount <= 2);
 
     // Traverse the children which can be either just include tables list or both include
     // and exclude tables lists.
+    String replScopeType = (replScope == this.replScope) ? "Current" : "Old";
     for (int listIdx = 0; listIdx < childCount; listIdx++) {
-      Tree tablesListNode = replTablesNode.getChild(listIdx);
-      assert(tablesListNode.getType() == TOK_REPL_TABLES_LIST);
-
-      List<String> tablesList = new ArrayList<>();
-      for (int child = 0; child < tablesListNode.getChildCount(); child++) {
-        Tree tablePatternNode = tablesListNode.getChild(child);
-        if (tablePatternNode.getType() == TOK_NULL) {
-          LOG.error(ErrorMsg.REPL_INVALID_DB_OR_TABLE_PATTERN.getMsg());
-          throw new SemanticException(ErrorMsg.REPL_INVALID_DB_OR_TABLE_PATTERN.getMsg());
-        }
-        tablesList.add(unescapeSQLString(tablePatternNode.getText()));
+      String tableList = unescapeSQLString(replTablesNode.getChild(listIdx).getText());
+      if (tableList == null || tableList.isEmpty()) {
+        throw new SemanticException(ErrorMsg.REPL_INVALID_DB_OR_TABLE_PATTERN);
       }
-
       if (listIdx == 0) {
-        LOG.info("ReplScope: Set Included Tables List: {}", tablesList);
-        replScope.setIncludedTablePatterns(tablesList);
+        LOG.info("{} ReplScope: Set Included Tables List: {}", replScopeType, tableList);
+        replScope.setIncludedTablePatterns(tableList);
       } else {
-        LOG.info("ReplScope: Set Excluded Tables List: {}", tablesList);
-        replScope.setExcludedTablePatterns(tablesList);
+        LOG.info("{} ReplScope: Set Excluded Tables List: {}", replScopeType, tableList);
+        replScope.setExcludedTablePatterns(tableList);
       }
     }
+  }
+
+  private void setOldReplPolicy(Tree oldReplPolicyTree) throws HiveException {
+    oldReplScope = new ReplScope();
+    int childCount = oldReplPolicyTree.getChildCount();
+
+    // First child is DB name and optional second child is tables list.
+    assert(childCount <= 2);
+
+    // First child is always the DB name. So set it.
+    oldReplScope.setDbName(oldReplPolicyTree.getChild(0).getText());
+    LOG.info("Old ReplScope: Set DB Name: {}", oldReplScope.getDbName());
+    if (!oldReplScope.getDbName().equalsIgnoreCase(replScope.getDbName())) {
+      LOG.error("DB name {} cannot be replaced to {} in the replication policy.",
+              oldReplScope.getDbName(), replScope.getDbName());
+      throw new SemanticException("DB name cannot be replaced in the replication policy.");
+    }
+
+    // If the old policy is just <db_name>, then tables list won't be there.
+    if (childCount <= 1) {
+      return;
+    }
+
+    // Traverse the children which can be either just include tables list or both include
+    // and exclude tables lists.
+    Tree oldPolicyTablesListNode = oldReplPolicyTree.getChild(1);
+    assert(oldPolicyTablesListNode.getType() == TOK_REPL_TABLES);
+    setReplDumpTablesList(oldPolicyTablesListNode, oldReplScope);
   }
 
   private void initReplDump(ASTNode ast) throws HiveException {
@@ -165,7 +185,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
     boolean isMetaDataOnly = false;
 
     String dbNameOrPattern = PlanUtils.stripQuotes(ast.getChild(0).getText());
-    LOG.info("ReplScope: Set DB Name: {}", dbNameOrPattern);
+    LOG.info("Current ReplScope: Set DB Name: {}", dbNameOrPattern);
     replScope.setDbName(dbNameOrPattern);
 
     // Skip the first node, which is always required
@@ -185,7 +205,11 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
           break;
         }
         case TOK_REPL_TABLES: {
-          setReplDumpTablesList(currNode);
+          setReplDumpTablesList(currNode, replScope);
+          break;
+        }
+        case TOK_REPLACE: {
+          setOldReplPolicy(currNode);
           break;
         }
         case TOK_FROM: {
@@ -247,6 +271,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
       Task<ReplDumpWork> replDumpWorkTask = TaskFactory
           .get(new ReplDumpWork(
               replScope,
+              oldReplScope,
               eventFrom,
               eventTo,
               ErrorMsg.INVALID_PATH.getMsg(ast),
@@ -413,6 +438,7 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
         LOG.debug("{} contains an bootstrap dump", loadPath);
       }
       ReplLoadWork replLoadWork = new ReplLoadWork(conf, loadPath.toString(), replScope.getDbName(),
+              dmd.getReplScope(),
               queryState.getLineageState(), evDump, dmd.getEventTo(),
           dirLocationsToCopy(loadPath, evDump));
       rootTasks.add(TaskFactory.get(replLoadWork, conf));
@@ -511,6 +537,6 @@ public class ReplicationSemanticAnalyzer extends BaseSemanticAnalyzer {
       LOG.debug("    > " + s);
     }
     ctx.setResFile(ctx.getLocalTmpPath());
-    Utils.writeOutput(values, ctx.getResFile(), conf);
+    Utils.writeOutput(Collections.singletonList(values), ctx.getResFile(), conf);
   }
 }

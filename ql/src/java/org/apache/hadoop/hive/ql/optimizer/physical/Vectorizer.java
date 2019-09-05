@@ -26,6 +26,7 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -42,6 +43,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedInputFormatInterface;
+import org.apache.hadoop.hive.ql.exec.vector.expressions.gen.DecimalColDivideDecimalScalar;
 import org.apache.hadoop.hive.ql.exec.vector.reducesink.*;
 import org.apache.hadoop.hive.ql.exec.vector.udf.VectorUDFArgDesc;
 import org.apache.hadoop.hive.ql.io.AcidUtils;
@@ -102,9 +104,6 @@ import org.apache.hadoop.hive.ql.io.ZeroRowsInputFormat;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatchCtx;
 import org.apache.hadoop.hive.ql.lib.Dispatcher;
 import org.apache.hadoop.hive.ql.lib.Node;
-import org.apache.hadoop.hive.ql.lib.NodeProcessor;
-import org.apache.hadoop.hive.ql.lib.Rule;
-import org.apache.hadoop.hive.ql.lib.RuleRegExp;
 import org.apache.hadoop.hive.ql.lib.TaskGraphWalker;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
@@ -310,9 +309,9 @@ public class Vectorizer implements PhysicalPlanResolver {
     };
   }
 
-  boolean isVectorizationEnabled;
+  private boolean isVectorizationEnabled;
   private EnabledOverride vectorizationEnabledOverride;
-  boolean isTestForcedVectorizationEnable;
+  private boolean isTestForcedVectorizationEnable;
 
   private boolean useVectorizedInputFileFormat;
   private boolean useVectorDeserialize;
@@ -856,10 +855,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       VectorTaskColumnInfo vectorTaskColumnInfo)
           throws VectorizerCannotVectorizeException {
 
-    List<Operator<? extends OperatorDesc>> vectorChildren = newOperatorList();
     List<Operator<? extends OperatorDesc>> children = parent.getChildOperators();
-    List<List<Operator<? extends OperatorDesc>>> listOfChildMultipleParents =
-        new ArrayList<List<Operator<? extends OperatorDesc>>>();
 
     final int childrenCount = children.size();
     for (int i = 0; i < childrenCount; i++) {
@@ -975,7 +971,6 @@ public class Vectorizer implements PhysicalPlanResolver {
       vContext = ((VectorizationOperator) vectorParent).getInputVectorizationContext();
     }
 
-    OperatorDesc desc = child.getConf();
     Operator<? extends OperatorDesc> vectorChild;
 
     try {
@@ -1191,13 +1186,6 @@ public class Vectorizer implements PhysicalPlanResolver {
       validateAndVectorizeMapWork(mapWork, vectorTaskColumnInfo, isTezOrSpark);
     }
 
-    private void addMapWorkRules(Map<Rule, NodeProcessor> opRules, NodeProcessor np) {
-      opRules.put(new RuleRegExp("R1", TableScanOperator.getOperatorName() + ".*"
-          + FileSinkOperator.getOperatorName()), np);
-      opRules.put(new RuleRegExp("R2", TableScanOperator.getOperatorName() + ".*"
-          + ReduceSinkOperator.getOperatorName()), np);
-    }
-
     /*
      * Determine if there is only one TableScanOperator.  Currently in Map vectorization, we do not
      * try to vectorize multiple input trees.
@@ -1206,7 +1194,7 @@ public class Vectorizer implements PhysicalPlanResolver {
 
       // Eliminate MR plans with more than one TableScanOperator.
 
-      LinkedHashMap<String, Operator<? extends OperatorDesc>> aliasToWork = mapWork.getAliasToWork();
+      Map<String, Operator<? extends OperatorDesc>> aliasToWork = mapWork.getAliasToWork();
       if ((aliasToWork == null) || (aliasToWork.size() == 0)) {
         setNodeIssue("Vectorized map work requires work");
         return null;
@@ -1230,7 +1218,7 @@ public class Vectorizer implements PhysicalPlanResolver {
         setNodeIssue("Vectorized map work only works with 1 TableScanOperator");
         return null;
       }
-      return new ImmutablePair(alias, tableScanOperator);
+      return new ImmutablePair<>(alias, tableScanOperator);
     }
 
     private void getTableScanOperatorSchemaInfo(TableScanOperator tableScanOperator,
@@ -1375,7 +1363,7 @@ public class Vectorizer implements PhysicalPlanResolver {
         List<TypeInfo> allTypeInfoList,
         Set<String> inputFileFormatClassNameSet,
         Map<VectorPartitionDesc, VectorPartitionDesc> vectorPartitionDescMap,
-        Set<String> enabledConditionsMetSet, ArrayList<String> enabledConditionsNotMetList,
+        Set<String> enabledConditionsMetSet, List<String> enabledConditionsNotMetList,
         Set<Support> newSupportSet, List<TypeInfo> dataTypeInfoList) {
 
       Class<? extends InputFormat> inputFileFormatClass = pd.getInputFileFormatClass();
@@ -1672,12 +1660,12 @@ public class Vectorizer implements PhysicalPlanResolver {
     private void setValidateInputFormatAndSchemaEvolutionExplain(MapWork mapWork,
         Set<String> inputFileFormatClassNameSet,
         Map<VectorPartitionDesc, VectorPartitionDesc> vectorPartitionDescMap,
-        Set<String> enabledConditionsMetSet, ArrayList<String> enabledConditionsNotMetList) {
+        Collection<String> enabledConditionsMetSet, Collection<String> enabledConditionsNotMetList) {
       mapWork.setVectorizationInputFileFormatClassNameSet(inputFileFormatClassNameSet);
       ArrayList<VectorPartitionDesc> vectorPartitionDescList = new ArrayList<VectorPartitionDesc>();
       vectorPartitionDescList.addAll(vectorPartitionDescMap.keySet());
       mapWork.setVectorPartitionDescList(vectorPartitionDescList);
-      mapWork.setVectorizationEnabledConditionsMet(new ArrayList(enabledConditionsMetSet));
+      mapWork.setVectorizationEnabledConditionsMet(enabledConditionsMetSet);
       mapWork.setVectorizationEnabledConditionsNotMet(enabledConditionsNotMetList);
     }
 
@@ -1713,19 +1701,19 @@ public class Vectorizer implements PhysicalPlanResolver {
       List<String> tableDataColumnList = null;
       List<TypeInfo> tableDataTypeInfoList = null;
 
-      LinkedHashMap<Path, ArrayList<String>> pathToAliases = mapWork.getPathToAliases();
-      LinkedHashMap<Path, PartitionDesc> pathToPartitionInfo = mapWork.getPathToPartitionInfo();
+      Map<Path, List<String>> pathToAliases = mapWork.getPathToAliases();
+      Map<Path, PartitionDesc> pathToPartitionInfo = mapWork.getPathToPartitionInfo();
 
       // Remember the input file formats we validated and why.
       Set<String> inputFileFormatClassNameSet = new HashSet<String>();
       Map<VectorPartitionDesc, VectorPartitionDesc> vectorPartitionDescMap =
           new LinkedHashMap<VectorPartitionDesc, VectorPartitionDesc>();
       Set<String> enabledConditionsMetSet = new HashSet<String>();
-      ArrayList<String> enabledConditionsNotMetList = new ArrayList<String>();
+      List<String> enabledConditionsNotMetList = new ArrayList<String>();
       Set<Support> inputFormatSupportSet = new TreeSet<Support>();
       boolean outsideLoopIsFirstPartition = true;
 
-      for (Entry<Path, ArrayList<String>> entry: pathToAliases.entrySet()) {
+      for (Entry<Path, List<String>> entry: pathToAliases.entrySet()) {
         final boolean isFirstPartition = outsideLoopIsFirstPartition;
         outsideLoopIsFirstPartition = false;
 
@@ -1933,7 +1921,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       ArrayList<VectorPartitionDesc> vectorPartitionDescList = new ArrayList<VectorPartitionDesc>();
       vectorPartitionDescList.addAll(vectorPartitionDescMap.keySet());
       mapWork.setVectorPartitionDescList(vectorPartitionDescList);
-      mapWork.setVectorizationEnabledConditionsMet(new ArrayList(enabledConditionsMetSet));
+      mapWork.setVectorizationEnabledConditionsMet(enabledConditionsMetSet);
       mapWork.setVectorizationEnabledConditionsNotMet(enabledConditionsNotMetList);
 
       return new ImmutablePair<Boolean,Boolean>(true, false);
@@ -1950,7 +1938,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       if (onlyOneTableScanPair == null) {
         VectorizerReason notVectorizedReason = currentBaseWork.getNotVectorizedReason();
         Preconditions.checkState(notVectorizedReason != null);
-        mapWork.setVectorizationEnabledConditionsNotMet(Arrays.asList(new String[] {notVectorizedReason.toString()}));
+        mapWork.setVectorizationEnabledConditionsNotMet(Collections.singleton(notVectorizedReason.toString()));
         return;
       }
       String alias = onlyOneTableScanPair.left;
@@ -1967,7 +1955,7 @@ public class Vectorizer implements PhysicalPlanResolver {
         if (!validateInputFormatAndSchemaEvolutionPair.right) {
           VectorizerReason notVectorizedReason = currentBaseWork.getNotVectorizedReason();
           Preconditions.checkState(notVectorizedReason != null);
-          mapWork.setVectorizationEnabledConditionsNotMet(Arrays.asList(new String[] {notVectorizedReason.toString()}));
+          mapWork.setVectorizationEnabledConditionsNotMet(Collections.singleton(notVectorizedReason.toString()));
         }
         return;
       }
@@ -2049,8 +2037,6 @@ public class Vectorizer implements PhysicalPlanResolver {
       vectorTaskColumnInfo.transferToBaseWork(mapWork);
 
       mapWork.setVectorMode(true);
-
-      return;
     }
 
     private boolean validateAndVectorizeMapOperators(MapWork mapWork, TableScanOperator tableScanOperator,
@@ -2224,8 +2210,6 @@ public class Vectorizer implements PhysicalPlanResolver {
 
     private void validateAndVectorizeReduceWork(ReduceWork reduceWork,
         VectorTaskColumnInfo vectorTaskColumnInfo) throws SemanticException {
-
-      Operator<? extends OperatorDesc> reducer = reduceWork.getReducer();
 
       // Validate input to ReduceWork.
       if (!getOnlyStructObjectInspectors(reduceWork, vectorTaskColumnInfo)) {
@@ -2611,18 +2595,6 @@ public class Vectorizer implements PhysicalPlanResolver {
     return true;
   }
 
-  private boolean validateSparkHashTableSinkOperator(SparkHashTableSinkOperator op) {
-    SparkHashTableSinkDesc desc = op.getConf();
-    byte tag = desc.getTag();
-    // it's essentially a MapJoinDesc
-    List<ExprNodeDesc> filterExprs = desc.getFilters().get(tag);
-    List<ExprNodeDesc> keyExprs = desc.getKeys().get(tag);
-    List<ExprNodeDesc> valueExprs = desc.getExprs().get(tag);
-    return validateExprNodeDesc(
-        filterExprs, "Filter", VectorExpressionDescriptor.Mode.FILTER, /* allowComplex */ true) &&
-        validateExprNodeDesc(keyExprs, "Key") && validateExprNodeDesc(valueExprs, "Value");
-  }
-
   private boolean validateReduceSinkOperator(ReduceSinkOperator op) {
     List<ExprNodeDesc> keyDescs = op.getConf().getKeyCols();
     List<ExprNodeDesc> partitionDescs = op.getConf().getPartitionCols();
@@ -2900,7 +2872,6 @@ public class Vectorizer implements PhysicalPlanResolver {
       }
     }
 
-    boolean isPartitionOrderBy = vectorPTFDesc.getIsPartitionOrderBy();
     String[] evaluatorFunctionNames = vectorPTFDesc.getEvaluatorFunctionNames();
     final int count = evaluatorFunctionNames.length;
     WindowFrameDef[] evaluatorWindowFrameDefs = vectorPTFDesc.getEvaluatorWindowFrameDefs();
@@ -3275,20 +3246,6 @@ public class Vectorizer implements PhysicalPlanResolver {
       }
     }
     return (result ? null : "Vectorizing data type " + type + " not supported");
-  }
-
-  private VectorizationContext getVectorizationContext(String contextName,
-      VectorTaskColumnInfo vectorTaskColumnInfo) {
-
-    VectorizationContext vContext =
-        new VectorizationContext(
-            contextName,
-            vectorTaskColumnInfo.allColumnNames,
-            vectorTaskColumnInfo.allTypeInfos,
-            vectorTaskColumnInfo.allDataTypePhysicalVariations,
-            hiveConf);
-
-    return vContext;
   }
 
   private void fixupParentChildOperators(Operator<? extends OperatorDesc> op,
@@ -3781,16 +3738,13 @@ public class Vectorizer implements PhysicalPlanResolver {
 
     int firstSmallTableOutputColumn;
     firstSmallTableOutputColumn = (order[0] == posBigTable ? bigTableRetainSize : 0);
-    int smallTableOutputCount = 0;
     nextOutputColumn = firstSmallTableOutputColumn;
 
     // Small table indices has more information (i.e. keys) than retain, so use it if it exists...
     if (smallTableIndicesSize > 0) {
-      smallTableOutputCount = smallTableIndicesSize;
 
       for (int i = 0; i < smallTableIndicesSize; i++) {
         if (smallTableIndices[i] >= 0) {
-
           // Zero and above numbers indicate a big table key is needed for
           // small table result "area".
 
@@ -3854,8 +3808,6 @@ public class Vectorizer implements PhysicalPlanResolver {
         nextOutputColumn++;
       }
     } else if (smallTableRetainSize > 0) {
-      smallTableOutputCount = smallTableRetainSize;
-
       // Only small table values appear in join output result.
 
       for (int i = 0; i < smallTableRetainSize; i++) {
@@ -3904,11 +3856,11 @@ public class Vectorizer implements PhysicalPlanResolver {
 
     vectorDesc.setSupportsKeyTypes(supportsKeyTypes);
     if (!supportsKeyTypes) {
-      vectorDesc.setNotSupportedKeyTypes(new ArrayList(notSupportedKeyTypes));
+      vectorDesc.setNotSupportedKeyTypes(new ArrayList<>(notSupportedKeyTypes));
     }
     vectorDesc.setSupportsValueTypes(supportsValueTypes);
     if (!supportsValueTypes) {
-      vectorDesc.setNotSupportedValueTypes(new ArrayList(notSupportedValueTypes));
+      vectorDesc.setNotSupportedValueTypes(new ArrayList<>(notSupportedValueTypes));
     }
 
     // Check common conditions for both Optimized and Fast Hash Tables.
@@ -4139,7 +4091,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       vectorReduceSinkInfo.setReduceSinkKeyExpressions(reduceSinkKeyExpressions);
     }
 
-    ArrayList<ExprNodeDesc> valueDescs = desc.getValueCols();
+    List<ExprNodeDesc> valueDescs = desc.getValueCols();
     final boolean isEmptyValue = (valueDescs.size() == 0);
     if (!isEmptyValue) {
       VectorExpression[] allValueExpressions = vContext.getVectorExpressions(valueDescs);
@@ -4781,9 +4733,14 @@ public class Vectorizer implements PhysicalPlanResolver {
             }
           }
         } else {
+          Object[] arguments;
           int argumentCount = children.length + (parent.getOutputColumnNum() == -1 ? 0 : 1);
-          Object[] arguments = new Object[argumentCount];
-          // new input column numbers
+          if (parent instanceof DecimalColDivideDecimalScalar) {
+            arguments = new Object[argumentCount + 1];
+            arguments[children.length] = ((DecimalColDivideDecimalScalar) parent).getValue();
+          } else {
+            arguments = new Object[argumentCount];
+          }
           for (int i = 0; i < children.length; i++) {
             VectorExpression vce = children[i];
             arguments[i] = vce.getOutputColumnNum();
@@ -4988,9 +4945,7 @@ public class Vectorizer implements PhysicalPlanResolver {
       PTFDesc ptfDesc, VectorizationContext vContext, VectorPTFDesc vectorPTFDesc)
           throws HiveException {
 
-    PartitionedTableFunctionDef funcDef = ptfDesc.getFuncDef();
-
-    ArrayList<ColumnInfo> outputSignature = ptfOp.getSchema().getSignature();
+    List<ColumnInfo> outputSignature = ptfOp.getSchema().getSignature();
     final int outputSize = outputSignature.size();
 
     boolean isPartitionOrderBy = vectorPTFDesc.getIsPartitionOrderBy();
@@ -4999,7 +4954,6 @@ public class Vectorizer implements PhysicalPlanResolver {
     String[] evaluatorFunctionNames = vectorPTFDesc.getEvaluatorFunctionNames();
 
     final int evaluatorCount = evaluatorFunctionNames.length;
-    WindowFrameDef[] evaluatorWindowFrameDefs = vectorPTFDesc.getEvaluatorWindowFrameDefs();
     List<ExprNodeDesc>[] evaluatorInputExprNodeDescLists = vectorPTFDesc.getEvaluatorInputExprNodeDescLists();
 
     /*
@@ -5073,10 +5027,6 @@ public class Vectorizer implements PhysicalPlanResolver {
     VectorExpression[] evaluatorInputExpressions = new VectorExpression[evaluatorCount];
     Type[] evaluatorInputColumnVectorTypes = new Type[evaluatorCount];
     for (int i = 0; i < evaluatorCount; i++) {
-      String functionName = evaluatorFunctionNames[i];
-      WindowFrameDef windowFrameDef = evaluatorWindowFrameDefs[i];
-      SupportedFunctionType functionType = VectorPTFDesc.supportedFunctionsMap.get(functionName);
-
       List<ExprNodeDesc> exprNodeDescList = evaluatorInputExprNodeDescLists[i];
       VectorExpression inputVectorExpression;
       final Type columnVectorType;
@@ -5089,7 +5039,6 @@ public class Vectorizer implements PhysicalPlanResolver {
         inputVectorExpression = vContext.getVectorExpression(exprNodeDesc);
 
         TypeInfo typeInfo = exprNodeDesc.getTypeInfo();
-        PrimitiveCategory primitiveCategory = ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory();
         columnVectorType = VectorizationContext.getColumnVectorTypeFromTypeInfo(typeInfo);
       } else {
         inputVectorExpression =  null;
@@ -5216,7 +5165,6 @@ public class Vectorizer implements PhysicalPlanResolver {
                 isNative = true;
 
                 if (vectorTaskColumnInfo != null) {
-                  VectorMapJoinInfo vectorMapJoinInfo = vectorMapJoinDesc.getVectorMapJoinInfo();
                   if (usesVectorUDFAdaptor(vectorMapJoinDesc.getAllBigTableKeyExpressions())) {
                     vectorTaskColumnInfo.setUsesVectorUDFAdaptor(true);
                   }

@@ -19,10 +19,10 @@
 package org.apache.hadoop.hive.ql.ddl.database;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.AlreadyExistsException;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.PrincipalType;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.ErrorMsg;
 import org.apache.hadoop.hive.ql.ddl.DDLOperation;
 import org.apache.hadoop.hive.ql.ddl.DDLOperationContext;
@@ -33,14 +33,11 @@ import org.apache.hadoop.hive.ql.session.SessionState;
 /**
  * Operation process of creating a database.
  */
-public class CreateDatabaseOperation extends DDLOperation {
+public class CreateDatabaseOperation extends DDLOperation<CreateDatabaseDesc> {
   private static final String DATABASE_PATH_SUFFIX = ".db";
 
-  private final CreateDatabaseDesc desc;
-
   public CreateDatabaseOperation(DDLOperationContext context, CreateDatabaseDesc desc) {
-    super(context);
-    this.desc = desc;
+    super(context, desc);
   }
 
   @Override
@@ -69,7 +66,7 @@ public class CreateDatabaseOperation extends DDLOperation {
       database.setLocationUri(Utilities.getQualifiedPath(context.getConf(), new Path(database.getLocationUri())));
     } else {
       // Location is not set we utilize METASTOREWAREHOUSE together with database name
-      Path path = new Path(HiveConf.getVar(context.getConf(), HiveConf.ConfVars.METASTOREWAREHOUSE),
+      Path path = new Path(MetastoreConf.getVar(context.getConf(), MetastoreConf.ConfVars.WAREHOUSE),
           database.getName().toLowerCase() + DATABASE_PATH_SUFFIX);
       String qualifiedPath = Utilities.getQualifiedPath(context.getConf(), path);
       database.setLocationUri(qualifiedPath);

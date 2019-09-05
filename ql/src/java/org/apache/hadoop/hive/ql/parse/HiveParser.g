@@ -247,7 +247,7 @@ TOK_STRINGLITERALSEQUENCE;
 TOK_CHARSETLITERAL;
 TOK_CREATEFUNCTION;
 TOK_DROPFUNCTION;
-TOK_RELOADFUNCTION;
+TOK_RELOADFUNCTIONS;
 TOK_CREATEMACRO;
 TOK_DROPMACRO;
 TOK_TEMPORARY;
@@ -267,6 +267,9 @@ TOK_ALTER_MATERIALIZED_VIEW_REBUILD;
 TOK_REWRITE_ENABLED;
 TOK_REWRITE_DISABLED;
 TOK_VIEWPARTCOLS;
+TOK_VIEWCLUSTERCOLS;
+TOK_VIEWDISTRIBUTECOLS;
+TOK_VIEWSORTCOLS;
 TOK_EXPLAIN;
 TOK_EXPLAIN_SQ_REWRITE;
 TOK_TABLESERIALIZER;
@@ -569,6 +572,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
     xlateMap.put("KW_REGEXP", "REGEXP");
     xlateMap.put("KW_TEMPORARY", "TEMPORARY");
     xlateMap.put("KW_FUNCTION", "FUNCTION");
+    xlateMap.put("KW_FUNCTIONS", "FUNCTIONS");
     xlateMap.put("KW_EXPLAIN", "EXPLAIN");
     xlateMap.put("KW_EXTENDED", "EXTENDED");
     xlateMap.put("KW_DEBUG", "DEBUG");
@@ -890,20 +894,28 @@ importStatement
     ;
 
 replDumpStatement
-@init { pushMsg("replication dump statement", state); }
+@init { pushMsg("Replication dump statement", state); }
 @after { popMsg(state); }
       : KW_REPL KW_DUMP
-        (dbName=identifier) (DOT tablePolicy=replTableLevelPolicy)?
+        (dbPolicy=replDbPolicy)
+        (KW_REPLACE oldDbPolicy=replDbPolicy)?
         (KW_FROM (eventId=Number)
           (KW_TO (rangeEnd=Number))?
           (KW_LIMIT (batchSize=Number))?
         )?
         (KW_WITH replConf=replConfigs)?
-    -> ^(TOK_REPL_DUMP $dbName $tablePolicy? ^(TOK_FROM $eventId (TOK_TO $rangeEnd)? (TOK_LIMIT $batchSize)?)? $replConf?)
+    -> ^(TOK_REPL_DUMP $dbPolicy ^(TOK_REPLACE $oldDbPolicy)? ^(TOK_FROM $eventId (TOK_TO $rangeEnd)? (TOK_LIMIT $batchSize)?)? $replConf?)
+    ;
+
+replDbPolicy
+@init { pushMsg("Repl dump DB replication policy", state); }
+@after { popMsg(state); }
+    :
+      (dbName=identifier) (DOT tablePolicy=replTableLevelPolicy)? -> $dbName $tablePolicy?
     ;
 
 replLoadStatement
-@init { pushMsg("replication load statement", state); }
+@init { pushMsg("Replication load statement", state); }
 @after { popMsg(state); }
       : KW_REPL KW_LOAD
         (dbName=identifier)?
@@ -913,41 +925,25 @@ replLoadStatement
       ;
 
 replConfigs
-@init { pushMsg("repl configurations", state); }
+@init { pushMsg("Repl configurations", state); }
 @after { popMsg(state); }
     :
       LPAREN replConfigsList RPAREN -> ^(TOK_REPL_CONFIG replConfigsList)
     ;
 
 replConfigsList
-@init { pushMsg("repl configurations list", state); }
+@init { pushMsg("Repl configurations list", state); }
 @after { popMsg(state); }
     :
       keyValueProperty (COMMA keyValueProperty)* -> ^(TOK_REPL_CONFIG_LIST keyValueProperty+)
     ;
 
 replTableLevelPolicy
-@init { pushMsg("replication table level policy definition", state); }
+@init { pushMsg("Replication table level policy definition", state); }
 @after { popMsg(state); }
     :
-      ((replTablesIncludeList=replTablesList) (DOT replTablesExcludeList=replTablesList)?)
+      ((replTablesIncludeList=StringLiteral) (DOT replTablesExcludeList=StringLiteral)?)
       -> ^(TOK_REPL_TABLES $replTablesIncludeList $replTablesExcludeList?)
-    ;
-
-replTablesList
-@init { pushMsg("replication table name or comma separated table names pattern list", state); }
-@after { popMsg(state); }
-    :
-      (LSQUARE (tablePattern (COMMA tablePattern)*)? RSQUARE) -> ^(TOK_REPL_TABLES_LIST tablePattern*)
-    ;
-
-tablePattern
-@init { pushMsg("Table name pattern", state); }
-@after { popMsg(state); }
-    :
-      (pattern=StringLiteral) -> $pattern
-      |
-      (identifier) -> TOK_NULL
     ;
 
 replStatusStatement
@@ -979,7 +975,7 @@ ddlStatement
     | createFunctionStatement
     | createMacroStatement
     | dropFunctionStatement
-    | reloadFunctionStatement
+    | reloadFunctionsStatement
     | dropMacroStatement
     | analyzeStatement
     | lockStatement
@@ -1625,7 +1621,7 @@ showStatement
     | KW_SHOW KW_MATERIALIZED KW_VIEWS ((KW_FROM|KW_IN) db_name=identifier)? (KW_LIKE showStmtIdentifier|showStmtIdentifier)?  -> ^(TOK_SHOWMATERIALIZEDVIEWS (TOK_FROM $db_name)? showStmtIdentifier?)
     | KW_SHOW KW_COLUMNS (KW_FROM|KW_IN) tableName ((KW_FROM|KW_IN) db_name=identifier)? (KW_LIKE showStmtIdentifier|showStmtIdentifier)?
     -> ^(TOK_SHOWCOLUMNS tableName (TOK_FROM $db_name)? showStmtIdentifier?)
-    | KW_SHOW KW_FUNCTIONS (KW_LIKE showFunctionIdentifier|showFunctionIdentifier)?  -> ^(TOK_SHOWFUNCTIONS KW_LIKE? showFunctionIdentifier?)
+    | KW_SHOW KW_FUNCTIONS (KW_LIKE showFunctionIdentifier)?  -> ^(TOK_SHOWFUNCTIONS KW_LIKE? showFunctionIdentifier?)
     | KW_SHOW KW_PARTITIONS tabName=tableName partitionSpec? -> ^(TOK_SHOWPARTITIONS $tabName partitionSpec?) 
     | KW_SHOW KW_CREATE (
         (KW_DATABASE|KW_SCHEMA) => (KW_DATABASE|KW_SCHEMA) db_name=identifier -> ^(TOK_SHOW_CREATEDATABASE $db_name)
@@ -1936,10 +1932,10 @@ dropFunctionStatement
     ->                  ^(TOK_DROPFUNCTION functionIdentifier ifExists?)
     ;
 
-reloadFunctionStatement
-@init { pushMsg("reload function statement", state); }
+reloadFunctionsStatement
+@init { pushMsg("reload functions statement", state); }
 @after { popMsg(state); }
-    : KW_RELOAD KW_FUNCTION -> ^(TOK_RELOADFUNCTION);
+    : KW_RELOAD (KW_FUNCTIONS|KW_FUNCTION) -> ^(TOK_RELOADFUNCTIONS);
 
 createMacroStatement
 @init { pushMsg("create macro statement", state); }
@@ -1983,6 +1979,40 @@ viewPartition
     -> ^(TOK_VIEWPARTCOLS columnNameList)
     ;
 
+viewOrganization
+@init { pushMsg("view organization specification", state); }
+@after { popMsg(state); }
+    : viewClusterSpec
+    | viewComplexSpec
+    ;
+
+viewClusterSpec
+@init { pushMsg("view cluster specification", state); }
+@after { popMsg(state); }
+    : KW_CLUSTERED KW_ON LPAREN columnNameList RPAREN
+    -> ^(TOK_VIEWCLUSTERCOLS columnNameList)
+    ;
+
+viewComplexSpec
+@init { pushMsg("view complex specification", state); }
+@after { popMsg(state); }
+    : viewDistSpec viewSortSpec
+    ;
+
+viewDistSpec
+@init { pushMsg("view distribute specification", state); }
+@after { popMsg(state); }
+    : KW_DISTRIBUTED KW_ON LPAREN colList=columnNameList RPAREN
+    -> ^(TOK_VIEWDISTRIBUTECOLS $colList)
+    ;
+
+viewSortSpec
+@init { pushMsg("view sort specification", state); }
+@after { popMsg(state); }
+    : KW_SORTED KW_ON LPAREN colList=columnNameList RPAREN
+    -> ^(TOK_VIEWSORTCOLS $colList)
+    ;
+
 dropViewStatement
 @init { pushMsg("drop view statement", state); }
 @after { popMsg(state); }
@@ -1995,7 +2025,8 @@ createMaterializedViewStatement
 }
 @after { popMsg(state); }
     : KW_CREATE KW_MATERIALIZED KW_VIEW (ifNotExists)? name=tableName
-        rewriteDisabled? tableComment? viewPartition? tableRowFormat? tableFileFormat? tableLocation?
+        rewriteDisabled? tableComment? viewPartition? viewOrganization?
+        tableRowFormat? tableFileFormat? tableLocation?
         tablePropertiesPrefixed? KW_AS selectStatementWithCTE
     -> ^(TOK_CREATE_MATERIALIZED_VIEW $name
          ifNotExists?
@@ -2005,6 +2036,7 @@ createMaterializedViewStatement
          tableFileFormat?
          tableLocation?
          viewPartition?
+         viewOrganization?
          tablePropertiesPrefixed?
          selectStatementWithCTE
         )

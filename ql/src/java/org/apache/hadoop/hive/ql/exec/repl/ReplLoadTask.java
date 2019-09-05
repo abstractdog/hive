@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hive.ql.exec.repl;
 
+import com.google.common.collect.Collections2;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.common.repl.ReplScope;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.ErrorMsg;
+import org.apache.hadoop.hive.ql.ddl.DDLWork;
+import org.apache.hadoop.hive.ql.ddl.database.AlterDatabaseSetPropertiesDesc;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.TaskFactory;
 import org.apache.hadoop.hive.ql.exec.repl.bootstrap.events.BootstrapEvent;
@@ -53,6 +57,7 @@ import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.parse.EximUtil;
 import org.apache.hadoop.hive.ql.parse.ReplicationSpec;
+import org.apache.hadoop.hive.ql.parse.SemanticAnalyzer;
 import org.apache.hadoop.hive.ql.parse.SemanticException;
 import org.apache.hadoop.hive.ql.parse.repl.PathBuilder;
 import org.apache.hadoop.hive.ql.parse.repl.ReplLogger;
@@ -63,6 +68,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +97,7 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
   }
 
   @Override
-  protected int execute(DriverContext driverContext) {
+  public int execute(DriverContext driverContext) {
     Task<? extends Serializable> rootTask = work.getRootTask();
     if (rootTask != null) {
       rootTask.setChildTasks(null);
@@ -364,6 +370,35 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
     }
   }
 
+  /**
+   * If replication policy is changed between previous and current load, then the excluded tables in
+   * the new replication policy will be dropped.
+   * @throws HiveException Failed to get/drop the tables.
+   */
+  private void dropTablesExcludedInReplScope(ReplScope replScope) throws HiveException {
+    // If all tables are included in replication scope, then nothing to be dropped.
+    if ((replScope == null) || replScope.includeAllTables()) {
+      return;
+    }
+
+    Hive db = getHive();
+    String dbName = replScope.getDbName();
+
+    // List all the tables that are excluded in the current repl scope.
+    Iterable<String> tableNames = Collections2.filter(db.getAllTables(dbName),
+        tableName -> {
+          assert(tableName != null);
+          return !tableName.toLowerCase().startsWith(
+                  SemanticAnalyzer.VALUES_TMP_TABLE_NAME_PREFIX.toLowerCase())
+                  && !replScope.tableIncludedInReplScope(tableName);
+        });
+    for (String table : tableNames) {
+      db.dropTable(dbName + "." + table, true);
+    }
+    LOG.info("Tables in the Database: {} that are excluded in the replication scope are dropped.",
+            dbName);
+  }
+
   private void createEndReplLogTask(Context context, Scope scope,
                                     ReplLogger replLogger) throws SemanticException {
     Map<String, String> dbProps;
@@ -457,13 +492,14 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
         work.needCleanTablesFromBootstrap = false;
       }
 
+      // If replication policy is changed between previous and current repl load, then drop the tables
+      // that are excluded in the new replication policy.
+      dropTablesExcludedInReplScope(work.currentReplScope);
+
       IncrementalLoadTasksBuilder builder = work.incrementalLoadTasksBuilder();
 
       // If incremental events are already applied, then check and perform if need to bootstrap any tables.
       if (!builder.hasMoreWork() && !work.getPathsToCopyIterator().hasNext()) {
-        // No need to set incremental load pending flag for external tables as the files will be copied to the same path
-        // for external table unlike migrated txn tables. Currently bootstrap during incremental is done only for
-        // external tables.
         if (work.hasBootstrapLoadTasks()) {
           LOG.debug("Current incremental dump have tables to be bootstrapped. Switching to bootstrap "
                   + "mode after applying all events.");
@@ -482,6 +518,42 @@ public class ReplLoadTask extends Task<ReplLoadWork> implements Serializable {
         childTasks.addAll(new ExternalTableCopyTaskBuilder(work, conf).tasks(tracker));
       } else {
         childTasks.add(builder.build(driverContext, getHive(), LOG, tracker));
+      }
+
+      // If there are no more events to be applied, add a task to update the last.repl.id of the
+      // target database to the event id of the last event considered by the dump. Next
+      // incremental cycle won't consider the events in this dump again if it starts from this id.
+      if (!builder.hasMoreWork() && !work.getPathsToCopyIterator().hasNext()) {
+        // The name of the database to be loaded into is either specified directly in REPL LOAD
+        // command i.e. when dbNameToLoadIn has a valid dbname or is available through dump
+        // metadata during table level replication.
+        String dbName = work.dbNameToLoadIn;
+        if (dbName == null || StringUtils.isBlank(dbName)) {
+          if (work.currentReplScope != null) {
+            String replScopeDbName = work.currentReplScope.getDbName();
+            if (replScopeDbName != null && !"*".equals(replScopeDbName)) {
+              dbName = replScopeDbName;
+            }
+          }
+        }
+
+        // If we are replicating to multiple databases at a time, it's not
+        // possible to know which all databases we are replicating into and hence we can not
+        // update repl id in all those databases.
+        if (StringUtils.isNotBlank(dbName)) {
+          String lastEventid = builder.eventTo().toString();
+          Map<String, String> mapProp = new HashMap<>();
+          mapProp.put(ReplicationSpec.KEY.CURR_STATE_ID.toString(), lastEventid);
+
+          AlterDatabaseSetPropertiesDesc alterDbDesc =
+                  new AlterDatabaseSetPropertiesDesc(dbName, mapProp,
+                          new ReplicationSpec(lastEventid, lastEventid));
+          Task<? extends Serializable> updateReplIdTask =
+                  TaskFactory.get(new DDLWork(new HashSet<>(), new HashSet<>(), alterDbDesc), conf);
+
+          DAGTraversal.traverse(childTasks, new AddDependencyToLeaves(updateReplIdTask));
+          LOG.debug("Added task to set last repl id of db " + dbName + " to " + lastEventid);
+        }
       }
 
       // Either the incremental has more work or the external table file copy has more paths to process.

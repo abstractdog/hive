@@ -32,6 +32,14 @@ import org.apache.hadoop.hive.metastore.utils.StringUtils;
 public class CacheUtils {
   private static final String delimit = "\u0001";
 
+  /**
+   * Constant variable that stores engine value needed to store / access
+   * Hive column statistics.
+   * TODO: Once CachedStore supports multiple engines, this constant variable
+   * can be removed.
+   */
+  protected static final String HIVE_ENGINE = "hive";
+
   public static String buildCatalogKey(String catName) {
     return catName;
   }
@@ -65,7 +73,7 @@ public class CacheUtils {
     return buildKey(catName, dbName, tableName, colName);
   }
 
-  private static String buildKey(String... elements) {
+  public static String buildKey(String... elements) {
     return org.apache.commons.lang.StringUtils.join(elements, delimit);
   }
 

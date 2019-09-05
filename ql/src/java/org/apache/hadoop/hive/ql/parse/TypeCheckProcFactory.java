@@ -769,6 +769,7 @@ public class TypeCheckProcFactory {
     ExprNodeConstantDesc constantExpr =
         new ExprNodeConstantDesc(colInfo.getType(), poi.getPrimitiveJavaObject(constant));
     constantExpr.setFoldedFromCol(colInfo.getInternalName());
+    constantExpr.setFoldedFromTab(colInfo.getTabAlias());
     return constantExpr;
   }
 
@@ -783,6 +784,7 @@ public class TypeCheckProcFactory {
 
     ExprNodeConstantDesc constantExpr = new ExprNodeConstantDesc(colInfo.getType(), constant);
     constantExpr.setFoldedFromCol(colInfo.getInternalName());
+    constantExpr.setFoldedFromTab(colInfo.getTabAlias());
     return constantExpr;
   }
 
@@ -798,6 +800,7 @@ public class TypeCheckProcFactory {
 
     ExprNodeConstantDesc constantExpr = new ExprNodeConstantDesc(colInfo.getType(), constant);
     constantExpr.setFoldedFromCol(colInfo.getInternalName());
+    constantExpr.setFoldedFromTab(colInfo.getTabAlias());
     return constantExpr;
   }
 
@@ -813,6 +816,7 @@ public class TypeCheckProcFactory {
 
     ExprNodeConstantDesc constantExpr = new ExprNodeConstantDesc(colInfo.getType(), constant);
     constantExpr.setFoldedFromCol(colInfo.getInternalName());
+    constantExpr.setFoldedFromTab(colInfo.getTabAlias());
     return constantExpr;
   }
 
@@ -1216,16 +1220,26 @@ public class TypeCheckProcFactory {
             }
             outputOpList.add(nullConst);
           }
+
           if (!ctx.isCBOExecuted()) {
-            ArrayList<ExprNodeDesc> orOperands = TypeCheckProcFactoryUtils.rewriteInToOR(children);
-            if (orOperands != null) {
-              if (orOperands.size() == 1) {
-                orOperands.add(new ExprNodeConstantDesc(TypeInfoFactory.booleanTypeInfo, false));
+
+            HiveConf conf;
+            try {
+              conf = Hive.get().getConf();
+            } catch (HiveException e) {
+              throw new SemanticException(e);
+            }
+            if( children.size() <= HiveConf.getIntVar(conf, HiveConf.ConfVars.HIVEOPT_TRANSFORM_IN_MAXNODES)) {
+              ArrayList<ExprNodeDesc> orOperands = TypeCheckProcFactoryUtils.rewriteInToOR(children);
+              if (orOperands != null) {
+                if (orOperands.size() == 1) {
+                  orOperands.add(new ExprNodeConstantDesc(TypeInfoFactory.booleanTypeInfo, false));
+                }
+                funcText = "or";
+                genericUDF = new GenericUDFOPOr();
+                children.clear();
+                children.addAll(orOperands);
               }
-              funcText = "or";
-              genericUDF = new GenericUDFOPOr();
-              children.clear();
-              children.addAll(orOperands);
             }
           }
         }

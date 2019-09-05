@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hive.ql.ddl.DDLDesc;
-import org.apache.hadoop.hive.ql.ddl.DDLTask2;
 import org.apache.hadoop.hive.ql.parse.ReplicationSpec;
 import org.apache.hadoop.hive.ql.plan.Explain;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
@@ -36,10 +35,6 @@ import org.apache.hadoop.hive.ql.plan.Explain.Level;
 @Explain(displayName = "Drop Partition", explainLevels = { Level.USER, Level.DEFAULT, Level.EXTENDED })
 public class AlterTableDropPartitionDesc implements DDLDesc, Serializable {
   private static final long serialVersionUID = 1L;
-
-  static {
-    DDLTask2.registerOperation(AlterTableDropPartitionDesc.class, AlterTableDropPartitionOperation.class);
-  }
 
   /**
    * Partition description.
@@ -101,7 +96,7 @@ public class AlterTableDropPartitionDesc implements DDLDesc, Serializable {
    * @return what kind of replication scope this drop is running under.
    * This can result in a "DROP IF OLDER THAN" kind of semantic
    */
-  public ReplicationSpec getReplicationSpec(){
+  public ReplicationSpec getReplicationSpec() {
     return replicationSpec;
   }
 }

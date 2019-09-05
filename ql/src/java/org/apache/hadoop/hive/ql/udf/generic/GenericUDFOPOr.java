@@ -26,7 +26,6 @@ import org.apache.hadoop.hive.ql.exec.vector.expressions.ColOrCol;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.FilterColOrScalar;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.FilterExprOrExpr;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.FilterScalarOrColumn;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.ScalarOrCol;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.ScalarNullOrCol;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.udf.UDFType;
@@ -39,8 +38,8 @@ import org.apache.hadoop.io.BooleanWritable;
  * GenericUDF Class for computing or.
  */
 @Description(name = "or", value = "a1 _FUNC_ a2 _FUNC_ ... _FUNC_ an - Logical or")
-@VectorizedExpressions({ ColOrCol.class, ScalarOrCol.class, ScalarNullOrCol.class,
-    FilterExprOrExpr.class, FilterColOrScalar.class, FilterScalarOrColumn.class })
+@VectorizedExpressions({ ColOrCol.class, ScalarNullOrCol.class, FilterExprOrExpr.class,
+    FilterColOrScalar.class, FilterScalarOrColumn.class })
 @NDV(maxNdv = 2)
 @UDFType(deterministic = true, commutative = true)
 public class GenericUDFOPOr extends GenericUDF {

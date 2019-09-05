@@ -5,15 +5,18 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 
-public class ScalarNullOrCol extends ScalarOrCol {
+public class ScalarNullOrCol extends VectorExpression {
   private static final long serialVersionUID = 1L;
+  protected final int colNum;
 
   public ScalarNullOrCol(ConstantVectorExpression expression, int colNum, int outputColumnNum) {
-    super(0, colNum, outputColumnNum);
+    super(outputColumnNum);
+    this.colNum = colNum;
   }
 
   public ScalarNullOrCol() {
     super();
+    colNum = -1;
   }
 
   @Override

@@ -14,6 +14,7 @@ insert into table vector_and_or
 insert into table vector_and_or
   select date '2001-01-01', date '2001-06-01' from src limit 1;
 
+select '*** OR ***';
 -- select null explicitly
 
 explain vectorization detail select null or dt1 is not null from vector_and_or;
@@ -46,3 +47,38 @@ select dt1 = dt1 from vector_and_or;
 set hive.vectorized.execution.enabled=false;
 select '*** non-vectorized dt1=dt1 ***';
 select dt1 = dt1 from vector_and_or;
+
+
+select '*** AND ***';
+-- select null explicitly
+
+explain vectorization detail select null and dt1 is null from vector_and_or;
+select '*** vectorized null and dt1 is null ***';
+select null and dt1 is null from vector_and_or;
+
+set hive.vectorized.execution.enabled=false;
+select '*** non-vectorized null and dt1 is null ***';
+select null and dt1 is null from vector_and_or;
+set hive.vectorized.execution.enabled=true;
+
+
+-- select boolean constant, already vectorized
+
+explain vectorization detail select true and dt1 is null from vector_and_or;
+select '*** vectorized true and dt1 is null ***';
+select true and dt1 is null from vector_and_or;
+
+set hive.vectorized.execution.enabled=false;
+select '*** non-vectorized true and dt1 is null ***';
+select true and dt1 is null from vector_and_or;
+set hive.vectorized.execution.enabled=true;
+
+-- select dt1 = dt1 which is translated to "null or ..." after HIVE-21001
+
+explain vectorization detail select dt1 != dt1 from vector_and_or;
+select '*** vectorized dt1!=dt1 ***';
+select dt1 != dt1 from vector_and_or;
+
+set hive.vectorized.execution.enabled=false;
+select '*** non-vectorized dt1!=dt1 ***';
+select dt1 != dt1 from vector_and_or;

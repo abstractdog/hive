@@ -125,7 +125,7 @@ STAGE PLANS:
                         className: VectorSelectOperator
                         native: true
                         projectedOutputColumnNums: [0, 1, 5, 6, 7, 8, 11, 12, 13]
-                        selectExpressions: ScalarOrCol(col 4:boolean, val 0:boolean)(children: IsNotNull(col 0:date) -> 4:boolean) -> 5:boolean, LongColNotEqualLongColumn(col 0:date, col 1:date) -> 6:boolean, LongColLessEqualLongColumn(col 0:date, col 1:date) -> 7:boolean, LongColLessLongColumn(col 0:date, col 1:date) -> 8:boolean, ScalarOrCol(col 10:boolean, val 0:boolean)(children: IsNotNull(col 1:date) -> 10:boolean) -> 11:boolean, LongColGreaterEqualLongColumn(col 1:date, col 0:date) -> 12:boolean, LongColGreaterLongColumn(col 1:date, col 0:date) -> 13:boolean
+                        selectExpressions: ScalarNullOrCol(col 4:boolean, val 0:boolean)(children: IsNotNull(col 0:date) -> 4:boolean) -> 5:boolean, LongColNotEqualLongColumn(col 0:date, col 1:date) -> 6:boolean, LongColLessEqualLongColumn(col 0:date, col 1:date) -> 7:boolean, LongColLessLongColumn(col 0:date, col 1:date) -> 8:boolean, ScalarNullOrCol(col 10:boolean, val 0:boolean)(children: IsNotNull(col 1:date) -> 10:boolean) -> 11:boolean, LongColGreaterEqualLongColumn(col 1:date, col 0:date) -> 12:boolean, LongColGreaterLongColumn(col 1:date, col 0:date) -> 13:boolean
                     Statistics: Num rows: 3 Data size: 432 Basic stats: COMPLETE Column stats: COMPLETE
                     Reduce Output Operator
                       key expressions: _col0 (type: date)

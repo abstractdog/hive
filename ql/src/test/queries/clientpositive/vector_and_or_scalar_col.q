@@ -17,10 +17,11 @@ insert into table vector_and_or
 -- select null explicitly
 
 explain vectorization detail select null or dt1 is not null from vector_and_or;
--- check vectorized results
+select '*** vectorized null or dt1 is not null ***';
 select null or dt1 is not null from vector_and_or;
+
 set hive.vectorized.execution.enabled=false;
--- check non-vectorized results
+select '*** non-vectorized null or dt1 is not null ***';
 select null or dt1 is not null from vector_and_or;
 set hive.vectorized.execution.enabled=true;
 
@@ -28,18 +29,20 @@ set hive.vectorized.execution.enabled=true;
 -- select boolean constant, already vectorized
 
 explain vectorization detail select false or dt1 is not null from vector_and_or;
--- check vectorized results
+select '*** vectorized false or dt1 is not null ***';
 select false or dt1 is not null from vector_and_or;
+
 set hive.vectorized.execution.enabled=false;
--- check non-vectorized results
+select '*** non-vectorized false or dt1 is not null ***';
 select false or dt1 is not null from vector_and_or;
 set hive.vectorized.execution.enabled=true;
 
 -- select dt1 = dt1 which is translated to "null or ..." after HIVE-21001
 
 explain vectorization detail select dt1 = dt1 from vector_and_or;
--- check vectorized results
+select '*** vectorized dt1=dt1 ***';
 select dt1 = dt1 from vector_and_or;
+
 set hive.vectorized.execution.enabled=false;
--- check non-vectorized results
+select '*** non-vectorized dt1=dt1 ***';
 select dt1 = dt1 from vector_and_or;

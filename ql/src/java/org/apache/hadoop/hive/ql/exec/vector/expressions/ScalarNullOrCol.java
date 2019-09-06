@@ -5,12 +5,12 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 
-public class ScalarNullOrCol extends VectorExpression {
+public class ScalarNullOrCol extends ColOrCol {
   private static final long serialVersionUID = 1L;
   protected final int colNum;
 
   public ScalarNullOrCol(ConstantVectorExpression expression, int colNum, int outputColumnNum) {
-    super(outputColumnNum);
+    super(colNum, -1, outputColumnNum);
     this.colNum = colNum;
   }
 
@@ -21,14 +21,14 @@ public class ScalarNullOrCol extends VectorExpression {
 
   @Override
   public void evaluate(VectorizedRowBatch batch) throws HiveException {
-    LongColumnVector outV = (LongColumnVector) batch.cols[outputColumnNum];
-    long[] outputVector = outV.vector;
-    boolean[] outputIsNull = outV.isNull;
+    if (childExpressions != null) {
+      super.evaluateChildren(batch);
+    }
 
-    // null or "anything" is null
-    outV.isRepeating = true;
-    outputVector[0] = LongColumnVector.NULL_VALUE;
-    outputIsNull[0] = true;
+    LongColumnVector inputColVector = (LongColumnVector) batch.cols[colNum];
+
+    super.doEvaluate(batch, new LongColumnVector(inputColVector.vector.length).fillWithNulls(),
+        inputColVector);
   }
 
   @Override

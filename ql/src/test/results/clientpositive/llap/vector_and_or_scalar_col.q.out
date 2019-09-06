@@ -409,8 +409,8 @@ POSTHOOK: type: QUERY
 POSTHOOK: Input: default@vector_and_or
 #### A masked pattern was here ####
 PLAN VECTORIZATION:
-  enabled: false
-  enabledConditionsNotMet: [hive.vectorized.execution.enabled IS false]
+  enabled: true
+  enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
 
 STAGE DEPENDENCIES:
   Stage-1 is a root stage
@@ -426,19 +426,45 @@ STAGE PLANS:
                 TableScan
                   alias: vector_and_or
                   Statistics: Num rows: 3 Data size: 168 Basic stats: COMPLETE Column stats: COMPLETE
+                  TableScan Vectorization:
+                      native: true
+                      vectorizationSchemaColumns: [0:dt1:date, 1:dt2:date, 2:ROW__ID:struct<writeid:bigint,bucketid:int,rowid:bigint>]
                   Select Operator
                     expressions: (null and dt1 is null) (type: boolean)
                     outputColumnNames: _col0
+                    Select Vectorization:
+                        className: VectorSelectOperator
+                        native: true
+                        projectedOutputColumnNums: [5]
+                        selectExpressions: ScalarNullAndCol(col 4:boolean, val 0:boolean)(children: IsNull(col 0:date) -> 4:boolean) -> 5:boolean
                     Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                     File Output Operator
                       compressed: false
+                      File Sink Vectorization:
+                          className: VectorFileSinkOperator
+                          native: false
                       Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                       table:
                           input format: org.apache.hadoop.mapred.SequenceFileInputFormat
                           output format: org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat
                           serde: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-            Execution mode: llap
+            Execution mode: vectorized, llap
             LLAP IO: all inputs
+            Map Vectorization:
+                enabled: true
+                enabledConditionsMet: hive.vectorized.use.vectorized.input.format IS true
+                inputFormatFeatureSupport: [DECIMAL_64]
+                featureSupportInUse: [DECIMAL_64]
+                inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
+                allNative: false
+                usesVectorUDFAdaptor: false
+                vectorized: true
+                rowBatchContext:
+                    dataColumnCount: 2
+                    includeColumns: [0]
+                    dataColumns: dt1:date, dt2:date
+                    partitionColumnCount: 0
+                    scratchColumnTypeNames: [bigint, bigint, bigint]
 
   Stage: Stage-0
     Fetch Operator
@@ -633,8 +659,8 @@ STAGE PLANS:
                     Select Vectorization:
                         className: VectorSelectOperator
                         native: true
-                        projectedOutputColumnNums: [4]
-                        selectExpressions: VectorUDFAdaptor((null and dt1 is null))(children: IsNull(col 0:date) -> 3:boolean) -> 4:boolean
+                        projectedOutputColumnNums: [5]
+                        selectExpressions: ScalarNullAndCol(col 4:boolean, val 0:boolean)(children: IsNull(col 0:date) -> 4:boolean) -> 5:boolean
                     Statistics: Num rows: 3 Data size: 12 Basic stats: COMPLETE Column stats: COMPLETE
                     File Output Operator
                       compressed: false
@@ -655,14 +681,14 @@ STAGE PLANS:
                 featureSupportInUse: [DECIMAL_64]
                 inputFileFormats: org.apache.hadoop.hive.ql.io.orc.OrcInputFormat
                 allNative: false
-                usesVectorUDFAdaptor: true
+                usesVectorUDFAdaptor: false
                 vectorized: true
                 rowBatchContext:
                     dataColumnCount: 2
                     includeColumns: [0]
                     dataColumns: dt1:date, dt2:date
                     partitionColumnCount: 0
-                    scratchColumnTypeNames: [bigint, bigint]
+                    scratchColumnTypeNames: [bigint, bigint, bigint]
 
   Stage: Stage-0
     Fetch Operator

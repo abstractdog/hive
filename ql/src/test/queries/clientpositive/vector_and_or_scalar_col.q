@@ -47,6 +47,7 @@ select dt1 = dt1 from vector_and_or;
 set hive.vectorized.execution.enabled=false;
 select '*** non-vectorized dt1=dt1 ***';
 select dt1 = dt1 from vector_and_or;
+set hive.vectorized.execution.enabled=true;
 
 
 select '*** AND ***';
@@ -73,7 +74,7 @@ select '*** non-vectorized true and dt1 is null ***';
 select true and dt1 is null from vector_and_or;
 set hive.vectorized.execution.enabled=true;
 
--- select dt1 = dt1 which is translated to "null or ..." after HIVE-21001
+-- select dt1 != dt1 which is translated to "null and ..." after HIVE-21001
 
 explain vectorization detail select dt1 != dt1 from vector_and_or;
 select '*** vectorized dt1!=dt1 ***';

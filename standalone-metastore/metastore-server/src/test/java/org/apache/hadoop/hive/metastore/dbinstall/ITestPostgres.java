@@ -17,66 +17,17 @@
  */
 package org.apache.hadoop.hive.metastore.dbinstall;
 
+import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
+import org.apache.hadoop.hive.metastore.dbinstall.rules.Postgres;
+import org.junit.Rule;
+
 public class ITestPostgres extends DbInstallBase {
-  @Override
-  protected String getDockerContainerName() {
-    return "metastore-test-postgres-install";
-  }
+
+  @Rule
+  public final DatabaseRule databaseRule = new Postgres();
 
   @Override
-  protected String getDockerImageName() {
-    return "postgres:9.3";
-  }
-
-  @Override
-  protected String[] getDockerAdditionalArgs() {
-    return buildArray(
-        "-p",
-        "5432:5432",
-        "-e",
-        "POSTGRES_PASSWORD=" + getDbRootPassword(),
-        "-d"
-
-    );
-  }
-
-  @Override
-  protected String getDbType() {
-    return "postgres";
-  }
-
-  @Override
-  protected String getDbRootUser() {
-    return "postgres";
-  }
-
-  @Override
-  protected String getDbRootPassword() {
-    return "its-a-secret";
-  }
-
-  @Override
-  protected String getJdbcDriver() {
-    return org.postgresql.Driver.class.getName();
-  }
-
-  @Override
-  protected String getJdbcUrl() {
-    return "jdbc:postgresql://localhost:5432/" + HIVE_DB;
-  }
-
-  @Override
-  protected String getInitialJdbcUrl() {
-    return "jdbc:postgresql://localhost:5432/postgres";
-  }
-
-  @Override
-  protected boolean isContainerReady(String logOutput) {
-    return logOutput.contains("database system is ready to accept connections");
-  }
-
-  @Override
-  protected String getHivePassword() {
-    return "hivepassword";
+  protected DatabaseRule getRule() {
+    return databaseRule;
   }
 }

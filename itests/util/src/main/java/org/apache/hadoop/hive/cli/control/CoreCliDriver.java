@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
 import org.apache.hadoop.hive.ql.QTestArguments;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
 import org.apache.hadoop.hive.ql.QTestUtil;
@@ -85,7 +86,7 @@ public class CoreCliDriver extends CliAdapter {
         @Override
         public Void invokeInternal() throws Exception {
           qt.newSession();
-          qt.cleanUp(); // I don't think this is neccessary...
+          //qt.cleanUp(); // I don't think this is neccessary...
           return null;
         }
       }.invoke("Initialization cleanup done.", LOG, true);
@@ -165,6 +166,10 @@ public class CoreCliDriver extends CliAdapter {
       System.err.flush();
       fail("Unexpected exception in shutdown");
     }
+  }
+
+  public DatabaseRule getMetaStoreDatabaseRule(){
+    return qt.getMetaStoreDatabaseRule();
   }
 
   @Override

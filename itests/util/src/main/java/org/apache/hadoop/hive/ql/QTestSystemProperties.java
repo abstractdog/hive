@@ -28,6 +28,7 @@ public class QTestSystemProperties {
   private static final String SYS_PROP_VECTORIZATION_ENABLED = "test.vectorization.enabled";
   private static final String SYS_PROP_CHECK_SYNTAX = "test.check.syntax";
   private static final String SYS_PROP_FORCE_EXCLUSIONS = "test.force.exclusions";
+  private static final String SYS_PROP_METASTORE_DB_TYPE = "test.metastore.db.type";
   private static final String SYS_PROP_BUILD_DIR = "build.dir"; // typically target
 
   public static String getTempDir() {
@@ -48,6 +49,10 @@ public class QTestSystemProperties {
 
   public static String getBuildDir() {
     return System.getProperty(SYS_PROP_BUILD_DIR);
+  }
+
+  public static String getMetaStoreDbType() {
+    return System.getProperty(SYS_PROP_METASTORE_DB_TYPE);
   }
 
   public static boolean isVectorizationEnabled() {

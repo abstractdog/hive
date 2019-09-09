@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -48,6 +49,10 @@ public abstract class CliAdapter {
     return ret;
   }
 
+  public DatabaseRule getMetaStoreDatabaseRule(){
+    return null;
+  }
+
   public abstract void beforeClass() throws Exception;
 
   // HIVE-14444 pending rename: before
@@ -68,11 +73,17 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
+            if (getMetaStoreDatabaseRule() != null){
+              getMetaStoreDatabaseRule().before();
+            }
             CliAdapter.this.beforeClass();
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.shutdown();
+              if (getMetaStoreDatabaseRule() != null){
+                getMetaStoreDatabaseRule().after();
+              }
             }
           }
         };
@@ -87,11 +98,17 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
+            if (getMetaStoreDatabaseRule() != null){
+              getMetaStoreDatabaseRule().before();
+            }
             CliAdapter.this.setUp();
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.tearDown();
+              if (getMetaStoreDatabaseRule() != null){
+                getMetaStoreDatabaseRule().after();
+              }
             }
           }
         };

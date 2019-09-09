@@ -52,7 +52,7 @@ import org.apache.hadoop.hive.common.io.SessionStream;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
+import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
 import org.apache.hadoop.hive.ql.QTestMiniClusters.FsType;
 import org.apache.hadoop.hive.ql.cache.results.QueryResultsCache;
 import org.apache.hadoop.hive.ql.dataset.QTestDatasetHandler;
@@ -113,6 +113,7 @@ public class QTestUtil {
   private final QOutProcessor qOutProcessor;
   private static QTestResultProcessor qTestResultProcessor = new QTestResultProcessor();
   protected QTestDatasetHandler datasetHandler;
+  protected QTestMetaStoreHandler metaStoreHandler;
   private final String initScript;
   private final String cleanupScript;
 
@@ -200,6 +201,7 @@ public class QTestUtil {
     initConf();
 
     datasetHandler = new QTestDatasetHandler(this, conf);
+    metaStoreHandler = new QTestMetaStoreHandler().setMetaStoreConfiguration(conf);
     testFiles = datasetHandler.getDataDir(conf);
     conf.set("test.data.dir", datasetHandler.getDataDir(conf));
 
@@ -405,8 +407,8 @@ public class QTestUtil {
     clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
     StatsSources.clearGlobalStats();
-    TxnDbUtil.cleanDb(conf);
-    TxnDbUtil.prepDb(conf);
+    
+    metaStoreHandler.cleanupMetaStore(conf);
   }
 
   protected void initConfFromSetup() throws Exception {
@@ -635,6 +637,10 @@ public class QTestUtil {
 
   public int execute(String tname) {
     return drv.run(qMap.get(tname)).getResponseCode();
+  }
+
+  public DatabaseRule getMetaStoreDatabaseRule(){
+    return metaStoreHandler.getRule();
   }
 
   public CommandProcessorResponse executeClient(String tname1, String tname2) {

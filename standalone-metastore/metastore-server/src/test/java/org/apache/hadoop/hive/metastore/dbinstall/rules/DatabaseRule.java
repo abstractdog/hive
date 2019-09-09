@@ -77,7 +77,7 @@ public abstract class DatabaseRule extends ExternalResource {
   }
   
   @Override
-  protected void before() throws Throwable { //runDockerContainer
+  public void before() throws Throwable { //runDockerContainer
     if (runCmdAndPrintStreams(buildRunCmd(), 600) != 0) {
       throw new RuntimeException("Unable to start docker container");
     }
@@ -96,7 +96,7 @@ public abstract class DatabaseRule extends ExternalResource {
   }
 
   @Override
-  protected void after() { // stopAndRmDockerContainer
+  public void after() { // stopAndRmDockerContainer
     if ("true".equalsIgnoreCase(System.getProperty("metastore.itest.no.stop.container"))) {
       LOG.warn("Not stopping container " + getDockerContainerName() + " at user request, please "
           + "be sure to shut it down before rerunning the test.");

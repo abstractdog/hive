@@ -168,8 +168,9 @@ public class CoreCliDriver extends CliAdapter {
     }
   }
 
-  public DatabaseRule getMetaStoreDatabaseRule(){
-    return qt.getMetaStoreDatabaseRule();
+  @Override
+  protected QTestUtil getQt() {
+    return qt;
   }
 
   @Override

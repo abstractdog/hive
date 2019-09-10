@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Mssql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Mysql;
@@ -39,8 +40,8 @@ public class QTestMetaStoreHandler {
   }
 
   private void init() {
-    this.metastoreType = QTestSystemProperties.getMetaStoreDbType();
-    this.rule = getDatabaseRule(metastoreType);
+    this.metastoreType = QTestSystemProperties.getMetaStoreDb();
+    this.rule = getDatabaseRule(metastoreType).setVerbose(true);
     
     LOG.info(String.format("initialized metastore type '%s' for qtests", metastoreType));
   }
@@ -52,12 +53,21 @@ public class QTestMetaStoreHandler {
   public QTestMetaStoreHandler setMetaStoreConfiguration(HiveConf conf) {
     conf.setVar(ConfVars.METASTOREDBTYPE, getDbTypeConfString());
 
-    conf.setVar(ConfVars.METASTORECONNECTURLKEY, rule.getJdbcUrl());
-    conf.setVar(ConfVars.METASTORE_CONNECTION_DRIVER, rule.getJdbcDriver());
-    conf.setVar(ConfVars.METASTORE_CONNECTION_USER_NAME, rule.getDbRootUser());
-    conf.setVar(ConfVars.METASTOREPWD, rule.getDbRootPassword());
+    MetastoreConf.setVar(conf, MetastoreConf.ConfVars.CONNECT_URL_KEY, rule.getJdbcUrl());
+    MetastoreConf.setVar(conf, MetastoreConf.ConfVars.CONNECTION_DRIVER, rule.getJdbcDriver());
+    MetastoreConf.setVar(conf, MetastoreConf.ConfVars.CONNECTION_USER_NAME, rule.getHiveUser());
+    MetastoreConf.setVar(conf, MetastoreConf.ConfVars.PWD, rule.getHivePassword());
+
+    LOG.info(String.format("set metastore connection to url: %s", MetastoreConf.getVar(conf, MetastoreConf.ConfVars.CONNECT_URL_KEY)));
 
     return this;
+  }
+
+  public void setSystemProperties() {
+    System.setProperty(MetastoreConf.ConfVars.CONNECT_URL_KEY.getVarname(), rule.getJdbcUrl());
+    System.setProperty(MetastoreConf.ConfVars.CONNECTION_DRIVER.getVarname(), rule.getJdbcDriver());
+    System.setProperty(MetastoreConf.ConfVars.CONNECTION_USER_NAME.getVarname(), rule.getHiveUser());
+    System.setProperty(MetastoreConf.ConfVars.PWD.getVarname(), rule.getHivePassword());
   }
 
   public void cleanupMetaStore(HiveConf conf) throws Exception {

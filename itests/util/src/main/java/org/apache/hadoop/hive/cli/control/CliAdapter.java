@@ -22,7 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+import org.apache.hadoop.hive.ql.QTestMetaStoreHandler;
+import org.apache.hadoop.hive.ql.QTestUtil;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -33,9 +35,11 @@ import org.junit.runners.model.Statement;
 public abstract class CliAdapter {
 
   protected final AbstractCliConfig cliConfig;
+  protected QTestMetaStoreHandler metaStoreHandler;
 
   public CliAdapter(AbstractCliConfig cliConfig) {
     this.cliConfig = cliConfig;
+    metaStoreHandler = new QTestMetaStoreHandler();
   }
 
   public final List<Object[]> getParameters() throws Exception {
@@ -47,10 +51,6 @@ public abstract class CliAdapter {
       ret.add(new Object[] { label, file });
     }
     return ret;
-  }
-
-  public DatabaseRule getMetaStoreDatabaseRule(){
-    return null;
   }
 
   public abstract void beforeClass() throws Exception;
@@ -73,17 +73,16 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
-            if (getMetaStoreDatabaseRule() != null){
-              getMetaStoreDatabaseRule().before();
-            }
-            CliAdapter.this.beforeClass();
+            metaStoreHandler.getRule().before();
+            metaStoreHandler.getRule().install();
+            metaStoreHandler.setSystemProperties();
+            CliAdapter.this.beforeClass(); // instantiating QTestUtil
+            metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.shutdown();
-              if (getMetaStoreDatabaseRule() != null){
-                getMetaStoreDatabaseRule().after();
-              }
+              metaStoreHandler.getRule().after();
             }
           }
         };
@@ -98,22 +97,23 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
-            if (getMetaStoreDatabaseRule() != null){
-              getMetaStoreDatabaseRule().before();
-            }
+            metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
             CliAdapter.this.setUp();
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.tearDown();
-              if (getMetaStoreDatabaseRule() != null){
-                getMetaStoreDatabaseRule().after();
-              }
+              metaStoreHandler.cleanupMetaStore(getQt().getConf());
             }
           }
         };
       }
     };
+  }
+
+  //FIXME: make this abstract
+  protected QTestUtil getQt() {
+    return null;
   }
 
   // HIVE-14444: pending refactor to push File forward

@@ -196,8 +196,9 @@ public class MetastoreSchemaTool {
     return verbose;
   }
 
-  protected void setVerbose(boolean verbose) {
+  public MetastoreSchemaTool setVerbose(boolean verbose) {
     this.verbose = verbose;
+    return this;
   }
 
   protected void setDbOpts(String dbOpts) {

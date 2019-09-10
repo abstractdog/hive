@@ -52,7 +52,6 @@ import org.apache.hadoop.hive.common.io.SessionStream;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
-import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
 import org.apache.hadoop.hive.ql.QTestMiniClusters.FsType;
 import org.apache.hadoop.hive.ql.cache.results.QueryResultsCache;
 import org.apache.hadoop.hive.ql.dataset.QTestDatasetHandler;
@@ -113,7 +112,6 @@ public class QTestUtil {
   private final QOutProcessor qOutProcessor;
   private static QTestResultProcessor qTestResultProcessor = new QTestResultProcessor();
   protected QTestDatasetHandler datasetHandler;
-  protected QTestMetaStoreHandler metaStoreHandler;
   private final String initScript;
   private final String cleanupScript;
 
@@ -196,12 +194,13 @@ public class QTestUtil {
     conf = queryState.getConf();
     sem = new SemanticAnalyzer(queryState);
 
+    setMetaStoreProperties();
+
     this.miniClusters.setup(testArgs, conf, getScriptsDir(), logDir);
 
     initConf();
 
     datasetHandler = new QTestDatasetHandler(this, conf);
-    metaStoreHandler = new QTestMetaStoreHandler().setMetaStoreConfiguration(conf);
     testFiles = datasetHandler.getDataDir(conf);
     conf.set("test.data.dir", datasetHandler.getDataDir(conf));
 
@@ -212,6 +211,16 @@ public class QTestUtil {
 
     postInit();
     savedConf = new HiveConf(conf);
+  }
+
+  private void setMetaStoreProperties() {
+    setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars.CONNECT_URL_KEY);
+  }
+
+  private void setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars var) {
+    if (System.getProperty(var.getVarname()) != null) {
+      MetastoreConf.setVar(conf, var, System.getProperty(var.getVarname()));
+    }
   }
 
   private String getScriptsDir() {
@@ -407,8 +416,6 @@ public class QTestUtil {
     clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
     StatsSources.clearGlobalStats();
-    
-    metaStoreHandler.cleanupMetaStore(conf);
   }
 
   protected void initConfFromSetup() throws Exception {
@@ -637,10 +644,6 @@ public class QTestUtil {
 
   public int execute(String tname) {
     return drv.run(qMap.get(tname)).getResponseCode();
-  }
-
-  public DatabaseRule getMetaStoreDatabaseRule(){
-    return metaStoreHandler.getRule();
   }
 
   public CommandProcessorResponse executeClient(String tname1, String tname2) {

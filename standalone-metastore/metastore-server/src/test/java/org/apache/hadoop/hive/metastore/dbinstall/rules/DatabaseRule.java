@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.tools.schematool.MetastoreSchemaTool;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory;
 public abstract class DatabaseRule extends ExternalResource {
   private static final Logger LOG = LoggerFactory.getLogger(DatabaseRule.class);
 
+  protected static final String HIVE_USER = "hiveuser";
   // used in most of the RDBMS configs, except MSSQL
   protected static final String HIVE_PASSWORD = "hivepassword";
   protected static final String HIVE_DB = "hivedb";
@@ -40,6 +42,13 @@ public abstract class DatabaseRule extends ExternalResource {
   public abstract String getJdbcDriver();
 
   public abstract String getJdbcUrl();
+
+  private boolean verbose;
+
+  public DatabaseRule setVerbose(boolean verbose) {
+    this.verbose = verbose;
+    return this;
+  };
 
   public String getDb() {
     return HIVE_DB;
@@ -177,5 +186,85 @@ public abstract class DatabaseRule extends ExternalResource {
         "logs",
         getDockerContainerName()
     );
+  }
+
+  public String getHiveUser(){
+    return HIVE_USER;
+  }
+
+  public int createUser() {
+    return new MetastoreSchemaTool().setVerbose(verbose).run(buildArray(
+        "-createUser",
+        "-dbType",
+        getDbType(),
+        "-userName",
+        getDbRootUser(),
+        "-passWord",
+        getDbRootPassword(),
+        "-hiveUser",
+        HIVE_USER,
+        "-hivePassword",
+        getHivePassword(),
+        "-hiveDb",
+        getDb(),
+        "-url",
+        getInitialJdbcUrl(),
+        "-driver",
+        getJdbcDriver()
+    ));
+  }
+
+  public int installLatest() {
+    return new MetastoreSchemaTool().setVerbose(verbose).run(buildArray(
+        "-initSchema",
+        "-dbType",
+        getDbType(),
+        "-userName",
+        HIVE_USER,
+        "-passWord",
+        getHivePassword(),
+        "-url",
+        getJdbcUrl(),
+        "-driver",
+        getJdbcDriver()
+    ));
+  }
+  
+  public int installAVersion(String version) {
+    return new MetastoreSchemaTool().setVerbose(verbose).run(buildArray(
+        "-initSchemaTo",
+        version,
+        "-dbType",
+        getDbType(),
+        "-userName",
+        HIVE_USER,
+        "-passWord",
+        getHivePassword(),
+        "-url",
+        getJdbcUrl(),
+        "-driver",
+        getJdbcDriver()
+    ));
+  }
+
+  public int upgradeToLatest() {
+    return new MetastoreSchemaTool().setVerbose(verbose).run(buildArray(
+        "-upgradeSchema",
+        "-dbType",
+        getDbType(),
+        "-userName",
+        HIVE_USER,
+        "-passWord",
+        getHivePassword(),
+        "-url",
+        getJdbcUrl(),
+        "-driver",
+        getJdbcDriver()
+    ));
+  }
+
+  public void install() {
+    createUser();
+    installLatest();
   }
 }

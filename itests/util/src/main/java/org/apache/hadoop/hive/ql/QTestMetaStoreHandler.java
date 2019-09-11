@@ -21,6 +21,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
+import org.apache.hadoop.hive.metastore.dbinstall.rules.Derby;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Mssql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Mysql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Oracle;
@@ -40,9 +41,11 @@ public class QTestMetaStoreHandler {
   }
 
   private void init() {
-    this.metastoreType = QTestSystemProperties.getMetaStoreDb();
+    this.metastoreType = QTestSystemProperties.getMetaStoreDb() == null ? "derby"
+      : QTestSystemProperties.getMetaStoreDb();
+
     this.rule = getDatabaseRule(metastoreType).setVerbose(true);
-    
+
     LOG.info(String.format("initialized metastore type '%s' for qtests", metastoreType));
   }
 
@@ -71,12 +74,18 @@ public class QTestMetaStoreHandler {
   }
 
   public void cleanupMetaStore(HiveConf conf) throws Exception {
-    TxnDbUtil.cleanDb(conf);
-    TxnDbUtil.prepDb(conf);
+    if (metastoreType.equalsIgnoreCase("derby")) {
+      TxnDbUtil.cleanDb(conf);
+      TxnDbUtil.prepDb(conf);
+    } else {
+      rule.after();
+      rule.before();
+      rule.install();
+    }
   }
 
   private DatabaseRule getDatabaseRule(String metastoreType) {
-    switch (metastoreType.toLowerCase()) {
+    switch (metastoreType) {
     case "postgres":
       return new Postgres();
     case "oracle":
@@ -87,7 +96,7 @@ public class QTestMetaStoreHandler {
     case "sqlserver":
       return new Mssql();
     default:
-      throw new RuntimeException("unknown metastore type: " + metastoreType);
+      return new Derby();
     }
   }
 

@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.QTestMetaStoreHandler;
 import org.apache.hadoop.hive.ql.QTestUtil;
+import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -77,7 +78,6 @@ public abstract class CliAdapter {
             metaStoreHandler.getRule().install();
             metaStoreHandler.setSystemProperties();
             CliAdapter.this.beforeClass(); // instantiating QTestUtil
-            metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
             try {
               base.evaluate();
             } finally {

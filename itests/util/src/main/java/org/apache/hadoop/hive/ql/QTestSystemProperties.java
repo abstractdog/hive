@@ -52,7 +52,8 @@ public class QTestSystemProperties {
   }
 
   public static String getMetaStoreDb() {
-    return System.getProperty(SYS_PROP_METASTORE_DB);
+    return System.getProperty(SYS_PROP_METASTORE_DB) == null ? null
+      : System.getProperty(SYS_PROP_METASTORE_DB).toLowerCase();
   }
 
   public static boolean isVectorizationEnabled() {

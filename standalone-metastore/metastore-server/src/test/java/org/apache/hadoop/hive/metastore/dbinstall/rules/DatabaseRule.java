@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.tools.schematool.MetastoreSchemaTool;
 import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
@@ -86,7 +85,7 @@ public abstract class DatabaseRule extends ExternalResource {
   }
   
   @Override
-  public void before() throws Throwable { //runDockerContainer
+  public void before() throws Exception { //runDockerContainer
     if (runCmdAndPrintStreams(buildRunCmd(), 600) != 0) {
       throw new RuntimeException("Unable to start docker container");
     }

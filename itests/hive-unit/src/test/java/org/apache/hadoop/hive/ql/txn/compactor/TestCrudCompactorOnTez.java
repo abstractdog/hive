@@ -90,6 +90,8 @@ public class TestCrudCompactorOnTez {
     hiveConf.setVar(HiveConf.ConfVars.HIVEINPUTFORMAT, HiveInputFormat.class.getName());
     hiveConf.setVar(HiveConf.ConfVars.DYNAMICPARTITIONINGMODE, "nonstrict");
     hiveConf.setVar(HiveConf.ConfVars.HIVEFETCHTASKCONVERSION, "none");
+    hiveConf.setBoolVar(HiveConf.ConfVars.HIVESTATSAUTOGATHER, false);
+    hiveConf.setBoolVar(HiveConf.ConfVars.HIVESTATSCOLAUTOGATHER, false);
     TxnDbUtil.setConfValues(hiveConf);
     TxnDbUtil.cleanDb(hiveConf);
     TxnDbUtil.prepDb(hiveConf);
@@ -345,7 +347,7 @@ public class TestCrudCompactorOnTez {
     // Clean up
     executeStatementOnDriver("drop table " + tblName, driver);
   }
-
+  
   private void runCompaction(String dbName, String tblName, CompactionType compactionType, String... partNames)
       throws Exception {
     HiveConf hiveConf = new HiveConf(conf);

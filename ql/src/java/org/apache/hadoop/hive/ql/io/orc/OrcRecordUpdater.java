@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.io.AcidOutputFormat;
 import org.apache.hadoop.hive.ql.io.AcidUtils;
@@ -571,7 +572,7 @@ public class OrcRecordUpdater implements RecordUpdater {
               LOG.debug("Closing writer for path: {} acid stats: {}", path, indexBuilder.acidStats);
             }
             writer.close(); // normal close, when there are inserts.
-          }
+          } 
         } else {
           if (options.isWritingBase()) {
             // With insert overwrite we need the empty file to delete the previous content of the table
@@ -621,11 +622,19 @@ public class OrcRecordUpdater implements RecordUpdater {
     deleteEventWriter = null;
     writerClosed = true;
   }
+  
   private void initWriter() throws IOException {
     if (writer == null) {
       writer = OrcFile.createWriter(path, writerOptions);
       AcidUtils.OrcAcidVersion.setAcidVersionInDataFile(writer);
-      AcidUtils.OrcAcidVersion.writeVersionFile(path.getParent(), fs);
+      try {
+        AcidUtils.OrcAcidVersion.writeVersionFile(path.getParent(), fs);
+      } catch (Exception e) {
+        e.printStackTrace();
+        // Ignore; might have been created by another concurrent writer, writing to a different bucket
+        // within this delta/base directory
+        LOG.trace(e.fillInStackTrace().toString());
+      }
     }
   }
 
@@ -809,5 +818,10 @@ public class OrcRecordUpdater implements RecordUpdater {
     int currentBucketProperty = bucket.get();
     bucket.set(bucketProperty);
     return currentBucketProperty;
+  }
+  
+  @Override
+  public Path getUpdatedFilePath() {
+    return path;
   }
 }

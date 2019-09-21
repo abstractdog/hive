@@ -2066,9 +2066,9 @@ public class Hive {
       LoadFileType loadFileType, boolean inheritTableSpecs, boolean inheritLocation,
       boolean isSkewedStoreAsSubdir,
       boolean isSrcLocal, boolean isAcidIUDoperation, boolean resetStatistics, Long writeId,
-      int stmtId, boolean isInsertOverwrite) throws HiveException {
+      int stmtId, boolean isInsertOverwrite, boolean isDirectInsert) throws HiveException {
     Path tblDataLocationPath =  tbl.getDataLocation();
-    boolean isMmTableWrite = AcidUtils.isInsertOnlyTable(tbl.getParameters());
+    boolean isMmTableWrite = AcidUtils.isInsertOnlyTable(tbl.getParameters()); 
     assert tbl.getPath() != null : "null==getPath() for " + tbl.getTableName();
     boolean isFullAcidTable = AcidUtils.isFullAcidTable(tbl);
     boolean isTxnTable = AcidUtils.isTransactionalTable(tbl);
@@ -2125,13 +2125,12 @@ public class Hive {
       //       to ACID updates. So the are not themselves ACID.
 
       // Note: this assumes both paths are qualified; which they are, currently.
-      if (((isMmTableWrite || isFullAcidTable) && loadPath.equals(newPartPath)) ||
+      if (((isMmTableWrite || isDirectInsert || isFullAcidTable) && loadPath.equals(newPartPath)) ||
               (loadFileType == LoadFileType.IGNORE)) {
-        // MM insert query, move itself is a no-op.
+        // MM insert query or direct insert; move itself is a no-op.
         if (Utilities.FILE_OP_LOGGER.isTraceEnabled()) {
           Utilities.FILE_OP_LOGGER.trace("not moving " + loadPath + " to " + newPartPath + " (MM)");
         }
-        assert !isAcidIUDoperation;
         if (newFiles != null) {
           listFilesCreatedByQuery(loadPath, writeId, stmtId, isMmTableWrite ? isInsertOverwrite : false, newFiles);
         }
@@ -2143,7 +2142,6 @@ public class Hive {
         // Either a non-MM query, or a load into MM table from an external source.
         Path destPath = newPartPath;
         if (isMmTableWrite) {
-          assert !isAcidIUDoperation;
           // We will load into MM directory, and hide previous directories if needed.
           destPath = new Path(destPath, isInsertOverwrite
               ? AcidUtils.baseDir(writeId) : AcidUtils.deltaSubdir(writeId, writeId, stmtId));
@@ -2501,13 +2499,13 @@ private void constructOneLBLocationMap(FileStatus fSta,
    * @return Set of valid partitions
    * @throws HiveException
    */
-  private Set<Path> getValidPartitionsInPath(
+  private Set<Path> getValidPartitionsInPath( // pass isDirectInsert from tbd
       int numDP, int numLB, Path loadPath, Long writeId, int stmtId,
-      boolean isMmTable, boolean isInsertOverwrite) throws HiveException {
+      boolean isMmTable, boolean isInsertOverwrite, boolean isDirectInsert) throws HiveException {
     Set<Path> validPartitions = new HashSet<Path>();
     try {
       FileSystem fs = loadPath.getFileSystem(conf);
-      if (!isMmTable) {
+      if (!isMmTable || !isDirectInsert) {
         List<FileStatus> leafStatus = HiveStatsUtils.getFileStatusRecurse(loadPath, numDP, fs);
         // Check for empty partitions
         for (FileStatus s : leafStatus) {
@@ -2525,7 +2523,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
         //       we have multiple statements anyway is union.
         Utilities.FILE_OP_LOGGER.trace(
             "Looking for dynamic partitions in {} ({} levels)", loadPath, numDP);
-        Path[] leafStatus = Utilities.getMmDirectoryCandidates(
+        Path[] leafStatus = Utilities.getDirectInsertDirectoryCandidates(
             fs, loadPath, numDP, null, writeId, -1, conf, isInsertOverwrite);
         for (Path p : leafStatus) {
           Path dpPath = p.getParent(); // Skip the MM directory that we have found.
@@ -2573,7 +2571,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       final String tableName, final Map<String, String> partSpec, final LoadFileType loadFileType,
       final int numDP, final int numLB, final boolean isAcid, final long writeId, final int stmtId,
       final boolean resetStatistics, final AcidUtils.Operation operation,
-      boolean isInsertOverwrite) throws HiveException {
+      boolean isInsertOverwrite, boolean isDirectInsert) throws HiveException {
 
     PerfLogger perfLogger = SessionState.getPerfLogger();
     perfLogger.PerfLogBegin("MoveTask", PerfLogger.LOAD_DYNAMIC_PARTITIONS);
@@ -2591,7 +2589,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     // Get all valid partition paths and existing partitions for them (if any)
     final Table tbl = getTable(tableName);
     final Set<Path> validPartitions = getValidPartitionsInPath(numDP, numLB, loadPath, writeId, stmtId,
-        AcidUtils.isInsertOnlyTable(tbl.getParameters()), isInsertOverwrite);
+        AcidUtils.isInsertOnlyTable(tbl.getParameters()), isInsertOverwrite, isDirectInsert);
 
     final int partsToLoad = validPartitions.size();
     final AtomicInteger partitionsLoaded = new AtomicInteger(0);
@@ -2625,7 +2623,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
               // load the partition
               Partition newPartition = loadPartition(partPath, tbl, fullPartSpec, loadFileType,
                   true, false, numLB > 0, false, isAcid, resetStatistics, writeId, stmtId,
-                  isInsertOverwrite);
+                  isInsertOverwrite, isDirectInsert);
               partitionsMap.put(fullPartSpec, newPartition);
 
               if (inPlaceEligible) {
@@ -2729,7 +2727,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
    */
   public void loadTable(Path loadPath, String tableName, LoadFileType loadFileType, boolean isSrcLocal,
       boolean isSkewedStoreAsSubdir, boolean isAcidIUDoperation, boolean resetStatistics,
-      Long writeId, int stmtId, boolean isInsertOverwrite) throws HiveException {
+      Long writeId, int stmtId, boolean isInsertOverwrite, boolean isDirectInsert) throws HiveException {
 
     PerfLogger perfLogger = SessionState.getPerfLogger();
     perfLogger.PerfLogBegin("MoveTask", PerfLogger.LOAD_TABLE);
@@ -2746,7 +2744,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
     }
 
     // Note: this assumes both paths are qualified; which they are, currently.
-    if (((isMmTable || isFullAcidTable) && loadPath.equals(tbl.getPath())) || (loadFileType == LoadFileType.IGNORE)) {
+    if (((isMmTable || isDirectInsert || isFullAcidTable) && loadPath.equals(tbl.getPath())) || (loadFileType == LoadFileType.IGNORE)) {
       /**
        * some operations on Transactional tables (e.g. Import) write directly to the final location
        * and avoid the 'move' operation.  Since MoveTask does other things, setting 'loadPath' to be
@@ -2766,7 +2764,6 @@ private void constructOneLBLocationMap(FileStatus fSta,
       Path tblPath = tbl.getPath();
       Path destPath = tblPath;
       if (isMmTable) {
-        assert !isAcidIUDoperation;
         // We will load into MM directory, and hide previous directories if needed.
         destPath = new Path(destPath, isInsertOverwrite
             ? AcidUtils.baseDir(writeId) : AcidUtils.deltaSubdir(writeId, writeId, stmtId));

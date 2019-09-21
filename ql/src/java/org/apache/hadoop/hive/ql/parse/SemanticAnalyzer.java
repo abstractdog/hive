@@ -7364,6 +7364,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     Table destinationTable = null; // destination table if any
     boolean destTableIsTransactional;     // true for full ACID table and MM table
     boolean destTableIsFullAcid; // should the destination table be written to using ACID
+    boolean isDirectInsert = false; // should we add files directly to the final path
     boolean destTableIsTemporary = false;
     boolean destTableIsMaterialization = false;
     Partition destinationPartition = null;// destination partition if any
@@ -7377,7 +7378,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     LoadTableDesc ltd = null;
     ListBucketingCtx lbCtx = null;
     Map<String, String> partSpec = null;
-    boolean isMmTable = false, isMmCtas = false;
+    boolean isMmTable = false, isMmCtas = false, isNonNativeTable = false;
     Long writeId = null;
     HiveTxnManager txnMgr = getTxnMgr();
 
@@ -7421,9 +7422,25 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         destinationPath = new Path(destinationTable.getPath(), dpCtx.getSPPath());
       }
 
-      boolean isNonNativeTable = destinationTable.isNonNative();
+      isNonNativeTable = destinationTable.isNonNative();
       isMmTable = AcidUtils.isInsertOnlyTable(destinationTable.getParameters());
-      if (isNonNativeTable || isMmTable) {
+      AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
+      // this table_desc does not contain the partitioning columns
+      tableDescriptor = Utilities.getTableDesc(destinationTable);
+      
+      if (!isNonNativeTable) {
+        if (destTableIsFullAcid) {
+          acidOp = getAcidType(tableDescriptor.getOutputFileFormatClass(), dest);
+        }
+      }
+      isDirectInsert = destTableIsFullAcid && (acidOp == AcidUtils.Operation.INSERT);
+      /**
+       * We will directly insert to the final destination in the following cases:
+       * 1. Non native table
+       * 2. Micro-managed (insert only table)
+       * 3. Full ACID table and operation type is INSERT 
+       */
+      if (isNonNativeTable || isMmTable || isDirectInsert) {
         queryTmpdir = destinationPath;
       } else {
         queryTmpdir = ctx.getTempDirForFinalJobPath(destinationPath);
@@ -7436,8 +7453,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         // set the root of the temporary path where dynamic partition columns will populate
         dpCtx.setRootPath(queryTmpdir);
       }
-      // this table_desc does not contain the partitioning columns
-      tableDescriptor = Utilities.getTableDesc(destinationTable);
 
       // Add NOT NULL constraint check
       input = genConstraintsPlan(dest, qb, input);
@@ -7467,7 +7482,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       // Create the work for moving the table
       // NOTE: specify Dynamic partitions in dest_tab for WriteEntity
       if (!isNonNativeTable) {
-        AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
         if (destTableIsFullAcid) {
           acidOp = getAcidType(tableDescriptor.getOutputFileFormatClass(), dest);
           //todo: should this be done for MM?  is it ok to use CombineHiveInputFormat with MM
@@ -7499,8 +7513,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
             destinationTable.getDbName(), destinationTable.getTableName());
         LoadFileType loadType = (!isInsertInto && !destTableIsTransactional)
             ? LoadFileType.REPLACE_ALL : LoadFileType.KEEP_EXISTING;
+        if (isDirectInsert) {
+          loadType = LoadFileType.IGNORE;
+        }
         ltd.setLoadFileType(loadType);
         ltd.setInsertOverwrite(!isInsertInto);
+        ltd.setIsDirectInsert(isDirectInsert);
         ltd.setLbCtx(lbCtx);
         loadTableWork.add(ltd);
       } else {
@@ -7559,13 +7577,33 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         }
       }
 
+      isNonNativeTable = destinationTable.isNonNative();
       isMmTable = AcidUtils.isInsertOnlyTable(destinationTable.getParameters());
-      queryTmpdir = isMmTable ? destinationPath : ctx.getTempDirForFinalJobPath(destinationPath);
+      AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
+      isDirectInsert = destTableIsFullAcid && (acidOp == AcidUtils.Operation.INSERT);
+      // this table_desc does not contain the partitioning columns
+      tableDescriptor = Utilities.getTableDesc(destinationTable);
+      
+      if (!isNonNativeTable) {
+        if (destTableIsFullAcid) {
+          acidOp = getAcidType(tableDescriptor.getOutputFileFormatClass(), dest);
+        }
+      }
+      /**
+       * We will directly insert to the final destination in the following cases:
+       * 1. Non native table
+       * 2. Micro-managed (insert only table)
+       * 3. Full ACID table and operation type is INSERT 
+       */
+      if (isNonNativeTable || isMmTable || isDirectInsert) {
+        queryTmpdir = destinationPath;
+      } else {
+        queryTmpdir = ctx.getTempDirForFinalJobPath(destinationPath);
+      }
       if (Utilities.FILE_OP_LOGGER.isTraceEnabled()) {
         Utilities.FILE_OP_LOGGER.trace("create filesink w/DEST_PARTITION specifying "
             + queryTmpdir + " from " + destinationPath);
       }
-      tableDescriptor = Utilities.getTableDesc(destinationTable);
 
       // Add NOT NULL constraint check
       input = genConstraintsPlan(dest, qb, input);
@@ -7591,7 +7629,6 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       lbCtx = constructListBucketingCtx(destinationPartition.getSkewedColNames(),
           destinationPartition.getSkewedColValues(), destinationPartition.getSkewedColValueLocationMaps(),
           destinationPartition.isStoredAsSubDirectories());
-      AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
       if (destTableIsFullAcid) {
         acidOp = getAcidType(tableDescriptor.getOutputFileFormatClass(), dest);
         //todo: should this be done for MM?  is it ok to use CombineHiveInputFormat with MM?
@@ -7622,8 +7659,12 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
       // deltas and base and leave them up to the cleaner to clean up
       LoadFileType loadType = (!isInsertInto && !destTableIsTransactional)
           ? LoadFileType.REPLACE_ALL : LoadFileType.KEEP_EXISTING;
+      if (isDirectInsert) {
+        loadType = LoadFileType.IGNORE;
+      }
       ltd.setLoadFileType(loadType);
       ltd.setInsertOverwrite(!isInsertInto);
+      ltd.setIsDirectInsert(isDirectInsert);
       ltd.setLbCtx(lbCtx);
 
       loadTableWork.add(ltd);
@@ -7849,7 +7890,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         // the metastore table, then we move and commit the partitions. At least for the time being,
         // this order needs to be enforced because metastore expects a table to exist before we can
         // add any partitions to it.
-        boolean isNonNativeTable = tableDescriptor.isNonNative();
+        isNonNativeTable = tableDescriptor.isNonNative();
         if (!isNonNativeTable) {
           AcidUtils.Operation acidOp = AcidUtils.Operation.NOT_ACID;
           if (destTableIsFullAcid) {
@@ -7891,7 +7932,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     default:
       throw new SemanticException("Unknown destination type: " + destType);
     }
-
+    
     if (!(destType == QBMetaData.DEST_DFS_FILE && qb.getIsQuery())) {
       input = genConversionSelectOperator(dest, qb, input, tableDescriptor, dpCtx);
     }
@@ -7938,7 +7979,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     FileSinkDesc fileSinkDesc = createFileSinkDesc(dest, tableDescriptor, destinationPartition,
         destinationPath, currentTableId, destTableIsFullAcid, destTableIsTemporary,//this was 1/4 acid
         destTableIsMaterialization, queryTmpdir, rsCtx, dpCtx, lbCtx, fsRS,
-        canBeMerged, destinationTable, writeId, isMmCtas, destType, qb);
+        canBeMerged, destinationTable, writeId, isMmCtas, destType, qb, isDirectInsert);
     if (isMmCtas) {
       // Add FSD so that the LoadTask compilation could fix up its path to avoid the move.
       tableDesc.setWriter(fileSinkDesc);
@@ -8148,7 +8189,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
                                           boolean destTableIsMaterialization, Path queryTmpdir,
                                           SortBucketRSCtx rsCtx, DynamicPartitionCtx dpCtx, ListBucketingCtx lbCtx,
                                           RowSchema fsRS, boolean canBeMerged, Table dest_tab, Long mmWriteId, boolean isMmCtas,
-                                          Integer dest_type, QB qb) throws SemanticException {
+                                          Integer dest_type, QB qb, boolean isDirectInsert) throws SemanticException {
     boolean isInsertOverwrite = false;
     switch (dest_type) {
     case QBMetaData.DEST_PARTITION:
@@ -8173,7 +8214,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
         conf.getBoolVar(HiveConf.ConfVars.COMPRESSRESULT), currentTableId, rsCtx.isMultiFileSpray(),
         canBeMerged, rsCtx.getNumFiles(), rsCtx.getTotalFiles(), rsCtx.getPartnCols(), dpCtx,
         dest_path, mmWriteId, isMmCtas, isInsertOverwrite, qb.getIsQuery(),
-        qb.isCTAS() || qb.isMaterializedView());
+        qb.isCTAS() || qb.isMaterializedView(), isDirectInsert);
 
     boolean isHiveServerQuery = SessionState.get().isHiveServerQuery();
     fileSinkDesc.setHiveServerQuery(isHiveServerQuery);

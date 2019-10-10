@@ -135,6 +135,11 @@ public abstract class AbstractCoreBlobstoreCliDriver extends CliAdapter {
     }
   }
 
+  @Override
+  protected QTestUtil getQt() {
+    return qt;
+  }
+
   private static String debugHint = "\nSee ./itests/hive-blobstore/target/tmp/log/hive.log, "
       + "or check ./itests/hive-blobstore/target/surefire-reports/ for specific test cases logs.";
 

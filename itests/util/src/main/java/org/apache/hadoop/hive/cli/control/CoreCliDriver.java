@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
-import org.apache.hadoop.hive.metastore.dbinstall.rules.DatabaseRule;
 import org.apache.hadoop.hive.ql.QTestArguments;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
 import org.apache.hadoop.hive.ql.QTestUtil;
@@ -58,7 +57,7 @@ public class CoreCliDriver extends CliAdapter {
     LOG.info(message);
     System.err.println(message);
 
-    MiniClusterType miniMR =cliConfig.getClusterType();
+    MiniClusterType miniMR = cliConfig.getClusterType();
     String hiveConfDir = cliConfig.getHiveConfDir();
     String initScript = cliConfig.getInitScript();
     String cleanupScript = cliConfig.getCleanupScript();

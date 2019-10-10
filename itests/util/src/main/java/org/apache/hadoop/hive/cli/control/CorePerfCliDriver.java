@@ -119,6 +119,11 @@ public class CorePerfCliDriver extends CliAdapter {
   }
 
   @Override
+  protected QTestUtil getQt() {
+    return qt;
+  }
+
+  @Override
   public void runTest(String name, String fname, String fpath) {
     long startTime = System.currentTimeMillis();
     try {

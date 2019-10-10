@@ -107,6 +107,11 @@ public class CoreKuduNegativeCliDriver extends CliAdapter {
   }
 
   @Override
+  protected QTestUtil getQt() {
+    return qt;
+  }
+
+  @Override
   public void runTest(String tname, String fname, String fpath) {
     long startTime = System.currentTimeMillis();
     try {

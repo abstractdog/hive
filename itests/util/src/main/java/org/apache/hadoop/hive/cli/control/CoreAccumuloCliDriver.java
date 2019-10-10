@@ -25,6 +25,7 @@ import java.io.File;
 import org.apache.hadoop.hive.accumulo.AccumuloQTestUtil;
 import org.apache.hadoop.hive.accumulo.AccumuloTestSetup;
 import org.apache.hadoop.hive.ql.QTestProcessExecResult;
+import org.apache.hadoop.hive.ql.QTestUtil;
 import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorException;
 import org.junit.After;
@@ -99,6 +100,11 @@ public class CoreAccumuloCliDriver extends CliAdapter {
       System.err.flush();
       fail("Unexpected exception in tearDown");
     }
+  }
+
+  @Override
+  protected QTestUtil getQt() {
+    return qt;
   }
 
   @Override

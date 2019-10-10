@@ -97,13 +97,17 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
-            metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
+            if (getQt() != null){
+              metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
+            }
             CliAdapter.this.setUp();
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.tearDown();
-              metaStoreHandler.cleanupMetaStore(getQt().getConf());
+              if (getQt() != null){
+                metaStoreHandler.cleanupMetaStore(getQt().getConf());
+              }
             }
           }
         };
@@ -111,10 +115,7 @@ public abstract class CliAdapter {
     };
   }
 
-  //FIXME: make this abstract
-  protected QTestUtil getQt() {
-    return null;
-  }
+  protected abstract QTestUtil getQt();
 
   // HIVE-14444: pending refactor to push File forward
   public final void runTest(String name, File qfile) throws Exception {

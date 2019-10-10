@@ -115,6 +115,11 @@ public class CoreNegativeCliDriver extends CliAdapter{
   }
 
   @Override
+  protected QTestUtil getQt() {
+    return qt;
+  }
+
+  @Override
   public void runTest(String tname, String fname, String fpath) throws Exception {
     long startTime = System.currentTimeMillis();
     try {

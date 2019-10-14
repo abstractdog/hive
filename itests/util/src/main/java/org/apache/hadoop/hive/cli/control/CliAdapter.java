@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.QTestMetaStoreHandler;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.junit.rules.TestRule;
@@ -72,10 +73,16 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader == null) {
+              Thread.currentThread().setContextClassLoader(CliAdapter.class.getClassLoader());
+            }
+
             metaStoreHandler.getRule().before();
             metaStoreHandler.getRule().install();
             metaStoreHandler.setSystemProperties();
             CliAdapter.this.beforeClass(); // instantiating QTestUtil
+
             try {
               base.evaluate();
             } finally {

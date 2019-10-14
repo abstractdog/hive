@@ -505,12 +505,6 @@
               </target>
             </configuration>
           </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
           <execution>
             <id>generate-tests-sources</id>
             <phase>generate-test-sources</phase>

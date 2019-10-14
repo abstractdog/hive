@@ -325,7 +325,7 @@ public class FetchOperator implements Serializable {
 
     if (!isSchemaEvolution && isForcePositionalEvolution) {
       LOG.warn(
-          "invalid schema evolution ({}) and force positional evolution ({}) combination, falling back to disabling both",
+          "invalid schema evolution ({}) and force positional evolution ({}) pair, falling back to disabling both",
           isSchemaEvolution, isForcePositionalEvolution);
       HiveConf.setBoolVar(conf, HiveConf.ConfVars.HIVE_ORC_FORCE_POSITIONAL_SCHEMA_EVOLUTION, false);
     }

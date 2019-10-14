@@ -17,17 +17,13 @@
  */
 package org.apache.hadoop.hive.metastore.dbinstall.rules;
 
+import org.apache.hadoop.hive.metastore.tools.schematool.MetastoreSchemaTool;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 
 /**
  * JUnit TestRule for Derby.
  */
 public class Derby extends DatabaseRule {
-
-  @Override
-  public String getHivePassword() {
-    return HIVE_PASSWORD;
-  }
 
   @Override
   public String getDockerImageName() {
@@ -50,7 +46,17 @@ public class Derby extends DatabaseRule {
   }
 
   @Override
+  public String getHiveUser() {
+    return "APP";
+  }
+
+  @Override
   public String getDbRootPassword() {
+    return "mine";
+  }
+
+  @Override
+  public String getHivePassword() {
     return "mine";
   }
 
@@ -61,12 +67,14 @@ public class Derby extends DatabaseRule {
 
   @Override
   public String getJdbcUrl() {
-    return "jdbc:derby:memory:${test.tmp.dir}/" + getDb() + ";create=true";
+    return String.format("jdbc:derby:memory:%s/%s;create=true", System.getProperty("test.tmp.dir"),
+        getDb());
   }
 
   @Override
   public String getInitialJdbcUrl() {
-    return "jdbc:derby:memory:${test.tmp.dir}/" + getDb() + ";create=true";
+    return String.format("jdbc:derby:memory:%s/%s;create=true", System.getProperty("test.tmp.dir"),
+        getDb());
   }
 
   public String getDb() {
@@ -80,11 +88,16 @@ public class Derby extends DatabaseRule {
 
   @Override
   public void before() throws Exception {
-    // no-op, no need for docker container for derby
+    MetastoreSchemaTool.setHomeDirForTesting();
   }
 
   @Override
   public void after() {
     // no-op, no need for docker container for derby
+  }
+
+  @Override
+  public int createUser() {
+    return 0; // no-op
   }
 }

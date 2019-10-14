@@ -200,8 +200,6 @@ public class QTestUtil {
     conf = queryState.getConf();
     sem = new SemanticAnalyzer(queryState);
 
-    setMetaStoreProperties();
-
     this.miniClusters.setup(testArgs, conf, getScriptsDir(), logDir);
 
     initConf();
@@ -219,16 +217,6 @@ public class QTestUtil {
 
     postInit();
     savedConf = new HiveConf(conf);
-  }
-
-  private void setMetaStoreProperties() {
-    setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars.CONNECT_URL_KEY);
-  }
-
-  private void setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars var) {
-    if (System.getProperty(var.getVarname()) != null) {
-      MetastoreConf.setVar(conf, var, System.getProperty(var.getVarname()));
-    }
   }
 
   private String getScriptsDir() {

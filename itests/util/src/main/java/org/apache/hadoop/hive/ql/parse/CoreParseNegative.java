@@ -63,11 +63,6 @@ public class CoreParseNegative extends CliAdapter{
             .withCleanupScript(cleanupScript)
             .withLlapIo(false)
             .build());
-
-      qt.newSession();
-      qt.cleanUp();
-      qt.createSources();
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

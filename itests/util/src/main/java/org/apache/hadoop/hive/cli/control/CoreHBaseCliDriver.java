@@ -51,11 +51,6 @@ public class CoreHBaseCliDriver extends CliAdapter {
     try {
       qt = new HBaseQTestUtil(cliConfig.getResultsDir(), cliConfig.getLogDir(), miniMR,
           new HBaseTestSetup(), initScript, cleanupScript);
-
-      qt.newSession();
-      qt.cleanUp(null);
-      qt.createSources(null);
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

@@ -64,12 +64,6 @@ public class CoreCompareCliDriver extends CliAdapter{
             .withCleanupScript(cleanupScript)
             .withLlapIo(false)
             .build());
-
-      // do a one time initialization
-      qt.newSession();
-      qt.cleanUp();
-      qt.createSources();
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

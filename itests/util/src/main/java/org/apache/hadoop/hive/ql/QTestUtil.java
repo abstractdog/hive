@@ -404,8 +404,6 @@ public class QTestUtil {
     Utilities.clearWorkMap(conf);
     NotificationEventPoll.shutdown();
     QueryResultsCache.cleanupInstance();
-    //clearTablesCreatedDuringTests();
-    //clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
     StatsSources.clearGlobalStats();
     dispatcher.afterTest(this);
@@ -429,8 +427,6 @@ public class QTestUtil {
     }
     conf.setBoolean("hive.test.shutdown.phase", true);
 
-    //clearTablesCreatedDuringTests();
-    //clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
 
     cleanupFromFile();

@@ -51,12 +51,6 @@ public class CoreAccumuloCliDriver extends CliAdapter {
     try {
       qt = new AccumuloQTestUtil(cliConfig.getResultsDir(), cliConfig.getLogDir(), miniMR,
           new AccumuloTestSetup(), initScript, cleanupScript);
-
-      // do a one time initialization
-      qt.newSession();
-      qt.cleanUp();
-      qt.createSources();
-
     } catch (Exception e) {
       throw new RuntimeException("Unexpected exception in setUp", e);
     }

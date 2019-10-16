@@ -80,25 +80,6 @@ public class CoreCliDriver extends CliAdapter {
                 .build());
         }
       }.invoke("QtestUtil instance created", LOG, true);
-
-      // do a one time initialization
-      new ElapsedTimeLoggingWrapper<Void>() {
-        @Override
-        public Void invokeInternal() throws Exception {
-          //qt.newSession(); // moved to post initialization
-          //qt.cleanUp(); // I don't think this is neccessary...
-          return null;
-        }
-      }.invoke("Initialization cleanup done.", LOG, true);
-
-      new ElapsedTimeLoggingWrapper<Void>() {
-        @Override
-        public Void invokeInternal() throws Exception {
-          //qt.createSources(); // moved to post initialization
-          return null;
-        }
-      }.invoke("Initialization createSources done.", LOG, true);
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

@@ -26,7 +26,6 @@ import org.apache.hadoop.hive.metastore.dbinstall.rules.Mssql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Mysql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Oracle;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Postgres;
-import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +43,7 @@ public class QTestMetaStoreHandler {
     this.metastoreType = QTestSystemProperties.getMetaStoreDb() == null ? "derby"
       : QTestSystemProperties.getMetaStoreDb();
 
-    this.rule = getDatabaseRule(metastoreType).setVerbose(true);
+    this.rule = getDatabaseRule(metastoreType).setVerbose(false);
 
     LOG.info(String.format("initialized metastore type '%s' for qtests", metastoreType));
   }
@@ -71,20 +70,6 @@ public class QTestMetaStoreHandler {
     System.setProperty(MetastoreConf.ConfVars.CONNECTION_DRIVER.getVarname(), rule.getJdbcDriver());
     System.setProperty(MetastoreConf.ConfVars.CONNECTION_USER_NAME.getVarname(), rule.getHiveUser());
     System.setProperty(MetastoreConf.ConfVars.PWD.getVarname(), rule.getHivePassword());
-  }
-
-  public void cleanupMetaStore(HiveConf conf) throws Exception {
-    if (metastoreType.equalsIgnoreCase("derby")) {
-      //TxnDbUtil.cleanDb(conf);
-      //TxnDbUtil.prepDb(conf);
-    } else {
-//      rule.after();
-//      rule.before();
-//      rule.install();
-    }
-//    rule.after();
-//    rule.before();
-//    rule.install();
   }
 
   private DatabaseRule getDatabaseRule(String metastoreType) {

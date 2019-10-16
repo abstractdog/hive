@@ -49,7 +49,7 @@ public class TestMetastoreSchemaTool {
     if (!file.exists()) {
       file.createNewFile();
     }
-    builder = new MetastoreSchemaTool.CommandBuilder(conf, null, null, "testUser", password, scriptFile);
+    builder = new MetastoreSchemaTool.CommandBuilder(conf, null, null, "testUser", password, scriptFile).setVerbose(false);
   }
 
   @After

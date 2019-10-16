@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.ql.QTestArguments;
@@ -84,7 +85,7 @@ public class CoreCliDriver extends CliAdapter {
       new ElapsedTimeLoggingWrapper<Void>() {
         @Override
         public Void invokeInternal() throws Exception {
-          qt.newSession();
+          //qt.newSession(); // moved to post initialization
           //qt.cleanUp(); // I don't think this is neccessary...
           return null;
         }
@@ -93,7 +94,7 @@ public class CoreCliDriver extends CliAdapter {
       new ElapsedTimeLoggingWrapper<Void>() {
         @Override
         public Void invokeInternal() throws Exception {
-          qt.createSources();
+          //qt.createSources(); // moved to post initialization
           return null;
         }
       }.invoke("Initialization createSources done.", LOG, true);

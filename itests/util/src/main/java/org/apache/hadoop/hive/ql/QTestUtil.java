@@ -59,7 +59,6 @@ import org.apache.hadoop.hive.ql.exec.FunctionRegistry;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.metadata.Hive;
-import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveMaterializedViewsRegistry;
 import org.apache.hadoop.hive.ql.metadata.InvalidTableException;
 import org.apache.hadoop.hive.ql.metadata.Table;
@@ -196,9 +195,7 @@ public class QTestUtil {
       System.out.println("Setting hive-site: " + HiveConf.getHiveSiteLocation());
     }
 
-    QueryState queryState = new QueryState.Builder().withHiveConf(new HiveConf(IDriver.class)).build();
-    conf = queryState.getConf();
-    sem = new SemanticAnalyzer(queryState);
+    conf = new HiveConf(IDriver.class);
 
     this.miniClusters.setup(testArgs, conf, getScriptsDir(), logDir);
 
@@ -215,7 +212,6 @@ public class QTestUtil {
     this.initScript = scriptsDir + File.separator + testArgs.getInitScript();
     this.cleanupScript = scriptsDir + File.separator + testArgs.getCleanupScript();
 
-    postInit();
     savedConf = new HiveConf(conf);
   }
 
@@ -408,8 +404,8 @@ public class QTestUtil {
     Utilities.clearWorkMap(conf);
     NotificationEventPoll.shutdown();
     QueryResultsCache.cleanupInstance();
-    clearTablesCreatedDuringTests();
-    clearUDFsCreatedDuringTests();
+    //clearTablesCreatedDuringTests();
+    //clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
     StatsSources.clearGlobalStats();
     dispatcher.afterTest(this);
@@ -433,8 +429,8 @@ public class QTestUtil {
     }
     conf.setBoolean("hive.test.shutdown.phase", true);
 
-    clearTablesCreatedDuringTests();
-    clearUDFsCreatedDuringTests();
+    //clearTablesCreatedDuringTests();
+    //clearUDFsCreatedDuringTests();
     clearKeysCreatedInTests();
 
     cleanupFromFile();
@@ -512,8 +508,10 @@ public class QTestUtil {
     }
   }
 
-  private void postInit() throws Exception {
+  public void postInit() throws Exception {
     miniClusters.postInit(conf);
+    
+    sem = new SemanticAnalyzer(new QueryState.Builder().withHiveConf(conf).build());
 
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);
 

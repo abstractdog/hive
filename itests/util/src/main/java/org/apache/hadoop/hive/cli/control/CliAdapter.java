@@ -36,6 +36,7 @@ public abstract class CliAdapter {
 
   protected final AbstractCliConfig cliConfig;
   protected QTestMetaStoreHandler metaStoreHandler;
+  boolean firstTestRun = true;
 
   public CliAdapter(AbstractCliConfig cliConfig) {
     this.cliConfig = cliConfig;
@@ -73,15 +74,20 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
-            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            if (classLoader == null) {
-              Thread.currentThread().setContextClassLoader(CliAdapter.class.getClassLoader());
-            }
+            CliAdapter.this.beforeClass(); // instantiating QTestUtil
 
             metaStoreHandler.getRule().before();
             metaStoreHandler.getRule().install();
             metaStoreHandler.setSystemProperties();
-            CliAdapter.this.beforeClass(); // instantiating QTestUtil
+
+            if(getQt() != null){
+              if (getQt() != null){
+                metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
+              }
+              getQt().postInit();
+              getQt().newSession();
+              getQt().createSources();
+            }
 
             try {
               base.evaluate();
@@ -102,16 +108,22 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
-            if (getQt() != null){
-              metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
+            if (!firstTestRun){
+              if (getQt() != null){
+                metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
+                metaStoreHandler.getRule().before();
+                metaStoreHandler.getRule().install();
+              }
+              firstTestRun = false;
             }
+
             CliAdapter.this.setUp();
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.tearDown();
               if (getQt() != null){
-                metaStoreHandler.cleanupMetaStore(getQt().getConf());
+                metaStoreHandler.getRule().after();
               }
             }
           }

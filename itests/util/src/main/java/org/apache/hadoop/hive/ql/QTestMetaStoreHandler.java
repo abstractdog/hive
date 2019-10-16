@@ -75,13 +75,16 @@ public class QTestMetaStoreHandler {
 
   public void cleanupMetaStore(HiveConf conf) throws Exception {
     if (metastoreType.equalsIgnoreCase("derby")) {
-      TxnDbUtil.cleanDb(conf);
-      TxnDbUtil.prepDb(conf);
+      //TxnDbUtil.cleanDb(conf);
+      //TxnDbUtil.prepDb(conf);
     } else {
-      rule.after();
-      rule.before();
-      rule.install();
+//      rule.after();
+//      rule.before();
+//      rule.install();
     }
+//    rule.after();
+//    rule.before();
+//    rule.install();
   }
 
   private DatabaseRule getDatabaseRule(String metastoreType) {

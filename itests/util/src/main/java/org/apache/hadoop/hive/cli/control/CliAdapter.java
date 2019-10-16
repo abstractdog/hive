@@ -22,12 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.ql.QTestMetaStoreHandler;
 import org.apache.hadoop.hive.ql.QTestUtil;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class adapts old vm test-executors to be executed in multiple instances
@@ -37,6 +38,7 @@ public abstract class CliAdapter {
   protected final AbstractCliConfig cliConfig;
   protected QTestMetaStoreHandler metaStoreHandler;
   boolean firstTestRun = true;
+  private static final Logger LOG = LoggerFactory.getLogger(CliAdapter.class);
 
   public CliAdapter(AbstractCliConfig cliConfig) {
     this.cliConfig = cliConfig;
@@ -76,6 +78,7 @@ public abstract class CliAdapter {
           public void evaluate() throws Throwable {
             CliAdapter.this.beforeClass(); // instantiating QTestUtil
 
+            LOG.debug("will initialize metastore database in class rule");
             metaStoreHandler.getRule().before();
             metaStoreHandler.getRule().install();
             metaStoreHandler.setSystemProperties();
@@ -93,7 +96,10 @@ public abstract class CliAdapter {
               base.evaluate();
             } finally {
               CliAdapter.this.shutdown();
-              metaStoreHandler.getRule().after();
+              if (getQt() != null && firstTestRun){
+                LOG.debug("will destroy metastore database in class rule");
+                metaStoreHandler.getRule().after();
+              }
             }
           }
         };
@@ -108,14 +114,16 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
+
             if (!firstTestRun){
               if (getQt() != null){
+                LOG.debug("will initialize metastore database in test rule");
                 metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
                 metaStoreHandler.getRule().before();
                 metaStoreHandler.getRule().install();
               }
-              firstTestRun = false;
             }
+            firstTestRun = false;
 
             CliAdapter.this.setUp();
             try {
@@ -123,6 +131,7 @@ public abstract class CliAdapter {
             } finally {
               CliAdapter.this.tearDown();
               if (getQt() != null){
+                LOG.debug("will destroy metastore database in test rule");
                 metaStoreHandler.getRule().after();
               }
             }

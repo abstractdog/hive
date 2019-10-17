@@ -26,6 +26,7 @@ import org.apache.hadoop.hive.metastore.dbinstall.rules.Mssql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Mysql;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Oracle;
 import org.apache.hadoop.hive.metastore.dbinstall.rules.Postgres;
+import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +53,10 @@ public class QTestMetaStoreHandler {
     return rule;
   }
 
+  public boolean isDerby() {
+    return "derby".equalsIgnoreCase(metastoreType);
+  }
+
   public QTestMetaStoreHandler setMetaStoreConfiguration(HiveConf conf) {
     conf.setVar(ConfVars.METASTOREDBTYPE, getDbTypeConfString());
 
@@ -60,16 +65,10 @@ public class QTestMetaStoreHandler {
     MetastoreConf.setVar(conf, MetastoreConf.ConfVars.CONNECTION_USER_NAME, rule.getHiveUser());
     MetastoreConf.setVar(conf, MetastoreConf.ConfVars.PWD, rule.getHivePassword());
 
-    LOG.info(String.format("set metastore connection to url: %s", MetastoreConf.getVar(conf, MetastoreConf.ConfVars.CONNECT_URL_KEY)));
+    LOG.info(String.format("set metastore connection to url: %s",
+        MetastoreConf.getVar(conf, MetastoreConf.ConfVars.CONNECT_URL_KEY)));
 
     return this;
-  }
-
-  public void setSystemProperties() {
-    System.setProperty(MetastoreConf.ConfVars.CONNECT_URL_KEY.getVarname(), rule.getJdbcUrl());
-    System.setProperty(MetastoreConf.ConfVars.CONNECTION_DRIVER.getVarname(), rule.getJdbcDriver());
-    System.setProperty(MetastoreConf.ConfVars.CONNECTION_USER_NAME.getVarname(), rule.getHiveUser());
-    System.setProperty(MetastoreConf.ConfVars.PWD.getVarname(), rule.getHivePassword());
   }
 
   private DatabaseRule getDatabaseRule(String metastoreType) {
@@ -90,5 +89,24 @@ public class QTestMetaStoreHandler {
 
   private String getDbTypeConfString() {// "ORACLE", "MYSQL", "MSSQL", "POSTGRES"
     return "sqlserver".equalsIgnoreCase(metastoreType) ? "MSSQL" : metastoreType.toUpperCase();
+  }
+
+  public void beforeTest() throws Exception {
+    getRule().before();
+    if (!isDerby()) {// derby is handled with old QTestUtil logic (TxnDbUtil stuff)
+      getRule().install();
+    }
+  }
+
+  public void afterTest(QTestUtil qt) throws Exception {
+    getRule().after();
+
+    // special qtest logic, which doesn't fit quite well into Derby.after()
+    if (isDerby()) {
+      qt.clearTablesCreatedDuringTests();
+      qt.clearUDFsCreatedDuringTests();
+      TxnDbUtil.cleanDb(qt.getConf());
+      TxnDbUtil.prepDb(qt.getConf());
+    }
   }
 }

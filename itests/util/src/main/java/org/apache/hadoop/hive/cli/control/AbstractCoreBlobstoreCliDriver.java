@@ -78,9 +78,6 @@ public abstract class AbstractCoreBlobstoreCliDriver extends CliAdapter {
 
       // do a one time initialization
       setupUniqueTestPath();
-      qt.newSession();
-      qt.cleanUp();
-      qt.createSources();
 
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());

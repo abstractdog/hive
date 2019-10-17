@@ -506,7 +506,7 @@ public class QTestUtil {
 
   public void postInit() throws Exception {
     miniClusters.postInit(conf);
-    
+
     sem = new SemanticAnalyzer(new QueryState.Builder().withHiveConf(conf).build());
 
     testWarehouse = conf.getVar(HiveConf.ConfVars.METASTOREWAREHOUSE);

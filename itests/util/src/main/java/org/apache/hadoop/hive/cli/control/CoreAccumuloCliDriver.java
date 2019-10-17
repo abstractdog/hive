@@ -61,7 +61,6 @@ public class CoreAccumuloCliDriver extends CliAdapter {
   public void shutdown() {
     try {
       qt.shutdown();
-
     } catch (Exception e) {
       throw new RuntimeException("Unexpected exception in tearDown", e);
     }
@@ -72,7 +71,6 @@ public class CoreAccumuloCliDriver extends CliAdapter {
   public void setUp() {
     try {
       qt.newSession();
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();
@@ -87,7 +85,6 @@ public class CoreAccumuloCliDriver extends CliAdapter {
     try {
       qt.clearPostTestEffects();
       qt.clearTestSideEffects();
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

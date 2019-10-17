@@ -37,7 +37,7 @@ public abstract class CliAdapter {
 
   protected final AbstractCliConfig cliConfig;
   protected QTestMetaStoreHandler metaStoreHandler;
-  boolean firstTestRun = true;
+  boolean firstTestAlreadyRun = true; // this can protect class/test level logic from each other
   private static final Logger LOG = LoggerFactory.getLogger(CliAdapter.class);
 
   public CliAdapter(AbstractCliConfig cliConfig) {
@@ -81,12 +81,9 @@ public abstract class CliAdapter {
             LOG.debug("will initialize metastore database in class rule");
             metaStoreHandler.getRule().before();
             metaStoreHandler.getRule().install();
-            metaStoreHandler.setSystemProperties();
 
-            if(getQt() != null){
-              if (getQt() != null){
-                metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
-              }
+            if (getQt() != null) {
+              metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
               getQt().postInit();
               getQt().newSession();
               getQt().createSources();
@@ -96,9 +93,9 @@ public abstract class CliAdapter {
               base.evaluate();
             } finally {
               CliAdapter.this.shutdown();
-              if (getQt() != null && firstTestRun){
-                LOG.debug("will destroy metastore database in class rule");
-                metaStoreHandler.getRule().after();
+              if (getQt() != null && firstTestAlreadyRun) {
+                LOG.debug("will destroy metastore database in class rule (if not derby)");
+                metaStoreHandler.afterTest(getQt());
               }
             }
           }
@@ -115,24 +112,21 @@ public abstract class CliAdapter {
           @Override
           public void evaluate() throws Throwable {
 
-            if (!firstTestRun){
-              if (getQt() != null){
-                LOG.debug("will initialize metastore database in test rule");
-                metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
-                metaStoreHandler.getRule().before();
-                metaStoreHandler.getRule().install();
-              }
+            if (getQt() != null && !firstTestAlreadyRun) {
+              LOG.debug("will initialize metastore database in test rule");
+              metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
+              metaStoreHandler.beforeTest();
             }
-            firstTestRun = false;
+            firstTestAlreadyRun = false;
 
             CliAdapter.this.setUp();
             try {
               base.evaluate();
             } finally {
               CliAdapter.this.tearDown();
-              if (getQt() != null){
-                LOG.debug("will destroy metastore database in test rule");
-                metaStoreHandler.getRule().after();
+              if (getQt() != null) {
+                LOG.debug("will destroy metastore database in test rule (if not derby)");
+                metaStoreHandler.afterTest(getQt());
               }
             }
           }

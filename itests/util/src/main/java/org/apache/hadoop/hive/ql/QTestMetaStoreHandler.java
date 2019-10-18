@@ -41,10 +41,6 @@ public class QTestMetaStoreHandler {
   private DatabaseRule rule;
 
   public QTestMetaStoreHandler() {
-    init();
-  }
-
-  private void init() {
     this.metastoreType = QTestSystemProperties.getMetaStoreDb() == null ? "derby"
       : QTestSystemProperties.getMetaStoreDb();
 

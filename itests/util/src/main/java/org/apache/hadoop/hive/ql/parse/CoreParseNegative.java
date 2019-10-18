@@ -73,6 +73,13 @@ public class CoreParseNegative extends CliAdapter{
 
   @Override
   public void setUp() {
+    try {
+      // it's because core parse negative tests use dest1, which is not a dataset table
+      // and get cleant after every test
+      qt.createSources();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   @Override

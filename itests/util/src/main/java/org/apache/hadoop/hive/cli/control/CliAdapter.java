@@ -37,7 +37,7 @@ public abstract class CliAdapter {
 
   protected final AbstractCliConfig cliConfig;
   protected QTestMetaStoreHandler metaStoreHandler;
-  boolean firstTestAlreadyRun = true; // this can protect class/test level logic from each other
+  boolean firstTestNotYetRun = true; // this can protect class/test level logic from each other
   private static final Logger LOG = LoggerFactory.getLogger(CliAdapter.class);
 
   public CliAdapter(AbstractCliConfig cliConfig) {
@@ -94,7 +94,7 @@ public abstract class CliAdapter {
               base.evaluate();
             } finally {
               CliAdapter.this.shutdown();
-              if (getQt() != null && firstTestAlreadyRun) {
+              if (getQt() != null && firstTestNotYetRun) {
                 LOG.debug("will destroy metastore database in class rule (if not derby)");
                 metaStoreHandler.afterTest(getQt());
               }
@@ -117,12 +117,12 @@ public abstract class CliAdapter {
           @Override
           public void evaluate() throws Throwable {
 
-            if (getQt() != null && !firstTestAlreadyRun) {
+            if (getQt() != null && !firstTestNotYetRun) {
               LOG.debug("will initialize metastore database in test rule");
               metaStoreHandler.setMetaStoreConfiguration(getQt().getConf());
               metaStoreHandler.beforeTest();
             }
-            firstTestAlreadyRun = false;
+            firstTestNotYetRun = false;
 
             if (getQt() != null && CliAdapter.this.shouldRunCreateScriptBeforeEveryTest()){
               // it's because some drivers still use init scripts, which can create a dataset table

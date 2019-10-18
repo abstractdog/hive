@@ -30,6 +30,10 @@ import org.apache.hadoop.hive.metastore.txn.TxnDbUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * QTestMetaStoreHandler is responsible for wrapping the logic of handling different metastore
+ * databases in qtests.
+ */
 public class QTestMetaStoreHandler {
   private static final Logger LOG = LoggerFactory.getLogger(QTestMetaStoreHandler.class);
 

@@ -89,6 +89,7 @@ public abstract class CliAdapter {
               getQt().createSources();
             }
 
+            CliAdapter.this.beforeClassSpec();
             try {
               base.evaluate();
             } finally {
@@ -102,6 +103,10 @@ public abstract class CliAdapter {
         };
       }
     };
+  }
+
+  // override this if e.g. a metastore dependent init logic is needed
+  protected void beforeClassSpec() {
   }
 
   public final TestRule buildTestRule() {
@@ -119,6 +124,11 @@ public abstract class CliAdapter {
             }
             firstTestAlreadyRun = false;
 
+            if (getQt() != null && CliAdapter.this.shouldRunCreateScriptBeforeEveryTest()){
+              // it's because some drivers still use init scripts, which can create a dataset table
+              // and get cleant after every test
+              getQt().createSources();
+            }
             CliAdapter.this.setUp();
             try {
               base.evaluate();
@@ -133,6 +143,10 @@ public abstract class CliAdapter {
         };
       }
     };
+  }
+
+  protected boolean shouldRunCreateScriptBeforeEveryTest() {
+    return false;
   }
 
   protected abstract QTestUtil getQt();

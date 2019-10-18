@@ -68,9 +68,6 @@ public class CorePerfCliDriver extends CliAdapter {
           .withCleanupScript(cleanupScript).withLlapIo(false).build());
       // Manually modify the underlying metastore db to reflect statistics corresponding to
       // the 30TB TPCDS scale set. This way the optimizer will generate plans for a 30 TB set.
-      MetaStoreDumpUtility.setupMetaStoreTableColumnStatsFor30TBTPCDSWorkload(qt.getConf(),
-          QTestSystemProperties.getTempDir());
-
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();
@@ -78,6 +75,17 @@ public class CorePerfCliDriver extends CliAdapter {
       throw new RuntimeException("Unexpected exception in static initialization: " + e.getMessage(),
           e);
     }
+  }
+
+  @Override
+  protected void beforeClassSpec() {
+    MetaStoreDumpUtility.setupMetaStoreTableColumnStatsFor30TBTPCDSWorkload(qt.getConf(),
+        QTestSystemProperties.getTempDir());
+  }
+
+  @Override
+  protected boolean shouldRunCreateScriptBeforeEveryTest() {
+    return true;
   }
 
   @Override

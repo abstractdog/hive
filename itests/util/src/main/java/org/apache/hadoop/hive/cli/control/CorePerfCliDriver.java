@@ -66,8 +66,6 @@ public class CorePerfCliDriver extends CliAdapter {
           .withOutDir(cliConfig.getResultsDir()).withLogDir(cliConfig.getLogDir())
           .withClusterType(miniMR).withConfDir(hiveConfDir).withInitScript(initScript)
           .withCleanupScript(cleanupScript).withLlapIo(false).build());
-      // Manually modify the underlying metastore db to reflect statistics corresponding to
-      // the 30TB TPCDS scale set. This way the optimizer will generate plans for a 30 TB set.
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();
@@ -79,6 +77,12 @@ public class CorePerfCliDriver extends CliAdapter {
 
   @Override
   protected void beforeClassSpec() {
+    overrideStatsInMetastore();
+  }
+
+  private void overrideStatsInMetastore() {
+    // Manually modify the underlying metastore db to reflect statistics corresponding to
+    // the 30TB TPCDS scale set. This way the optimizer will generate plans for a 30 TB set.
     MetaStoreDumpUtility.setupMetaStoreTableColumnStatsFor30TBTPCDSWorkload(qt.getConf(),
         QTestSystemProperties.getTempDir());
   }
@@ -98,7 +102,7 @@ public class CorePerfCliDriver extends CliAdapter {
   public void setUp() {
     try {
       qt.newSession();
-
+      overrideStatsInMetastore();
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();
@@ -112,7 +116,7 @@ public class CorePerfCliDriver extends CliAdapter {
   public void tearDown() {
     try {
       qt.clearPostTestEffects();
-
+      qt.clearTestSideEffects();
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

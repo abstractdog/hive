@@ -125,7 +125,7 @@ public abstract class CliAdapter {
             firstTestNotYetRun = false;
 
             if (getQt() != null && CliAdapter.this.shouldRunCreateScriptBeforeEveryTest()){
-              // it's because some drivers still use init scripts, which can create a dataset table
+              // it's because some drivers still use init scripts, which can create a non-dataset table
               // and get cleant after every test
               getQt().createSources();
             }

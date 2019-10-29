@@ -32,6 +32,8 @@ import org.apache.hadoop.hive.ql.QTestMiniClusters.MiniClusterType;
 import org.apache.hadoop.hive.ql.processors.CommandProcessorException;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
@@ -45,6 +47,7 @@ import com.google.common.base.Strings;
  */
 public class CorePerfCliDriver extends CliAdapter {
 
+  private static final Logger LOG = LoggerFactory.getLogger(CorePerfCliDriver.class);
   private static QTestUtil qt;
 
   public CorePerfCliDriver(AbstractCliConfig testCliConfig) {
@@ -134,6 +137,7 @@ public class CorePerfCliDriver extends CliAdapter {
   public void runTest(String name, String fname, String fpath) {
     long startTime = System.currentTimeMillis();
     try {
+      LOG.info("Begin query: " + fname);
       System.err.println("Begin query: " + fname);
 
       qt.addFile(fpath);
@@ -156,7 +160,9 @@ public class CorePerfCliDriver extends CliAdapter {
     }
 
     long elapsedTime = System.currentTimeMillis() - startTime;
-    System.err.println("Done query: " + fname + " elapsedTime=" + elapsedTime / 1000 + "s");
+    String message = "Done query: " + fname + " elapsedTime=" + elapsedTime / 1000 + "s";
+    LOG.info(message);
+    System.err.println(message);
     assertTrue("Test passed", true);
   }
 

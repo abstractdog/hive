@@ -91,11 +91,6 @@ public class CorePerfCliDriver extends CliAdapter {
   }
 
   @Override
-  protected boolean shouldRunCreateScriptBeforeEveryTest() {
-    return true;
-  }
-
-  @Override
   @AfterClass
   public void shutdown() throws Exception {
     qt.shutdown();
@@ -105,7 +100,6 @@ public class CorePerfCliDriver extends CliAdapter {
   public void setUp() {
     try {
       qt.newSession();
-      overrideStatsInMetastore();
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();
@@ -119,7 +113,6 @@ public class CorePerfCliDriver extends CliAdapter {
   public void tearDown() {
     try {
       qt.clearPostTestEffects();
-      qt.clearTestSideEffects();
     } catch (Exception e) {
       System.err.println("Exception: " + e.getMessage());
       e.printStackTrace();

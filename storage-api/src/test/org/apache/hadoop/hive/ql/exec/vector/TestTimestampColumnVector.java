@@ -20,13 +20,21 @@ package org.apache.hadoop.hive.ql.exec.vector;
 
 import org.junit.Test;
 
+import org.junit.Assert;
+
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Random;
+import java.util.TimeZone;
 
+import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.hadoop.hive.common.type.RandomTypeUtil;
 
 import static org.junit.Assert.*;
@@ -96,6 +104,50 @@ public class TestTimestampColumnVector {
     }
   }
 
+  @Test
+  public void testProlepticCalendar() {
+    fillAndVerify("2015-11-29T12:00:00.00Z", "2015-11-29 12:00:00", true, true, true);
+    fillAndVerify("2015-11-29T12:00:00.00Z", "2015-11-29 12:00:00", true, true, false);
+
+    fillAndVerify("1582-10-15T11:17:22Z", "1582-10-15 11:17:22", true, true, true);
+    fillAndVerify("1582-10-15T11:17:22Z", "1582-10-15 11:17:22", true, true, false);
+
+    fillAndVerify("1582-10-14T11:17:22Z", "1582-10-24 11:17:22", true, true, true);
+    fillAndVerify("1582-10-14T11:17:22Z", "1582-10-24 11:17:22", true, true, false);
+
+    fillAndVerify("1582-10-04T11:17:22Z", "1582-10-14 11:17:22", true, true, true);
+    fillAndVerify("1582-10-04T11:17:22Z", "1582-10-14 11:17:22", true, true, false);
+
+    fillAndVerify("0601-03-04T11:17:22Z", "0601-03-07 11:17:22", true, true, true);
+    fillAndVerify("0601-03-04T11:17:22Z", "0601-03-07 11:17:22", true, true, false);
+  }
+
+  private void fillAndVerify(String momentInUtc, String expected, boolean useProleptic, boolean changeData, boolean isUTC) {
+    DateFormat testFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    TimeZone timeZone = isUTC ? TimeZone.getTimeZone("UTC") : TimeZone.getDefault();
+    Instant instant = Instant.parse(momentInUtc); // instant is always a moment in UTC
+    long offsetFromUTC = timeZone.getOffset(instant.toEpochMilli());
+
+    if (useProleptic) {
+      testFormatter.setCalendar(DateColumnVector.PROLEPTIC_GREGORIAN_CALENDAR);
+    } else {
+      testFormatter.setCalendar(DateColumnVector.GREGORIAN_CALENDAR);
+    }
+    testFormatter.setTimeZone(timeZone);
+    testFormatter.setLenient(false);
+
+    TimestampColumnVector timestampColVector = new TimestampColumnVector();
+    timestampColVector.setIsUTC(isUTC);
+    timestampColVector.time[0] = instant.toEpochMilli();
+
+    System.out.println(timestampColVector.time[0]);
+    timestampColVector.changeCalendar(useProleptic, changeData);
+    System.out.println(timestampColVector.time[0]);
+
+    System.out.println(Timestamp.from(Instant.ofEpochMilli(timestampColVector.time[0])));
+    Assert.assertEquals(expected,
+        testFormatter.format(Timestamp.from(Instant.ofEpochMilli(timestampColVector.time[0] - offsetFromUTC))));
+  }
   /*
   @Test
   public void testGenerate() throws Exception {

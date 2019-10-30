@@ -18,10 +18,12 @@
 package org.apache.hadoop.hive.ql.exec.vector;
 
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.TimeZone;
 
 import org.apache.hadoop.io.Writable;
 
@@ -37,8 +39,15 @@ import org.apache.hadoop.io.Writable;
  * Generally, the caller will fill in a scratch timestamp object with values from a row, work
  * using the scratch timestamp, and then perhaps update the column vector row with a result.
  */
-public class TimestampColumnVector extends ColumnVector {
+public class TimestampColumnVector extends ColumnVector implements ProlepticCalendarColumnVectorType {
+  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER =
+      new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private static final SimpleDateFormat GREGORIAN_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+  static {
+    PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.setCalendar(DateColumnVector.PROLEPTIC_GREGORIAN_CALENDAR);
+    GREGORIAN_TIMESTAMP_FORMATTER.setCalendar(DateColumnVector.GREGORIAN_CALENDAR);
+  }
   /*
    * The storage arrays for this column vector corresponds to the storage of a Timestamp:
    */
@@ -57,6 +66,8 @@ public class TimestampColumnVector extends ColumnVector {
       // Supports keeping a TimestampWritable object without having to import that definition...
 
   private boolean isUTC;
+
+  private boolean usingProlepticCalendar = false;
 
   /**
    * Use this constructor by default. All column vectors
@@ -545,5 +556,39 @@ public class TimestampColumnVector extends ColumnVector {
     super.shallowCopyTo(other);
     other.time = time;
     other.nanos = nanos;
+  }
+
+  @Override
+  public void changeCalendar(boolean useProleptic, boolean updateData) {
+    usingProlepticCalendar = useProleptic;
+    if (updateData) {
+      updateDataAccordingProlepticSetting();
+    }
+  }
+
+  private void updateDataAccordingProlepticSetting() {
+    for (int i = 0; i < nanos.length; i++) {
+      asScratchTimestamp(i);
+      if (i == 0) {
+
+        System.out.println(PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp.getTime()));
+        System.out
+            .println(Timestamp.valueOf(PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp.getTime())));
+      }
+
+      //Timestamp.valueOf is assuming a local datetime, so after the conversion, an offset correction is needed
+      long offset = isUTC ? TimeZone.getDefault().getOffset(scratchTimestamp.getTime()) : 0;
+
+      scratchTimestamp.setTime(Timestamp.valueOf(
+          usingProlepticCalendar ? PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp.getTime())
+            : GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp))
+          .getTime() + offset);
+      setFromScratchTimestamp(i);
+    }
+  }
+
+  @Override
+  public boolean usingProlepticCalendar() {
+    return usingProlepticCalendar;
   }
 }

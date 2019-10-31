@@ -76,6 +76,7 @@ public abstract class CliAdapter {
         return new Statement() {
           @Override
           public void evaluate() throws Throwable {
+            metaStoreHandler.setSystemProperties(); // for QTestUtil pre-initialization
             CliAdapter.this.beforeClass(); // instantiating QTestUtil
 
             LOG.debug("will initialize metastore database in class rule");

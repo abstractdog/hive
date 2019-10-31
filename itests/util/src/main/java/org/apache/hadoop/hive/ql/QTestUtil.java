@@ -196,6 +196,7 @@ public class QTestUtil {
     }
 
     conf = new HiveConf(IDriver.class);
+    setMetaStoreProperties();
 
     this.miniClusters.setup(testArgs, conf, getScriptsDir(), logDir);
 
@@ -213,6 +214,19 @@ public class QTestUtil {
     this.cleanupScript = scriptsDir + File.separator + testArgs.getCleanupScript();
 
     savedConf = new HiveConf(conf);
+  }
+
+  private void setMetaStoreProperties() {
+    setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars.CONNECT_URL_KEY);
+    setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars.CONNECTION_DRIVER);
+    setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars.CONNECTION_USER_NAME);
+    setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars.PWD);
+  }
+
+  private void setMetastoreConfPropertyFromSystemProperty(MetastoreConf.ConfVars var) {
+    if (System.getProperty(var.getVarname()) != null) {
+      MetastoreConf.setVar(conf, var, System.getProperty(var.getVarname()));
+    }
   }
 
   private String getScriptsDir() {

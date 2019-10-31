@@ -107,4 +107,11 @@ public class QTestMetaStoreHandler {
       TxnDbUtil.prepDb(qt.getConf());
     }
   }
+
+  public void setSystemProperties() {
+    System.setProperty(MetastoreConf.ConfVars.CONNECT_URL_KEY.getVarname(), rule.getJdbcUrl());
+    System.setProperty(MetastoreConf.ConfVars.CONNECTION_DRIVER.getVarname(), rule.getJdbcDriver());
+    System.setProperty(MetastoreConf.ConfVars.CONNECTION_USER_NAME.getVarname(), rule.getHiveUser());
+    System.setProperty(MetastoreConf.ConfVars.PWD.getVarname(), rule.getHivePassword());
+  }
 }

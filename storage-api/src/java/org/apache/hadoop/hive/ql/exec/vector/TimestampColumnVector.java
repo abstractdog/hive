@@ -569,20 +569,16 @@ public class TimestampColumnVector extends ColumnVector implements ProlepticCale
   private void updateDataAccordingProlepticSetting() {
     for (int i = 0; i < nanos.length; i++) {
       asScratchTimestamp(i);
-      if (i == 0) {
-
-        System.out.println(PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp.getTime()));
-        System.out
-            .println(Timestamp.valueOf(PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp.getTime())));
-      }
-
       //Timestamp.valueOf is assuming a local datetime, so after the conversion, an offset correction is needed
       long offset = isUTC ? TimeZone.getDefault().getOffset(scratchTimestamp.getTime()) : 0;
 
-      scratchTimestamp.setTime(Timestamp.valueOf(
-          usingProlepticCalendar ? PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp.getTime())
-            : GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp))
-          .getTime() + offset);
+      Timestamp updated = Timestamp.valueOf(
+          usingProlepticCalendar ? PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp)
+            : GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp));
+
+      scratchTimestamp.setTime(updated.getTime() + offset);
+      scratchTimestamp.setNanos(nanos[i]);
+
       setFromScratchTimestamp(i);
     }
   }

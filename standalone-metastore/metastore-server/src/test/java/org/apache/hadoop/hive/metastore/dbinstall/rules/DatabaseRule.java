@@ -111,7 +111,9 @@ public abstract class DatabaseRule extends ExternalResource {
     do {
       Thread.sleep(5000);
       pr = runCmd(buildLogCmd(), 5);
-      if (pr.rc != 0) throw new RuntimeException("Failed to get docker logs");
+      if (pr.rc != 0) {
+        throw new RuntimeException("Failed to get docker logs");
+      }
     } while (startTime + MAX_STARTUP_WAIT >= System.currentTimeMillis() && !isContainerReady(pr.stdout));
     if (startTime + MAX_STARTUP_WAIT < System.currentTimeMillis()) {
       throw new RuntimeException("Container failed to be ready in " + MAX_STARTUP_WAIT/1000 +

@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.metastore.dbinstall.rules.Mssql;
 import org.junit.Rule;
 
 /**
- * Mssql-specific DbInstallBase child test class
+ * Mssql-specific DbInstallBase child test class.
  */
 public class ITestSqlServer extends DbInstallBase {
 

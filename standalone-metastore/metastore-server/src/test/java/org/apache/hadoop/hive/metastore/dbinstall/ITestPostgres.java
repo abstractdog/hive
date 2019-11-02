@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.metastore.dbinstall.rules.Postgres;
 import org.junit.Rule;
 
 /**
- * Postgres-specific DbInstallBase child test class
+ * Postgres-specific DbInstallBase child test class.
  */
 public class ITestPostgres extends DbInstallBase {
 

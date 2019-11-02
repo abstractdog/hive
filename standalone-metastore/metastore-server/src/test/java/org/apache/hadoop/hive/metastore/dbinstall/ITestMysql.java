@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.metastore.dbinstall.rules.Mysql;
 import org.junit.Rule;
 
 /**
- * Mysql-specific DbInstallBase child test class
+ * Mysql-specific DbInstallBase child test class.
  */
 public class ITestMysql extends DbInstallBase {
 

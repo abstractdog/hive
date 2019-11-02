@@ -22,7 +22,7 @@ import org.apache.hadoop.hive.metastore.dbinstall.rules.Oracle;
 import org.junit.Rule;
 
 /**
- * Oracle-specific DbInstallBase child test class
+ * Oracle-specific DbInstallBase child test class.
  */
 public class ITestOracle extends DbInstallBase {
 

@@ -17,22 +17,22 @@
  */
 package org.apache.hadoop.hive.ql.exec.vector;
 
+import java.sql.Date;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.TimeZone;
 
 /**
  * This class extends LongColumnVector in order to introduce some date-specific semantics.
  */
-public class DateColumnVector extends LongColumnVector implements ProlepticCalendarColumnVectorType {
-  public static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR =
-      new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
-  public static final GregorianCalendar GREGORIAN_CALENDAR =
-      new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
+public class DateColumnVector extends LongColumnVector
+    implements ProlepticCalendarColumnVectorType {
+  public static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
+  public static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
 
-  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
-  private static final SimpleDateFormat GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
+  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER =
+      new SimpleDateFormat("yyyy-MM-dd");
+  private static final SimpleDateFormat GREGORIAN_DATE_FORMATTER =
+      new SimpleDateFormat("yyyy-MM-dd");
 
   static {
     PROLEPTIC_GREGORIAN_CALENDAR.setGregorianChange(new java.util.Date(Long.MIN_VALUE));
@@ -60,9 +60,10 @@ public class DateColumnVector extends LongColumnVector implements ProlepticCalen
 
   private void updateDataAccordingProlepticSetting() {
     for (int i = 0; i < vector.length; i++) {
+      Date oldDate = new java.sql.Date(vector[i]);
       vector[i] =
-          java.sql.Date.valueOf(usingProlepticCalendar ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(new Date(vector[i]))
-            : GREGORIAN_DATE_FORMATTER.format(new Date(vector[i]))).getTime();
+          java.sql.Date.valueOf(usingProlepticCalendar ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(oldDate)
+            : GREGORIAN_DATE_FORMATTER.format(oldDate)).getTime();
     }
   }
 

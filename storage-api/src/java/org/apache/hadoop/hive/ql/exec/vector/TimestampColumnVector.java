@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import org.apache.hadoop.io.Writable;
@@ -40,13 +41,21 @@ import org.apache.hadoop.io.Writable;
  * using the scratch timestamp, and then perhaps update the column vector row with a result.
  */
 public class TimestampColumnVector extends ColumnVector implements ProlepticCalendarColumnVectorType {
-  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER =
+  public static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR_UTC =
+      new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
+  public static final GregorianCalendar GREGORIAN_CALENDAR_UTC =
+      new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
+
+  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC =
       new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-  private static final SimpleDateFormat GREGORIAN_TIMESTAMP_FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private static final SimpleDateFormat GREGORIAN_TIMESTAMP_FORMATTER_UTC =
+      new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   static {
-    PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.setCalendar(DateColumnVector.PROLEPTIC_GREGORIAN_CALENDAR);
-    GREGORIAN_TIMESTAMP_FORMATTER.setCalendar(DateColumnVector.GREGORIAN_CALENDAR);
+    PROLEPTIC_GREGORIAN_CALENDAR_UTC.setGregorianChange(new java.util.Date(Long.MIN_VALUE));
+
+    PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC.setCalendar(PROLEPTIC_GREGORIAN_CALENDAR_UTC);
+    GREGORIAN_TIMESTAMP_FORMATTER_UTC.setCalendar(GREGORIAN_CALENDAR_UTC);
   }
   /*
    * The storage arrays for this column vector corresponds to the storage of a Timestamp:
@@ -573,8 +582,8 @@ public class TimestampColumnVector extends ColumnVector implements ProlepticCale
       long offset = isUTC ? TimeZone.getDefault().getOffset(scratchTimestamp.getTime()) : 0;
 
       Timestamp updated = Timestamp.valueOf(
-          usingProlepticCalendar ? PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp)
-            : GREGORIAN_TIMESTAMP_FORMATTER.format(scratchTimestamp));
+          usingProlepticCalendar ? PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC.format(scratchTimestamp)
+            : GREGORIAN_TIMESTAMP_FORMATTER_UTC.format(scratchTimestamp));
 
       scratchTimestamp.setTime(updated.getTime() + offset);
       scratchTimestamp.setNanos(nanos[i]);

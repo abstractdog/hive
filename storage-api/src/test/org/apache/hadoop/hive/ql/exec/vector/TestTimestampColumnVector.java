@@ -18,32 +18,23 @@
 
 package org.apache.hadoop.hive.ql.exec.vector;
 
-import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Assert;
-
-import java.io.PrintWriter;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.Random;
 import java.util.TimeZone;
 
 import org.apache.hadoop.hive.common.type.RandomTypeUtil;
-
-import static org.junit.Assert.*;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Test for ListColumnVector
  */
 public class TestTimestampColumnVector {
-
-  private static int TEST_COUNT = 5000;
 
   @Test
   public void testSaveAndRetrieve() throws Exception {
@@ -109,46 +100,63 @@ public class TestTimestampColumnVector {
   @Test
   public void testProlepticCalendar() {
     // proleptic
+    // a random gregorian day as propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", true, true);
     setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", true, false);
 
+    // first gregorian day as propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", true, true);
     setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", true, false);
 
+    // a day before first gregorian day as propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-24 11:17:22.123", true, true);
     setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-24 11:17:22.123", true, false);
 
+    // a day after last julian day as propleptic gregorian date
+    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-10-15 11:17:22.123", true, true);
+    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-10-15 11:17:22.123", true, false);
+
+    // last julian day as propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-10-14 11:17:22.123", true, true);
     setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-10-14 11:17:22.123", true, false);
 
+    // older julian day as propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-07 11:17:22.123", true, true);
     setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-07 11:17:22.123", true, false);
 
     // non-proleptic
+    // a random gregorian day as non-propleptic gregorian date
+    setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", false, true);
+    setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", false, false);
+
+    // first gregorian day as non-propleptic gregorian date
+    setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", false, true);
+    setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", false, false);
+
+    // a day before first gregorian day as non-propleptic gregorian date
+    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-04 11:17:22.123", false, true);
+    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-04 11:17:22.123", false, false);
+
+    // a day after last julian day as non-propleptic gregorian date
+    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-09-25 11:17:22.123", false, true);
+    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-09-25 11:17:22.123", false, false);
+ 
+    // last julian day as non-propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-09-24 11:17:22.123", false, true);
     setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-09-24 11:17:22.123", false, false);
 
-    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-04 11:17:22.123", false, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-04 11:17:22.123", false, false);
-    
+    // older julian day as non-propleptic gregorian date
     setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-01 11:17:22.123", false, true);
     setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-01 11:17:22.123", false, false);
   }
 
-  private void setInstantAndVerifyProlepticUpdate(String momentInUtc, String expected, boolean useProleptic,
-      boolean isUTC) {
-    DateFormat testFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+  private void setInstantAndVerifyProlepticUpdate(String momentInUtc, String expected,
+      boolean useProleptic, boolean isUTC) {
     TimeZone timeZone = isUTC ? TimeZone.getTimeZone("UTC") : TimeZone.getDefault();
+    DateFormat testFormatter = getTestFormatter(useProleptic, timeZone);
+
     Instant instant = Instant.parse(momentInUtc); // instant is always a moment in UTC
     long offsetFromUTC = timeZone.getOffset(instant.toEpochMilli());
-
-    if (useProleptic) {
-      testFormatter.setCalendar(DateColumnVector.PROLEPTIC_GREGORIAN_CALENDAR);
-    } else {
-      testFormatter.setCalendar(DateColumnVector.GREGORIAN_CALENDAR);
-    }
-    testFormatter.setTimeZone(timeZone);
-    testFormatter.setLenient(false);
 
     int nanos = instant.getNano() + new Random().nextInt(999999) + 0;
     TimestampColumnVector timestampColVector = new TimestampColumnVector();
@@ -162,20 +170,18 @@ public class TestTimestampColumnVector {
         .format(Timestamp.from(Instant.ofEpochMilli(timestampColVector.time[0] - offsetFromUTC))));
     Assert.assertEquals(nanos, timestampColVector.nanos[0]); // preserving nanos
   }
-  /*
-  @Test
-  public void testGenerate() throws Exception {
-    PrintWriter writer = new PrintWriter("/Users/you/timestamps.txt");
-    Random r = new Random(18485);
-    for (int i = 0; i < 25; i++) {
-      Timestamp randTimestamp = RandomTypeUtil.getRandTimestamp(r);
-      writer.println(randTimestamp.toString());
+
+  private DateFormat getTestFormatter(boolean useProleptic, TimeZone timeZone) {
+    DateFormat testFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+    if (useProleptic) {
+      testFormatter.setCalendar(TimestampColumnVector.PROLEPTIC_GREGORIAN_CALENDAR_UTC);
+    } else {
+      testFormatter.setCalendar(TimestampColumnVector.GREGORIAN_CALENDAR_UTC);
     }
-    for (int i = 0; i < 25; i++) {
-      Timestamp randTimestamp = RandomTypeUtil.getRandTimestamp(r, 1965, 2025);
-      writer.println(randTimestamp.toString());
-    }
-    writer.close();
+    testFormatter.setTimeZone(timeZone);
+    testFormatter.setLenient(false);
+
+    return testFormatter;
   }
-  */
 }

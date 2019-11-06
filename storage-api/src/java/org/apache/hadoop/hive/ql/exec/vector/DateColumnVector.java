@@ -24,8 +24,7 @@ import java.util.GregorianCalendar;
 /**
  * This class extends LongColumnVector in order to introduce some date-specific semantics.
  */
-public class DateColumnVector extends LongColumnVector
-    implements ProlepticCalendarColumnVectorType {
+public class DateColumnVector extends LongColumnVector {
   public static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
   public static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
 
@@ -50,7 +49,12 @@ public class DateColumnVector extends LongColumnVector
     this(VectorizedRowBatch.DEFAULT_SIZE);
   }
 
-  @Override
+  /**
+   * Change the calendar to or from proleptic. If the new and old values of the flag are the
+   * same, nothing is done.
+   * useProleptic - set the flag for the proleptic calendar
+   * updateData - change the data to match the new value of the flag.
+   */
   public void changeCalendar(boolean useProleptic, boolean updateData) {
     if (useProleptic == usingProlepticCalendar) {
       return;
@@ -70,7 +74,9 @@ public class DateColumnVector extends LongColumnVector
     }
   }
 
-  @Override
+  /**
+   * Detect whether this data is using the proleptic calendar.
+   */
   public boolean usingProlepticCalendar() {
     return usingProlepticCalendar;
   }

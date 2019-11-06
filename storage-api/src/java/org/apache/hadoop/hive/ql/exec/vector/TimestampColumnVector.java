@@ -40,7 +40,7 @@ import org.apache.hadoop.io.Writable;
  * Generally, the caller will fill in a scratch timestamp object with values from a row, work
  * using the scratch timestamp, and then perhaps update the column vector row with a result.
  */
-public class TimestampColumnVector extends ColumnVector implements ProlepticCalendarColumnVectorType {
+public class TimestampColumnVector extends ColumnVector {
   public static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR_UTC =
       new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
   public static final GregorianCalendar GREGORIAN_CALENDAR_UTC =
@@ -567,7 +567,12 @@ public class TimestampColumnVector extends ColumnVector implements ProlepticCale
     other.nanos = nanos;
   }
 
-  @Override
+  /**
+   * Change the calendar to or from proleptic. If the new and old values of the flag are the
+   * same, nothing is done.
+   * useProleptic - set the flag for the proleptic calendar
+   * updateData - change the data to match the new value of the flag.
+   */
   public void changeCalendar(boolean useProleptic, boolean updateData) {
     if (useProleptic == usingProlepticCalendar) {
       return;
@@ -595,7 +600,9 @@ public class TimestampColumnVector extends ColumnVector implements ProlepticCale
     }
   }
 
-  @Override
+  /**
+   * Detect whether this data is using the proleptic calendar.
+   */
   public boolean usingProlepticCalendar() {
     return usingProlepticCalendar;
   }

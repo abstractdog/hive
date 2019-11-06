@@ -32,19 +32,15 @@ public class TestVectorizedRowBatch {
   static final String[] COLORS = {"red", "yellow", "green", "blue", "violet", "orange"};
   private static byte[][] colorsBytes;
 
-  private static final int TEST_BATCH_SIZE = 4;
-
   private VectorizedRowBatch makeBatch() {
-    VectorizedRowBatch batch = new VectorizedRowBatch(TEST_BATCH_SIZE);
+    VectorizedRowBatch batch = new VectorizedRowBatch(3);
     LongColumnVector lv = new LongColumnVector();
-    LongColumnVector dav = new DateColumnVector();
     DoubleColumnVector dv = new DoubleColumnVector();
     BytesColumnVector bv = new BytesColumnVector();
     setSampleStringCol(bv);
     batch.cols[0] = lv;
-    batch.cols[1] = dav;
-    batch.cols[2] = dv;
-    batch.cols[3] = bv;
+    batch.cols[1] = dv;
+    batch.cols[2] = bv;
     addRandomNulls(batch);
     return batch;
   }
@@ -56,15 +52,13 @@ public class TestVectorizedRowBatch {
    */
   public void testVectorizedRowBatchCreate() {
     VectorizedRowBatch batch = makeBatch();
-    Assert.assertEquals(TEST_BATCH_SIZE, batch.numCols);
+    Assert.assertEquals(3, batch.numCols);
     Assert.assertEquals(VectorizedRowBatch.DEFAULT_SIZE, batch.size);
     Assert.assertEquals(((LongColumnVector) batch.cols[0]).vector.length,
         VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertEquals(((DateColumnVector) batch.cols[1]).vector.length,
+    Assert.assertEquals(((DoubleColumnVector) batch.cols[1]).vector.length,
         VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertEquals(((DoubleColumnVector) batch.cols[2]).vector.length,
-        VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertEquals(((BytesColumnVector) batch.cols[3]).vector.length,
+    Assert.assertEquals(((BytesColumnVector) batch.cols[2]).vector.length,
         VectorizedRowBatch.DEFAULT_SIZE);
   }
 

@@ -52,6 +52,9 @@ public class DateColumnVector extends LongColumnVector
 
   @Override
   public void changeCalendar(boolean useProleptic, boolean updateData) {
+    if (useProleptic == usingProlepticCalendar) {
+      return;
+    }
     usingProlepticCalendar = useProleptic;
     if (updateData) {
       updateDataAccordingProlepticSetting();

@@ -569,6 +569,9 @@ public class TimestampColumnVector extends ColumnVector implements ProlepticCale
 
   @Override
   public void changeCalendar(boolean useProleptic, boolean updateData) {
+    if (useProleptic == usingProlepticCalendar) {
+      return;
+    }
     usingProlepticCalendar = useProleptic;
     if (updateData) {
       updateDataAccordingProlepticSetting();

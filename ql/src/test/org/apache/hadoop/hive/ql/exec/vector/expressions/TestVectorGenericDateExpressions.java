@@ -21,7 +21,7 @@ package org.apache.hadoop.hive.ql.exec.vector.expressions;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.DateColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.TestVectorizedRowBatch;
 import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
@@ -63,8 +63,8 @@ public class TestVectorGenericDateExpressions {
     return random.nextInt(i);
   }
 
-  private LongColumnVector newRandomLongColumnVector(int range, int size) {
-    LongColumnVector vector = new LongColumnVector(size);
+  private DateColumnVector newRandomDateColumnVector(int range, int size) {
+    DateColumnVector vector = new DateColumnVector(size);
     for (int i = 0; i < size; i++) {
       vector.vector[i] = random.nextInt(range);
     }
@@ -83,7 +83,7 @@ public class TestVectorGenericDateExpressions {
       throw new RuntimeException("Unexpected primitive category " + primitiveCategory);
     }
   }
-  private TimestampColumnVector toTimestamp(LongColumnVector date) {
+  private TimestampColumnVector toTimestamp(DateColumnVector date) {
     TimestampColumnVector vector = new TimestampColumnVector(size);
     for (int i = 0; i < size; i++) {
       if (date.isNull[i]) {
@@ -100,7 +100,7 @@ public class TestVectorGenericDateExpressions {
     return new Timestamp(DateWritableV2.daysToMillis((int) date));
   }
 
-  private BytesColumnVector toString(LongColumnVector date) {
+  private BytesColumnVector toString(DateColumnVector date) {
     BytesColumnVector bcv = new BytesColumnVector(size);
     for (int i = 0; i < size; i++) {
       if (date.isNull[i]) {
@@ -121,7 +121,7 @@ public class TestVectorGenericDateExpressions {
   }
 
   private void validateDateAdd(VectorizedRowBatch batch, PrimitiveCategory colType1, long scalar2,
-                               boolean isPositive, LongColumnVector date1)
+                               boolean isPositive, DateColumnVector date1)
                                    throws HiveException {
     VectorUDFDateAddColScalar udf;
     if (isPositive) {
@@ -132,7 +132,7 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {primitiveCategoryToTypeInfo(colType1), TypeInfoFactory.voidTypeInfo});
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
-    LongColumnVector output = (LongColumnVector) batch.cols[1];
+    DateColumnVector output = (DateColumnVector) batch.cols[1];
 
     try {
       for (int i = 0; i < size; i++) {
@@ -154,7 +154,7 @@ public class TestVectorGenericDateExpressions {
     }
   }
 
-  private ColumnVector castTo(LongColumnVector date, PrimitiveCategory type) {
+  private ColumnVector castTo(DateColumnVector date, PrimitiveCategory type) {
     switch (type) {
       case DATE:
         return date;
@@ -173,10 +173,10 @@ public class TestVectorGenericDateExpressions {
 
   private void testDateAddColScalar(PrimitiveCategory colType1, boolean isPositive)
       throws HiveException {
-    LongColumnVector date1 = newRandomLongColumnVector(10000, size);
+    DateColumnVector date1 = newRandomDateColumnVector(10000, size);
     ColumnVector col1 = castTo(date1, colType1);
     long scalar2 = newRandom(1000);
-    LongColumnVector output = new LongColumnVector(size);
+    DateColumnVector output = new DateColumnVector(size);
 
     VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
     batch.cols[0] = col1;
@@ -197,7 +197,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     VectorizedRowBatch batch = new VectorizedRowBatch(2, 1);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     BytesColumnVector bcv = (BytesColumnVector) batch.cols[0];
     byte[] bytes = "error".getBytes(utf8);
     bcv.vector[0] = bytes;
@@ -217,7 +217,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     VectorizedRowBatch batch = new VectorizedRowBatch(2, 1);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     BytesColumnVector bcv = (BytesColumnVector) batch.cols[0];
     byte[] bytes = "error".getBytes(utf8);
     bcv.vector[0] = bytes;
@@ -227,7 +227,7 @@ public class TestVectorGenericDateExpressions {
     Assert.assertEquals(batch.cols[1].isNull[0], true);
   }
 
-  private void validateDateAdd(VectorizedRowBatch batch, long scalar1, LongColumnVector date2,
+  private void validateDateAdd(VectorizedRowBatch batch, long scalar1, DateColumnVector date2,
                                PrimitiveCategory colType1, boolean isPositive)
                                   throws HiveException {
     VectorExpression udf = null;
@@ -268,7 +268,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
 
-    LongColumnVector output = (LongColumnVector) batch.cols[1];
+    DateColumnVector output = (DateColumnVector) batch.cols[1];
     try {
       for (int i = 0; i < date2.vector.length; i++) {
         String expected;
@@ -290,10 +290,10 @@ public class TestVectorGenericDateExpressions {
 
   private void testDateAddScalarCol(PrimitiveCategory colType1, boolean isPositive)
       throws HiveException {
-    LongColumnVector date2 = newRandomLongColumnVector(10000, size);
+    DateColumnVector date2 = newRandomDateColumnVector(10000, size);
     long scalar1 = newRandom(1000);
 
-    LongColumnVector output = new LongColumnVector(size);
+    DateColumnVector output = new DateColumnVector(size);
 
     VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
     batch.cols[0] = date2;
@@ -313,8 +313,8 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.stringTypeInfo, TypeInfoFactory.timestampTypeInfo});
     udf.transientInit(hiveConf);
     VectorizedRowBatch batch = new VectorizedRowBatch(2, 1);
-    batch.cols[0] = new LongColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[0] = new DateColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     udf.evaluate(batch);
     Assert.assertEquals(batch.cols[1].isNull[0], true);
   }
@@ -328,14 +328,14 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.stringTypeInfo, TypeInfoFactory.timestampTypeInfo});
     udf.transientInit(hiveConf);
     VectorizedRowBatch batch = new VectorizedRowBatch(2, 1);
-    batch.cols[0] = new LongColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[0] = new DateColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     udf.evaluate(batch);
     Assert.assertEquals(batch.cols[1].isNull[0], true);
   }
 
   private void validateDateAdd(VectorizedRowBatch batch,
-                               LongColumnVector date1, LongColumnVector date2,
+                               DateColumnVector date1, DateColumnVector date2,
                                PrimitiveCategory colType1, boolean isPositive)
                                    throws HiveException {
     VectorExpression udf;
@@ -347,7 +347,7 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {primitiveCategoryToTypeInfo(colType1), TypeInfoFactory.voidTypeInfo});
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
-    LongColumnVector output = (LongColumnVector) batch.cols[2];
+    DateColumnVector output = (DateColumnVector) batch.cols[2];
     try {
       for (int i = 0; i < date2.vector.length; i++) {
         String expected;
@@ -369,11 +369,11 @@ public class TestVectorGenericDateExpressions {
 
   private void testDateAddColCol(PrimitiveCategory colType1, boolean isPositive)
       throws HiveException {
-    LongColumnVector date1 = newRandomLongColumnVector(10000, size);
-    LongColumnVector days2 = newRandomLongColumnVector(1000, size);
+    DateColumnVector date1 = newRandomDateColumnVector(10000, size);
+    DateColumnVector days2 = newRandomDateColumnVector(1000, size);
     ColumnVector col1 = castTo(date1, colType1);
 
-    LongColumnVector output = new LongColumnVector(size);
+    DateColumnVector output = new DateColumnVector(size);
 
     VectorizedRowBatch batch = new VectorizedRowBatch(3, size);
     batch.cols[0] = col1;
@@ -402,8 +402,8 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.stringTypeInfo, TypeInfoFactory.timestampTypeInfo});
     udf.transientInit(hiveConf);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
-    batch.cols[2] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
+    batch.cols[2] = new DateColumnVector(1);
     bcv = (BytesColumnVector) batch.cols[0];
     bcv.vector[0] = bytes;
     bcv.start[0] = 0;
@@ -425,8 +425,8 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.stringTypeInfo, TypeInfoFactory.timestampTypeInfo});
     udf.transientInit(hiveConf);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
-    batch.cols[2] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
+    batch.cols[2] = new DateColumnVector(1);
     bcv = (BytesColumnVector) batch.cols[0];
     bcv.vector[0] = bytes;
     bcv.start[0] = 0;
@@ -437,7 +437,7 @@ public class TestVectorGenericDateExpressions {
 
   private void validateDateDiff(VectorizedRowBatch batch, long scalar1,
                                 PrimitiveCategory scalarType1, PrimitiveCategory colType2,
-                                LongColumnVector date2)
+                                DateColumnVector date2)
                                     throws HiveException {
     VectorExpression udf = null;
     switch (scalarType1) {
@@ -459,7 +459,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
 
-    LongColumnVector output = (LongColumnVector) batch.cols[1];
+    DateColumnVector output = (DateColumnVector) batch.cols[1];
     for (int i = 0; i < date2.vector.length; i++) {
       Assert.assertEquals(scalar1 - date2.vector[i], output.vector[i]);
     }
@@ -469,8 +469,8 @@ public class TestVectorGenericDateExpressions {
   public void testDateDiffScalarCol() throws HiveException {
     for (PrimitiveCategory scalarType1 : dateTimestampStringTypes) {
       for (PrimitiveCategory colType2 : dateTimestampStringTypes) {
-        LongColumnVector date2 = newRandomLongColumnVector(10000, size);
-        LongColumnVector output = new LongColumnVector(size);
+        DateColumnVector date2 = newRandomDateColumnVector(10000, size);
+        DateColumnVector output = new DateColumnVector(size);
         ColumnVector col2 = castTo(date2, colType2);
         VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
         batch.cols[0] = col2;
@@ -492,7 +492,7 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.timestampTypeInfo, TypeInfoFactory.stringTypeInfo});
     udf.transientInit(hiveConf);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
 
     BytesColumnVector bcv = (BytesColumnVector) batch.cols[0];
     bcv.vector[0] = bytes;
@@ -504,13 +504,13 @@ public class TestVectorGenericDateExpressions {
     udf = new VectorUDFDateDiffScalarCol(bytes, 0, 1);
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.stringTypeInfo, TypeInfoFactory.timestampTypeInfo});
     udf.transientInit(hiveConf);
-    batch.cols[0] = new LongColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[0] = new DateColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     udf.evaluate(batch);
     Assert.assertEquals(batch.cols[1].isNull[0], true);
   }
 
-  private void validateDateDiff(VectorizedRowBatch batch, LongColumnVector date1, long scalar2,
+  private void validateDateDiff(VectorizedRowBatch batch, DateColumnVector date1, long scalar2,
                                 PrimitiveCategory colType1, PrimitiveCategory scalarType2)
                                     throws HiveException {
     VectorExpression udf = null;
@@ -532,7 +532,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
 
-    LongColumnVector output = (LongColumnVector) batch.cols[1];
+    DateColumnVector output = (DateColumnVector) batch.cols[1];
     for (int i = 0; i < date1.vector.length; i++) {
       Assert.assertEquals(date1.vector[i] - scalar2, output.vector[i]);
     }
@@ -542,8 +542,8 @@ public class TestVectorGenericDateExpressions {
   public void testDateDiffColScalar() throws HiveException {
     for (PrimitiveCategory colType1 : dateTimestampStringTypes) {
       for (PrimitiveCategory scalarType2 : dateTimestampStringTypes) {
-        LongColumnVector date1 = newRandomLongColumnVector(10000, size);
-        LongColumnVector output = new LongColumnVector(size);
+        DateColumnVector date1 = newRandomDateColumnVector(10000, size);
+        DateColumnVector output = new DateColumnVector(size);
         VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
         batch.cols[0] = castTo(date1, colType1);
         batch.cols[1] = output;
@@ -562,7 +562,7 @@ public class TestVectorGenericDateExpressions {
     udf = new VectorUDFDateDiffColScalar(0, 0L, 1);
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.timestampTypeInfo, TypeInfoFactory.stringTypeInfo});
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
 
     BytesColumnVector bcv = (BytesColumnVector) batch.cols[0];
     bcv.vector[0] = bytes;
@@ -574,21 +574,21 @@ public class TestVectorGenericDateExpressions {
     udf = new VectorUDFDateDiffColScalar(0, bytes, 1);
     udf.setInputTypeInfos(new TypeInfo[] {TypeInfoFactory.timestampTypeInfo, TypeInfoFactory.stringTypeInfo});
     udf.transientInit(hiveConf);
-    batch.cols[0] = new LongColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[0] = new DateColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     udf.evaluate(batch);
     Assert.assertEquals(batch.cols[1].isNull[0], true);
   }
 
   private void validateDateDiff(VectorizedRowBatch batch,
-                                LongColumnVector date1, LongColumnVector date2,
+                                DateColumnVector date1, DateColumnVector date2,
                                 PrimitiveCategory colType1, PrimitiveCategory colType2)
                                     throws HiveException {
     VectorExpression udf = new VectorUDFDateDiffColCol(0, 1, 2);
     udf.setInputTypeInfos(new TypeInfo[] {primitiveCategoryToTypeInfo(colType1), primitiveCategoryToTypeInfo(colType2)});
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
-    LongColumnVector output = (LongColumnVector) batch.cols[2];
+    DateColumnVector output = (DateColumnVector) batch.cols[2];
     for (int i = 0; i < date1.vector.length; i++) {
       if (date1.isNull[i] || date2.isNull[i]) {
         Assert.assertTrue(output.isNull[i]);
@@ -602,9 +602,9 @@ public class TestVectorGenericDateExpressions {
   public void testDateDiffColCol() throws HiveException {
     for (PrimitiveCategory colType1 : dateTimestampStringTypes) {
       for (PrimitiveCategory colType2 : dateTimestampStringTypes) {
-        LongColumnVector date1 = newRandomLongColumnVector(10000, size);
-        LongColumnVector date2 = newRandomLongColumnVector(10000, size);
-        LongColumnVector output = new LongColumnVector(size);
+        DateColumnVector date1 = newRandomDateColumnVector(10000, size);
+        DateColumnVector date2 = newRandomDateColumnVector(10000, size);
+        DateColumnVector output = new DateColumnVector(size);
         VectorizedRowBatch batch = new VectorizedRowBatch(3, size);
 
         batch.cols[0] = castTo(date1, colType1);
@@ -630,7 +630,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     batch.cols[0] = new BytesColumnVector(1);
     batch.cols[1] = new TimestampColumnVector(1);
-    batch.cols[2] = new LongColumnVector(1);
+    batch.cols[2] = new DateColumnVector(1);
     bcv = (BytesColumnVector) batch.cols[0];
     bcv.vector[0] = bytes;
     bcv.start[0] = 0;
@@ -642,7 +642,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     batch.cols[0] = new TimestampColumnVector(1);
     batch.cols[1] = new BytesColumnVector(1);
-    batch.cols[2] = new LongColumnVector(1);
+    batch.cols[2] = new DateColumnVector(1);
     bcv = (BytesColumnVector) batch.cols[1];
     bcv.vector[0] = bytes;
     bcv.start[0] = 0;
@@ -652,7 +652,7 @@ public class TestVectorGenericDateExpressions {
   }
 
   private void validateDate(VectorizedRowBatch batch, PrimitiveCategory colType,
-      LongColumnVector date) throws HiveException {
+      DateColumnVector date) throws HiveException {
     VectorExpression udf;
     if (colType == PrimitiveCategory.STRING) {
       udf = new VectorUDFDateString(0, 1);
@@ -665,7 +665,7 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {primitiveCategoryToTypeInfo(colType)});
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
-    LongColumnVector output = (LongColumnVector) batch.cols[1];
+    DateColumnVector output = (DateColumnVector) batch.cols[1];
 
     for (int i = 0; i < size; i++) {
       String actual;
@@ -689,8 +689,8 @@ public class TestVectorGenericDateExpressions {
       if (colType == PrimitiveCategory.DATE) {
         continue;
       }
-      LongColumnVector date = newRandomLongColumnVector(10000, size);
-      LongColumnVector output = new LongColumnVector(size);
+      DateColumnVector date = newRandomDateColumnVector(10000, size);
+      DateColumnVector output = new DateColumnVector(size);
 
       VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
       batch.cols[0] = castTo(date, colType);
@@ -707,7 +707,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     VectorizedRowBatch batch = new VectorizedRowBatch(2, 1);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     BytesColumnVector bcv = (BytesColumnVector) batch.cols[0];
     byte[] bytes = "error".getBytes(utf8);
     bcv.vector[0] = bytes;
@@ -718,7 +718,7 @@ public class TestVectorGenericDateExpressions {
   }
 
   private void validateToDate(VectorizedRowBatch batch, PrimitiveCategory colType,
-      LongColumnVector date) throws HiveException {
+      DateColumnVector date) throws HiveException {
     VectorExpression udf;
     if (colType == PrimitiveCategory.STRING ||
         colType == PrimitiveCategory.CHAR ||
@@ -732,7 +732,7 @@ public class TestVectorGenericDateExpressions {
     udf.setInputTypeInfos(new TypeInfo[] {primitiveCategoryToTypeInfo(colType)});
     udf.transientInit(hiveConf);
     udf.evaluate(batch);
-    LongColumnVector output = (LongColumnVector) batch.cols[1];
+    DateColumnVector output = (DateColumnVector) batch.cols[1];
 
     for (int i = 0; i < size; i++) {
       long actual = output.vector[i];
@@ -749,8 +749,8 @@ public class TestVectorGenericDateExpressions {
   public void testToDate() throws HiveException {
     for (PrimitiveCategory type :
         Arrays.asList(PrimitiveCategory.TIMESTAMP, PrimitiveCategory.STRING)) {
-      LongColumnVector date = newRandomLongColumnVector(10000, size);
-      LongColumnVector output = new LongColumnVector(size);
+      DateColumnVector date = newRandomDateColumnVector(10000, size);
+      DateColumnVector output = new DateColumnVector(size);
 
       VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
       batch.cols[0] = castTo(date, type);
@@ -767,7 +767,7 @@ public class TestVectorGenericDateExpressions {
     udf.transientInit(hiveConf);
     VectorizedRowBatch batch = new VectorizedRowBatch(2, 1);
     batch.cols[0] = new BytesColumnVector(1);
-    batch.cols[1] = new LongColumnVector(1);
+    batch.cols[1] = new DateColumnVector(1);
     BytesColumnVector bcv = (BytesColumnVector) batch.cols[0];
     byte[] bytes = "error".getBytes(utf8);
     bcv.vector[0] = bytes;

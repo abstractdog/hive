@@ -32,7 +32,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 import org.junit.Assert;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.DateColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.TestVectorizedRowBatch;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
@@ -97,13 +97,13 @@ public class TestVectorDateExpressions {
 
   private VectorizedRowBatch getVectorizedRandomRowBatch(int seed, int size) {
     VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
-    LongColumnVector lcv = new LongColumnVector(size);
+    DateColumnVector lcv = new DateColumnVector(size);
     Random rand = new Random(seed);
     for (int i = 0; i < size; i++) {
       lcv.vector[i] = (rand.nextInt());
     }
     batch.cols[0] = lcv;
-    batch.cols[1] = new LongColumnVector(size);
+    batch.cols[1] = new DateColumnVector(size);
     batch.size = size;
     return batch;
   }
@@ -113,12 +113,12 @@ public class TestVectorDateExpressions {
    */
   private VectorizedRowBatch getVectorizedRowBatch(int[] inputs, int size) {
     VectorizedRowBatch batch = new VectorizedRowBatch(2, size);
-    LongColumnVector lcv = new LongColumnVector(size);
+    DateColumnVector lcv = new DateColumnVector(size);
     for (int i = 0; i < size; i++) {
       lcv.vector[i] = inputs[i % inputs.length];
     }
     batch.cols[0] = lcv;
-    batch.cols[1] = new LongColumnVector(size);
+    batch.cols[1] = new DateColumnVector(size);
     batch.size = size;
     return batch;
   }
@@ -145,8 +145,8 @@ public class TestVectorDateExpressions {
         if (!batch.cols[in].noNulls) {
           Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
         }
-        long t = ((LongColumnVector) batch.cols[in]).vector[i];
-        long y = ((LongColumnVector) batch.cols[out]).vector[i];
+        long t = ((DateColumnVector) batch.cols[in]).vector[i];
+        long y = ((DateColumnVector) batch.cols[out]).vector[i];
         compareToUDFYearDate(t, (int) y);
       } else {
         Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
@@ -158,8 +158,8 @@ public class TestVectorDateExpressions {
   public void testVectorUDFYear() throws HiveException {
     VectorizedRowBatch batch = getVectorizedRowBatch(new int[] {0},
             VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertTrue(((LongColumnVector) batch.cols[1]).noNulls);
-    Assert.assertFalse(((LongColumnVector) batch.cols[1]).isRepeating);
+    Assert.assertTrue(((DateColumnVector) batch.cols[1]).noNulls);
+    Assert.assertFalse(((DateColumnVector) batch.cols[1]).isRepeating);
     verifyUDFYear(batch);
     TestVectorizedRowBatch.addRandomNulls(batch.cols[0]);
     verifyUDFYear(batch);
@@ -209,8 +209,8 @@ public class TestVectorDateExpressions {
         if (!batch.cols[in].noNulls) {
           Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
         }
-        long t = ((LongColumnVector) batch.cols[in]).vector[i];
-        long y = ((LongColumnVector) batch.cols[out]).vector[i];
+        long t = ((DateColumnVector) batch.cols[in]).vector[i];
+        long y = ((DateColumnVector) batch.cols[out]).vector[i];
         compareToUDFDayOfMonthDate(t, (int) y);
       } else {
         Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
@@ -222,8 +222,8 @@ public class TestVectorDateExpressions {
   public void testVectorUDFDayOfMonth() throws HiveException {
     VectorizedRowBatch batch = getVectorizedRowBatch(new int[] {0},
             VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertTrue(((LongColumnVector) batch.cols[1]).noNulls);
-    Assert.assertFalse(((LongColumnVector) batch.cols[1]).isRepeating);
+    Assert.assertTrue(((DateColumnVector) batch.cols[1]).noNulls);
+    Assert.assertFalse(((DateColumnVector) batch.cols[1]).isRepeating);
     verifyUDFDayOfMonth(batch);
     TestVectorizedRowBatch.addRandomNulls(batch.cols[0]);
     verifyUDFDayOfMonth(batch);
@@ -273,8 +273,8 @@ public class TestVectorDateExpressions {
         if (!batch.cols[in].noNulls) {
           Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
         }
-        long t = ((LongColumnVector) batch.cols[in]).vector[i];
-        long y = ((LongColumnVector) batch.cols[out]).vector[i];
+        long t = ((DateColumnVector) batch.cols[in]).vector[i];
+        long y = ((DateColumnVector) batch.cols[out]).vector[i];
         compareToUDFMonthDate(t, (int) y);
       } else {
         Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
@@ -286,8 +286,8 @@ public class TestVectorDateExpressions {
   public void testVectorUDFMonth() throws HiveException {
     VectorizedRowBatch batch = getVectorizedRowBatch(new int[] {0},
             VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertTrue(((LongColumnVector) batch.cols[1]).noNulls);
-    Assert.assertFalse(((LongColumnVector) batch.cols[1]).isRepeating);
+    Assert.assertTrue(((DateColumnVector) batch.cols[1]).noNulls);
+    Assert.assertFalse(((DateColumnVector) batch.cols[1]).isRepeating);
     verifyUDFMonth(batch);
     TestVectorizedRowBatch.addRandomNulls(batch.cols[0]);
     verifyUDFMonth(batch);
@@ -345,8 +345,8 @@ public class TestVectorDateExpressions {
         if (!batch.cols[out].noNulls) {
           Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
         }
-        long t = ((LongColumnVector) batch.cols[in]).vector[i];
-        long y = ((LongColumnVector) batch.cols[out]).vector[i];
+        long t = ((DateColumnVector) batch.cols[in]).vector[i];
+        long y = ((DateColumnVector) batch.cols[out]).vector[i];
         compareToUDFUnixTimeStampDate(t, y);
       } else {
         Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
@@ -358,8 +358,8 @@ public class TestVectorDateExpressions {
   public void testVectorUDFUnixTimeStamp() throws HiveException {
     VectorizedRowBatch batch = getVectorizedRowBatch(new int[] {0},
             VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertTrue(((LongColumnVector) batch.cols[1]).noNulls);
-    Assert.assertFalse(((LongColumnVector) batch.cols[1]).isRepeating);
+    Assert.assertTrue(((DateColumnVector) batch.cols[1]).noNulls);
+    Assert.assertFalse(((DateColumnVector) batch.cols[1]).isRepeating);
     verifyUDFUnixTimeStamp(batch);
     TestVectorizedRowBatch.addRandomNulls(batch.cols[0]);
     verifyUDFUnixTimeStamp(batch);
@@ -405,8 +405,8 @@ public class TestVectorDateExpressions {
 
     for (int i = 0; i < batch.size; i++) {
       if (batch.cols[in].noNulls || !batch.cols[in].isNull[i]) {
-        long t = ((LongColumnVector) batch.cols[in]).vector[i];
-        long y = ((LongColumnVector) batch.cols[out]).vector[i];
+        long t = ((DateColumnVector) batch.cols[in]).vector[i];
+        long y = ((DateColumnVector) batch.cols[out]).vector[i];
         compareToUDFWeekOfYearDate(t, (int) y);
       } else {
         Assert.assertEquals(batch.cols[out].isNull[i], batch.cols[in].isNull[i]);
@@ -418,8 +418,8 @@ public class TestVectorDateExpressions {
   public void testVectorUDFWeekOfYear() throws HiveException {
     VectorizedRowBatch batch = getVectorizedRowBatch(new int[] {0},
             VectorizedRowBatch.DEFAULT_SIZE);
-    Assert.assertTrue(((LongColumnVector) batch.cols[1]).noNulls);
-    Assert.assertFalse(((LongColumnVector) batch.cols[1]).isRepeating);
+    Assert.assertTrue(((DateColumnVector) batch.cols[1]).noNulls);
+    Assert.assertFalse(((DateColumnVector) batch.cols[1]).isRepeating);
     verifyUDFWeekOfYear(batch);
     TestVectorizedRowBatch.addRandomNulls(batch.cols[0]);
     verifyUDFWeekOfYear(batch);
@@ -461,7 +461,7 @@ public class TestVectorDateExpressions {
       VectorUDFDateString udf = new VectorUDFDateString(0, 1);
       VectorizedRowBatch batch = new VectorizedRowBatch(2, batchSize);
       BytesColumnVector in = new BytesColumnVector(batchSize);
-      LongColumnVector out = new LongColumnVector(batchSize);
+      DateColumnVector out = new DateColumnVector(batchSize);
       batch.cols[0] = in;
       batch.cols[1] = out;
       for (int i = 0; i < batchSize; i++) {

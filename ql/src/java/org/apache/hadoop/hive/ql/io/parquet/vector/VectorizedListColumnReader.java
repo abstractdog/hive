@@ -19,6 +19,7 @@ import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.DoubleColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.DateColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
@@ -283,12 +284,17 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
     case INT:
     case BYTE:
     case SHORT:
-    case DATE:
     case INTERVAL_YEAR_MONTH:
     case LONG:
       lcv.child = new LongColumnVector(total);
       for (int i = 0; i < valueList.size(); i++) {
         ((LongColumnVector) lcv.child).vector[i] = ((List<Long>) valueList).get(i);
+      }
+      break;
+    case DATE:
+      lcv.child = new DateColumnVector(total);
+      for (int i = 0; i < valueList.size(); i++) {
+        ((DateColumnVector) lcv.child).vector[i] = ((List<Long>) valueList).get(i);
       }
       break;
     case DOUBLE:
@@ -367,7 +373,18 @@ public class VectorizedListColumnReader extends BaseVectorizedColumnReader {
     int length = (int)lcv.lengths[index];
     ColumnVector child = lcv.child;
     ColumnVector resultCV = null;
-    if (child instanceof LongColumnVector) {
+    if (child instanceof DateColumnVector) {
+      resultCV = new DateColumnVector(length);
+      try {
+        System.arraycopy(((DateColumnVector) lcv.child).vector, start,
+            ((DateColumnVector) resultCV).vector, 0, length);
+      } catch (Exception e) {
+        throw new RuntimeException(
+            "Fail to copy at index:" + index + ", start:" + start + ",length:" + length + ",vec " +
+                "len:" + ((LongColumnVector) lcv.child).vector.length + ", offset len:" + lcv
+                .offsets.length + ", len len:" + lcv.lengths.length, e);
+      }
+    } else if (child instanceof LongColumnVector) {
       resultCV = new LongColumnVector(length);
       try {
         System.arraycopy(((LongColumnVector) lcv.child).vector, start,

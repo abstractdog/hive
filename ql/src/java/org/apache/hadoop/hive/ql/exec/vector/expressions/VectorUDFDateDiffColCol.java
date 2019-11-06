@@ -21,7 +21,7 @@ package org.apache.hadoop.hive.ql.exec.vector.expressions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.DateColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
@@ -46,8 +46,8 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
   private transient final Date date = new Date(0);
 
   // Transient members initialized by transientInit method.
-  private transient LongColumnVector dateVector1;
-  private transient LongColumnVector dateVector2;
+  private transient DateColumnVector dateVector1;
+  private transient DateColumnVector dateVector2;
 
   public VectorUDFDateDiffColCol(int colNum1, int colNum2, int outputColumnNum) {
     super(outputColumnNum);
@@ -67,8 +67,8 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
   public void transientInit(Configuration conf) throws HiveException {
     super.transientInit(conf);
 
-    dateVector1 = new LongColumnVector();
-    dateVector2 = new LongColumnVector();
+    dateVector1 = new DateColumnVector();
+    dateVector2 = new DateColumnVector();
   }
 
   @Override
@@ -83,7 +83,7 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
     int[] sel = batch.selected;
     int n = batch.size;
 
-    LongColumnVector outV = (LongColumnVector) batch.cols[outputColumnNum];
+    DateColumnVector outV = (DateColumnVector) batch.cols[outputColumnNum];
     long[] outputVector = outV.vector;
     if (n <= 0) {
       // Nothing to do
@@ -95,8 +95,8 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
      */
     NullUtil.propagateNullsColCol(inputColVector1, inputColVector2, outV, batch.selected, batch.size, batch.selectedInUse);
 
-    LongColumnVector convertedVector1 = toDateArray(batch, inputTypeInfos[0], inputColVector1, dateVector1);
-    LongColumnVector convertedVector2 = toDateArray(batch, inputTypeInfos[1], inputColVector2, dateVector2);
+    DateColumnVector convertedVector1 = toDateArray(batch, inputTypeInfos[0], inputColVector1, dateVector1);
+    DateColumnVector convertedVector2 = toDateArray(batch, inputTypeInfos[1], inputColVector2, dateVector2);
 
     // Now disregard null in second pass.
     if ((inputColVector1.isRepeating) && (inputColVector2.isRepeating)) {
@@ -168,21 +168,21 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
     }
   }
 
-  private LongColumnVector toDateArray(VectorizedRowBatch batch, TypeInfo typeInfo,
-                                       ColumnVector inputColVector, LongColumnVector dateVector) {
+  private DateColumnVector toDateArray(VectorizedRowBatch batch, TypeInfo typeInfo,
+                                       ColumnVector inputColVector, DateColumnVector dateVector) {
     PrimitiveCategory primitiveCategory =
         ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory();
     int size = batch.size;
     if (primitiveCategory == PrimitiveCategory.DATE) {
-      return (LongColumnVector) inputColVector;
+      return (DateColumnVector) inputColVector;
     }
 
     if (size > dateVector.vector.length) {
       if (dateVector1 == dateVector) {
-        dateVector1 = new LongColumnVector(size * 2);
+        dateVector1 = new DateColumnVector(size * 2);
         dateVector = dateVector1;
       } else {
-        dateVector2 = new LongColumnVector(size * 2);
+        dateVector2 = new DateColumnVector(size * 2);
         dateVector = dateVector2;
       }
     }
@@ -207,7 +207,7 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
   // Copy the current object contents into the output. Only copy selected entries,
   // as indicated by selectedInUse and the sel array.
   public void copySelected(
-      BytesColumnVector input, boolean selectedInUse, int[] sel, int size, LongColumnVector output) {
+      BytesColumnVector input, boolean selectedInUse, int[] sel, int size, DateColumnVector output) {
 
     output.isRepeating = false;
 
@@ -292,7 +292,7 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
     }
   }
 
-  private void setDays(BytesColumnVector input, LongColumnVector output, int i) {
+  private void setDays(BytesColumnVector input, DateColumnVector output, int i) {
     String string = new String(input.vector[i], input.start[i], input.length[i]);
     try {
       date.setTime(formatter.parse(string).getTime());
@@ -306,7 +306,7 @@ public class VectorUDFDateDiffColCol extends VectorExpression {
   // Copy the current object contents into the output. Only copy selected entries,
   // as indicated by selectedInUse and the sel array.
   public void copySelected(
-      TimestampColumnVector input, boolean selectedInUse, int[] sel, int size, LongColumnVector output) {
+      TimestampColumnVector input, boolean selectedInUse, int[] sel, int size, DateColumnVector output) {
 
     output.isRepeating = false;
 

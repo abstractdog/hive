@@ -404,6 +404,12 @@
       <version>${mariadb.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>9.3-1102-jdbc41</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>

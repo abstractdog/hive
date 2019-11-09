@@ -445,7 +445,11 @@ public class QTestUtil {
 
     clearKeysCreatedInTests();
 
-    cleanupFromFile();
+    String metastoreDb = QTestSystemProperties.getMetaStoreDb();
+    if (metastoreDb == null || "derby".equalsIgnoreCase(metastoreDb)) {
+      // otherwise, the docker container is already destroyed by this time
+      cleanupFromFile();
+    }
 
     // delete any contents in the warehouse dir
     Path p = new Path(testWarehouse);

@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.exec.vector;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,56 +34,60 @@ public class TestDateColumnVector {
   @Test
   public void testProlepticCalendar() throws Exception {
     // proleptic
+    // epoch day as proleptic gregorian date
+    setDateAndVerifyProlepticUpdate("1970-01-02", "1970-01-02", false, true);
+
     // gregorian day as proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("2015-11-29", "2015-11-29", true);
+    setDateAndVerifyProlepticUpdate("2015-11-29", "2015-11-29", false, true);
 
     // first gregorian day as proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-15", "1582-10-15", true);
+    setDateAndVerifyProlepticUpdate("1582-10-15", "1582-10-15", false, true);
 
     // a day before first gregorian day as proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-14", "1582-10-24", true);
+    setDateAndVerifyProlepticUpdate("1582-10-14", "1582-10-24", false, true);
 
     // a day after last julian day as proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-05", "1582-10-15", true);
+    setDateAndVerifyProlepticUpdate("1582-10-05", "1582-10-15", false, true);
 
     // last julian day as proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-04", "1582-10-14", true);
+    setDateAndVerifyProlepticUpdate("1582-10-04", "1582-10-14", false, true);
 
     // older julian day as propleptic gregorian date
-    setDateAndVerifyProlepticUpdate("0601-03-04", "0601-03-07", true);
+    setDateAndVerifyProlepticUpdate("0601-03-04", "0601-03-07", false, true);
 
     // non-proleptic
     // gregorian day as non-proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("2015-11-29", "2015-11-29", false);
+    setDateAndVerifyProlepticUpdate("2015-11-29", "2015-11-29", true, false);
 
     // first gregorian day as non-proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-15", "1582-10-15", false);
+    setDateAndVerifyProlepticUpdate("1582-10-15", "1582-10-15", true, false);
 
     // a day before first gregorian day as non-proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-14", "1582-10-04", false);
+    setDateAndVerifyProlepticUpdate("1582-10-14", "1582-10-04", true, false);
 
     // a day after last julian day as non-proleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-05", "1582-09-25", false);
+    setDateAndVerifyProlepticUpdate("1582-10-05", "1582-09-25", true, false);
 
     // last julian day as non-propleptic gregorian date
-    setDateAndVerifyProlepticUpdate("1582-10-04", "1582-09-24", false);
+    setDateAndVerifyProlepticUpdate("1582-10-04", "1582-09-24", true, false);
 
     // older julian day as non-propleptic gregorian date
-    setDateAndVerifyProlepticUpdate("0601-03-04", "0601-03-01", false);
+    setDateAndVerifyProlepticUpdate("0601-03-04", "0601-03-01", true, false);
   }
 
-  private void setDateAndVerifyProlepticUpdate(String dateString,
-      String expectedGregorianDateString, boolean useProleptic) throws Exception {
+  private void setDateAndVerifyProlepticUpdate(String dateString, String expectedDateString,
+      boolean originalUseProleptic, boolean newUseProleptic) throws Exception {
     Instant instant = Instant.parse(dateString + "T00:00:00Z");
-    long timestamp = instant.toEpochMilli();
+    long epochDays = TimeUnit.MILLISECONDS.toDays(instant.toEpochMilli());
 
-    DateColumnVector dateColumnVector = new DateColumnVector();
-    dateColumnVector.vector[0] = timestamp;
+    DateColumnVector dateColumnVector = new DateColumnVector().setUsingProlepticCalendar(originalUseProleptic);
+    dateColumnVector.vector[0] = epochDays;
+    dateColumnVector.setUsingProlepticCalendar(originalUseProleptic);
 
-    dateColumnVector.changeCalendar(useProleptic, true);
+    dateColumnVector.changeCalendar(newUseProleptic, true);
 
-    Assert.assertEquals(expectedGregorianDateString,
-        getTestFormatter(useProleptic).format(dateColumnVector.vector[0]));
+    Assert.assertEquals(expectedDateString,
+        getTestFormatter(newUseProleptic).format(TimeUnit.DAYS.toMillis(dateColumnVector.vector[0])));
   }
 
   private DateFormat getTestFormatter(boolean useProleptic) {

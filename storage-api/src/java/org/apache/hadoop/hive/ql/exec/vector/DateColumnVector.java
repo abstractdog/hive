@@ -19,9 +19,6 @@ package org.apache.hadoop.hive.ql.exec.vector;
 
 import java.sql.Date;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +69,6 @@ public class DateColumnVector extends LongColumnVector {
   private void updateDataAccordingProlepticSetting() {
     for (int i = 0; i < vector.length; i++) {
       long oldMillis = TimeUnit.DAYS.toMillis(vector[i]);
-      //Date oldDate = new java.sql.Date(TimeUnit.DAYS.toMillis(vector[i]));
       long newMillis = java.sql.Date.valueOf(usingProlepticCalendar
         ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(oldMillis) : GREGORIAN_DATE_FORMATTER.format(oldMillis)).getTime();
 
@@ -80,6 +76,17 @@ public class DateColumnVector extends LongColumnVector {
       newMillis += TimeZone.getDefault().getOffset(newMillis);
       vector[i] = TimeUnit.MILLISECONDS.toDays(newMillis);
     }
+  }
+
+  public String stringifyValue(int row) {
+    long millis = TimeUnit.DAYS.toMillis(vector[row]);
+    millis += TimeZone.getDefault().getOffset(millis);
+    return usingProlepticCalendar ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(millis)
+      : GREGORIAN_DATE_FORMATTER.format(millis);
+  }
+
+  public Date getDateValue(int row) {
+    return Date.valueOf(stringifyValue(row));
   }
 
   public DateColumnVector setUsingProlepticCalendar(boolean usingProlepticCalendar) {

@@ -24,8 +24,10 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hive.common.type.RandomTypeUtil;
 import org.junit.Assert;
@@ -35,6 +37,22 @@ import org.junit.Test;
  * Test for ListColumnVector
  */
 public class TestTimestampColumnVector {
+  private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR_UTC =
+      new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+  private static final GregorianCalendar GREGORIAN_CALENDAR_UTC =
+      new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+
+  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC =
+      new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private static final SimpleDateFormat GREGORIAN_TIMESTAMP_FORMATTER_UTC =
+      new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+  static {
+    PROLEPTIC_GREGORIAN_CALENDAR_UTC.setGregorianChange(new java.util.Date(Long.MIN_VALUE));
+
+    PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC.setCalendar(PROLEPTIC_GREGORIAN_CALENDAR_UTC);
+    GREGORIAN_TIMESTAMP_FORMATTER_UTC.setCalendar(GREGORIAN_CALENDAR_UTC);
+  }
 
   @Test
   public void testSaveAndRetrieve() throws Exception {
@@ -96,90 +114,74 @@ public class TestTimestampColumnVector {
 
   /**
    * Test case for TimestampColumnVector's changeCalendar
+   *   16768: hybrid: 2015-11-29 proleptic: 2015-11-29
+   * -141418: hybrid: 1582-10-24 proleptic: 1582-10-24
+   * -141427: hybrid: 1582-10-15 proleptic: 1582-10-15
+   * -141428: hybrid: 1582-10-04 proleptic: 1582-10-14
+   * -141430: hybrid: 1582-10-02 proleptic: 1582-10-12
+   * -141437: hybrid: 1582-09-25 proleptic: 1582-10-05
+   * -141438: hybrid: 1582-09-24 proleptic: 1582-10-04
+   * -499952: hybrid: 0601-03-04 proleptic: 0601-03-07
+   * -499955: hybrid: 0601-03-01 proleptic: 0601-03-04
    */
   @Test
   public void testProlepticCalendar() {
-    // proleptic
-    // a random gregorian day as propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", true, true);
-    setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", true, false);
+    // from hybrid internal representation to proleptic
+    setAndVerifyProlepticUpdate(16768, appendTime("2015-11-29"), false, true);
+    setAndVerifyProlepticUpdate(-141418, appendTime("1582-10-24"), false, true);
+    setAndVerifyProlepticUpdate(-141427, appendTime("1582-10-15"), false, true);
+    setAndVerifyProlepticUpdate(-141428, appendTime("1582-10-04"), false, true);
+    setAndVerifyProlepticUpdate(-141430, appendTime("1582-10-02"), false, true);
+    setAndVerifyProlepticUpdate(-141437, appendTime("1582-09-25"), false, true);
+    setAndVerifyProlepticUpdate(-499952, appendTime("0601-03-04"), false, true);
+    setAndVerifyProlepticUpdate(-499955, appendTime("0601-03-01"), false, true);
 
-    // first gregorian day as propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", true, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", true, false);
-
-    // a day before first gregorian day as propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-24 11:17:22.123", true, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-24 11:17:22.123", true, false);
-
-    // a day after last julian day as propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-10-15 11:17:22.123", true, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-10-15 11:17:22.123", true, false);
-
-    // last julian day as propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-10-14 11:17:22.123", true, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-10-14 11:17:22.123", true, false);
-
-    // older julian day as propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-07 11:17:22.123", true, true);
-    setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-07 11:17:22.123", true, false);
-
-    // non-proleptic
-    // a random gregorian day as non-propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", false, true);
-    setInstantAndVerifyProlepticUpdate("2015-11-29T12:00:00.123Z", "2015-11-29 12:00:00.123", false, false);
-
-    // first gregorian day as non-propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", false, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-15T11:17:22.123Z", "1582-10-15 11:17:22.123", false, false);
-
-    // a day before first gregorian day as non-propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-04 11:17:22.123", false, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-14T11:17:22.123Z", "1582-10-04 11:17:22.123", false, false);
-
-    // a day after last julian day as non-propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-09-25 11:17:22.123", false, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-05T11:17:22.123Z", "1582-09-25 11:17:22.123", false, false);
- 
-    // last julian day as non-propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-09-24 11:17:22.123", false, true);
-    setInstantAndVerifyProlepticUpdate("1582-10-04T11:17:22.123Z", "1582-09-24 11:17:22.123", false, false);
-
-    // older julian day as non-propleptic gregorian date
-    setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-01 11:17:22.123", false, true);
-    setInstantAndVerifyProlepticUpdate("0601-03-04T11:17:22.123Z", "0601-03-01 11:17:22.123", false, false);
+    // from proleptic internal representation to hybrid
+    setAndVerifyProlepticUpdate(16768, appendTime("2015-11-29"), true, false);
+    setAndVerifyProlepticUpdate(-141418, appendTime("1582-10-24"), true, false);
+    setAndVerifyProlepticUpdate(-141427, appendTime("1582-10-15"), true, false);
+    setAndVerifyProlepticUpdate(-141428, appendTime("1582-10-24"), true, false);
+    setAndVerifyProlepticUpdate(-141430, appendTime("1582-10-22"), true, false);
+    setAndVerifyProlepticUpdate(-141437, appendTime("1582-10-15"), true, false);
+    setAndVerifyProlepticUpdate(-499952, appendTime("0601-03-07"), true, false);
+    setAndVerifyProlepticUpdate(-499955, appendTime("0601-03-04"), true, false);
   }
 
-  private void setInstantAndVerifyProlepticUpdate(String momentInUtc, String expected,
-      boolean useProleptic, boolean isUTC) {
-    TimeZone timeZone = isUTC ? TimeZone.getTimeZone("UTC") : TimeZone.getDefault();
-    DateFormat testFormatter = getTestFormatter(useProleptic, timeZone);
+  private String appendTime(String string) {
+    return string + " 00:00:00.000";
+  }
 
-    Instant instant = Instant.parse(momentInUtc); // instant is always a moment in UTC
-    long offsetFromUTC = timeZone.getOffset(instant.toEpochMilli());
+  private void setAndVerifyProlepticUpdate(long epochDay, String expected,
+      boolean originalUseProleptic, boolean newUseProleptic) {
+    long epochMilli = TimeUnit.DAYS.toMillis(epochDay);
+
+    DateFormat testFormatter = getTestFormatter(newUseProleptic);
+
+    Instant instant = Instant.ofEpochMilli(epochMilli); // instant is always a moment in UTC
 
     int nanos = instant.getNano() + new Random().nextInt(999999) + 0;
-    TimestampColumnVector timestampColVector = new TimestampColumnVector();
-    timestampColVector.setIsUTC(isUTC);
+    TimestampColumnVector timestampColVector =
+        new TimestampColumnVector().setUsingProlepticCalendar(originalUseProleptic);
+
     timestampColVector.time[0] = instant.toEpochMilli();
     timestampColVector.nanos[0] = nanos;
 
-    timestampColVector.changeCalendar(useProleptic, true);
+    timestampColVector.changeCalendar(newUseProleptic, true);
 
-    Assert.assertEquals(expected, testFormatter
-        .format(Timestamp.from(Instant.ofEpochMilli(timestampColVector.time[0] - offsetFromUTC))));
+    Assert.assertEquals(expected,
+        testFormatter.format(Timestamp.from(Instant.ofEpochMilli(timestampColVector.time[0]))));
     Assert.assertEquals(nanos, timestampColVector.nanos[0]); // preserving nanos
   }
 
-  private DateFormat getTestFormatter(boolean useProleptic, TimeZone timeZone) {
+  private DateFormat getTestFormatter(boolean useProleptic) {
     DateFormat testFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
     if (useProleptic) {
-      testFormatter.setCalendar(TimestampColumnVector.PROLEPTIC_GREGORIAN_CALENDAR_UTC);
+      testFormatter.setCalendar(PROLEPTIC_GREGORIAN_CALENDAR_UTC);
     } else {
-      testFormatter.setCalendar(TimestampColumnVector.GREGORIAN_CALENDAR_UTC);
+      testFormatter.setCalendar(GREGORIAN_CALENDAR_UTC);
     }
-    testFormatter.setTimeZone(timeZone);
+
     testFormatter.setLenient(false);
 
     return testFormatter;

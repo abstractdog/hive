@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hive.ql.exec.vector;
 
-import java.sql.Date;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -31,17 +27,14 @@ import java.util.concurrent.TimeUnit;
  * In DateColumnVector, the elements of vector[] represent the days since 1970-01-01
  */
 public class DateColumnVector extends LongColumnVector {
-  public static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
-  public static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
+  private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
+  private static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
 
   private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
   private static final SimpleDateFormat GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
 
   static {
     PROLEPTIC_GREGORIAN_CALENDAR.setGregorianChange(new java.util.Date(Long.MIN_VALUE));
-
-    PROLEPTIC_GREGORIAN_CALENDAR.setLenient(false);
-    GREGORIAN_CALENDAR.setLenient(false);
 
     PROLEPTIC_GREGORIAN_DATE_FORMATTER.setCalendar(PROLEPTIC_GREGORIAN_CALENDAR);
     GREGORIAN_DATE_FORMATTER.setCalendar(GREGORIAN_CALENDAR);
@@ -65,21 +58,33 @@ public class DateColumnVector extends LongColumnVector {
     }
     usingProlepticCalendar = useProleptic;
     if (updateData) {
-      updateDataAccordingProlepticSetting();
+      try {
+        updateDataAccordingProlepticSetting();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
-  private void updateDataAccordingProlepticSetting() {
+  private void updateDataAccordingProlepticSetting() throws Exception {
     for (int i = 0; i < vector.length; i++) {
-      long oldMillis = TimeUnit.DAYS.toMillis(vector[i]);
-      //Date oldDate = new java.sql.Date(TimeUnit.DAYS.toMillis(vector[i]));
-      long newMillis = java.sql.Date.valueOf(usingProlepticCalendar
-        ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(oldMillis) : GREGORIAN_DATE_FORMATTER.format(oldMillis)).getTime();
+      long millis = TimeUnit.DAYS.toMillis(vector[i]);
+      String originalFormatted = usingProlepticCalendar ? GREGORIAN_DATE_FORMATTER.format(millis)
+        : PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(millis);
+
+      millis = (usingProlepticCalendar ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.parse(originalFormatted)
+        : GREGORIAN_DATE_FORMATTER.parse(originalFormatted)).getTime();
 
       // as java.sql.Date.getTime() gives corresponding value in GMT, a correction is needed
-      newMillis += TimeZone.getDefault().getOffset(newMillis);
-      vector[i] = TimeUnit.MILLISECONDS.toDays(newMillis);
+      millis += TimeZone.getDefault().getOffset(millis);
+      vector[i] = TimeUnit.MILLISECONDS.toDays(millis);
     }
+  }
+
+  public String formatDate(int i) {
+    long millis = TimeUnit.DAYS.toMillis(vector[i]);
+    return usingProlepticCalendar ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(millis)
+      : GREGORIAN_DATE_FORMATTER.format(millis);
   }
 
   public DateColumnVector setUsingProlepticCalendar(boolean usingProlepticCalendar) {

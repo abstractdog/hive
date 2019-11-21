@@ -19,6 +19,7 @@ package org.apache.hadoop.hive.ql.exec.vector;
 
 import java.sql.Date;
 import java.text.SimpleDateFormat;
+import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -26,12 +27,16 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestDateColumnVector {
+  private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
+  private static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
   private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
   private static final SimpleDateFormat GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
 
   static {
-    PROLEPTIC_GREGORIAN_DATE_FORMATTER.setCalendar(DateColumnVector.PROLEPTIC_GREGORIAN_CALENDAR);
-    GREGORIAN_DATE_FORMATTER.setCalendar(DateColumnVector.GREGORIAN_CALENDAR);
+    PROLEPTIC_GREGORIAN_CALENDAR.setGregorianChange(new java.util.Date(Long.MIN_VALUE));
+
+    PROLEPTIC_GREGORIAN_DATE_FORMATTER.setCalendar(PROLEPTIC_GREGORIAN_CALENDAR);
+    GREGORIAN_DATE_FORMATTER.setCalendar(GREGORIAN_CALENDAR);
   }
 
   /**
@@ -39,6 +44,7 @@ public class TestDateColumnVector {
    * REFERENCE for EPOCH DAYS:
    * epoch days, hybrid representation, proleptic representation
    *   16768: hybrid: 2015-11-29 proleptic: 2015-11-29
+   * -141418: hybrid: 1582-10-24 proleptic: 1582-10-24
    * -141427: hybrid: 1582-10-15 proleptic: 1582-10-15
    * -141428: hybrid: 1582-10-04 proleptic: 1582-10-14
    * -141430: hybrid: 1582-10-02 proleptic: 1582-10-12
@@ -121,5 +127,105 @@ public class TestDateColumnVector {
     System.out.println("original string: " + strDate + "-> Date.valueOf: " + java.sql.Date.valueOf(strDate) + " toDays(getTime()): "
         + TimeUnit.MILLISECONDS.toDays(java.sql.Date.valueOf(strDate).getTime()) + " proleptic: "
         + PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(java.sql.Date.valueOf(strDate).getTime()));
+  }
+  
+  @Test
+  public void testConvert1() throws Exception { // convert from proleptic to non-proleptic
+    long days = -141428; // proleptic 1582-10-14
+    System.out.println("days: "+ days); //days: -141428
+    
+    long original = TimeUnit.DAYS.toMillis(days);
+    System.out.println("millis: " + original); // millis: -12219379200000
+    String string = PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(original);
+    System.out.println("formatted: " + string); // formatted: 1582-10-14
+    
+    long newMillis = GREGORIAN_DATE_FORMATTER.parse(string).getTime();
+    System.out.println("newMillis: " + newMillis); // newMillis: -12218518800000
+    
+    long newDays = TimeUnit.MILLISECONDS.toDays(newMillis);
+    System.out.println("newDays: " + newDays); //newDays: -141418
+    System.out.println("new format: "+ GREGORIAN_DATE_FORMATTER.format(newMillis)); //new format ????
+  }
+  
+  @Test
+  public void testConvert2() throws Exception { // convert from hybrid to proleptic
+    long days = -141428; // hybrid 1582-10-04
+    System.out.println("days: "+ days); //days: -141428
+    
+    long original = TimeUnit.DAYS.toMillis(days);
+    System.out.println("millis: " + original); 
+    String string = GREGORIAN_DATE_FORMATTER.format(original);
+    System.out.println("formatted: " + string); 
+    
+    long newMillis = PROLEPTIC_GREGORIAN_DATE_FORMATTER.parse(string).getTime();
+    System.out.println("newMillis: " + newMillis); 
+    
+    long newDays = TimeUnit.MILLISECONDS.toDays(newMillis);
+    System.out.println("newDays: " + newDays); 
+    System.out.println("new format: "+ PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(newMillis));
+  }
+  
+  @Test
+  public void testConvert3() throws Exception { // convert from proleptic to non-proleptic
+    long days = -141438; // proleptic 1582-10-04
+    System.out.println("days: "+ days); 
+    
+    long original = TimeUnit.DAYS.toMillis(days);
+    System.out.println("millis: " + original); 
+    String string = PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(original);
+    System.out.println("formatted: " + string);
+    
+    long newMillis = GREGORIAN_DATE_FORMATTER.parse(string).getTime();
+    System.out.println("newMillis: " + newMillis);
+    
+    long newDays = TimeUnit.MILLISECONDS.toDays(newMillis);
+    System.out.println("newDays: " + newDays);
+    System.out.println("new format: "+ GREGORIAN_DATE_FORMATTER.format(newMillis));
+  }
+  
+  @Test
+  public void testConvert4() throws Exception { // convert from proleptic to non-proleptic
+    long days = -499955; // proleptic 0601-03-04
+    System.out.println("days: "+ days); 
+    
+    long original = TimeUnit.DAYS.toMillis(days);
+    System.out.println("millis: " + original); 
+    String string = PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(original);
+    System.out.println("formatted: " + string);
+    
+    long newMillis = GREGORIAN_DATE_FORMATTER.parse(string).getTime();
+    System.out.println("newMillis: " + newMillis);
+    
+    long newDays = TimeUnit.MILLISECONDS.toDays(newMillis);
+    System.out.println("newDays: " + newDays);
+    System.out.println("new format: "+ GREGORIAN_DATE_FORMATTER.format(newMillis));
+  }
+  
+  @Test
+  public void testConvert5() throws Exception { // convert from hybrid to proleptic
+    long days = -141418; // hybrid 1582-10-24
+    System.out.println("days: "+ days); //days: -141428
+    
+    long original = TimeUnit.DAYS.toMillis(days);
+    System.out.println("millis: " + original); 
+    String string = GREGORIAN_DATE_FORMATTER.format(original);
+    System.out.println("formatted: " + string); 
+    
+    long newMillis = PROLEPTIC_GREGORIAN_DATE_FORMATTER.parse(string).getTime();
+    System.out.println("newMillis: " + newMillis); 
+    
+    long newDays = TimeUnit.MILLISECONDS.toDays(newMillis);
+    System.out.println("newDays: " + newDays); 
+    System.out.println("new format: "+ PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(newMillis));
+  }
+  
+  
+  @Test
+  public void testHybridParseAndFormat() throws Exception {
+    String nonExistingHybridDate = "1582-10-14";
+    long millis = GREGORIAN_DATE_FORMATTER.parse(nonExistingHybridDate).getTime();
+    System.out.println("millis: " + millis);
+    String str = GREGORIAN_DATE_FORMATTER.format(millis);
+    System.out.println("str: " + str);
   }
 }

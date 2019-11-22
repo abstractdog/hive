@@ -126,34 +126,58 @@ public class TestTimestampColumnVector {
    */
   @Test
   public void testProlepticCalendar() {
+    int randomMillis = new Random().nextInt(24 * 60 * 60 * 1000 -1);
+
     // from hybrid internal representation to proleptic
-    setAndVerifyProlepticUpdate(16768, appendTime("2015-11-29"), false, true);
-    setAndVerifyProlepticUpdate(-141418, appendTime("1582-10-24"), false, true);
-    setAndVerifyProlepticUpdate(-141427, appendTime("1582-10-15"), false, true);
-    setAndVerifyProlepticUpdate(-141428, appendTime("1582-10-04"), false, true);
-    setAndVerifyProlepticUpdate(-141430, appendTime("1582-10-02"), false, true);
-    setAndVerifyProlepticUpdate(-141437, appendTime("1582-09-25"), false, true);
-    setAndVerifyProlepticUpdate(-499952, appendTime("0601-03-04"), false, true);
-    setAndVerifyProlepticUpdate(-499955, appendTime("0601-03-01"), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(16768, randomMillis),
+        appendTime("2015-11-29", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141418, randomMillis),
+        appendTime("1582-10-24", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141427, randomMillis),
+        appendTime("1582-10-15", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141428, randomMillis),
+        appendTime("1582-10-04", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141430, randomMillis),
+        appendTime("1582-10-02", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141437, randomMillis),
+        appendTime("1582-09-25", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-499952, randomMillis),
+        appendTime("0601-03-04", randomMillis), false, true);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-499955, randomMillis),
+        appendTime("0601-03-01", randomMillis), false, true);
 
     // from proleptic internal representation to hybrid
-    setAndVerifyProlepticUpdate(16768, appendTime("2015-11-29"), true, false);
-    setAndVerifyProlepticUpdate(-141418, appendTime("1582-10-24"), true, false);
-    setAndVerifyProlepticUpdate(-141427, appendTime("1582-10-15"), true, false);
-    setAndVerifyProlepticUpdate(-141428, appendTime("1582-10-24"), true, false);
-    setAndVerifyProlepticUpdate(-141430, appendTime("1582-10-22"), true, false);
-    setAndVerifyProlepticUpdate(-141437, appendTime("1582-10-15"), true, false);
-    setAndVerifyProlepticUpdate(-499952, appendTime("0601-03-07"), true, false);
-    setAndVerifyProlepticUpdate(-499955, appendTime("0601-03-04"), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(16768, randomMillis),
+        appendTime("2015-11-29", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141418, randomMillis),
+        appendTime("1582-10-24", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141427, randomMillis),
+        appendTime("1582-10-15", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141428, randomMillis),
+        appendTime("1582-10-24", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141430, randomMillis),
+        appendTime("1582-10-22", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-141437, randomMillis),
+        appendTime("1582-10-15", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-499952, randomMillis),
+        appendTime("0601-03-07", randomMillis), true, false);
+    setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(-499955, randomMillis),
+        appendTime("0601-03-04", randomMillis), true, false);
   }
 
-  private String appendTime(String string) {
-    return string + " 00:00:00.000";
+  private long getMillisForDayPlusMillis(int days, int millis) {
+    return TimeUnit.DAYS.toMillis(days) + millis;
   }
 
-  private void setAndVerifyProlepticUpdate(long epochDay, String expected,
+  private String appendTime(String datePart, int millis) {
+    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+    return datePart + " " + sdf.format(millis);
+  }
+
+  private void setAndVerifyProlepticUpdate(long epochMilli, String expected,
       boolean originalUseProleptic, boolean newUseProleptic) {
-    long epochMilli = TimeUnit.DAYS.toMillis(epochDay);
 
     DateFormat testFormatter = getTestFormatter(newUseProleptic);
 

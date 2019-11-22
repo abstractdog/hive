@@ -37,7 +37,7 @@ public class TestDateColumnVector {
    */
   @Test
   public void testProlepticCalendar() throws Exception {
-    // the expected output is the same as it was with the original calendar, 
+    // the expected output is the same as it was with the original calendar,
     // as the goal is to change the underlying data in a way that the user
     // gets the same string representation after the calendar change
 
@@ -52,7 +52,7 @@ public class TestDateColumnVector {
     setDateAndVerifyProlepticUpdate(-499955, "0601-03-01", false, true);
 
     // from proleptic internal representation to hybrid
-    // this way, some string representations will change, as some proleptic dates 
+    // this way, some string representations will change, as some proleptic dates
     // (represented as string) don't exist in hybrid calendar, e.g. '1582-10-14'
     setDateAndVerifyProlepticUpdate(16768, "2015-11-29", true, false);
     setDateAndVerifyProlepticUpdate(-141418, "1582-10-24", true, false);
@@ -64,10 +64,11 @@ public class TestDateColumnVector {
     setDateAndVerifyProlepticUpdate(-499955, "0601-03-04", true, false);
   }
 
-  private void setDateAndVerifyProlepticUpdate(long longDay, String expectedDateString, boolean originalUseProleptic,
-      boolean newUseProleptic) throws Exception {
+  private void setDateAndVerifyProlepticUpdate(long longDay, String expectedDateString,
+      boolean originalUseProleptic, boolean newUseProleptic) throws Exception {
 
-    DateColumnVector dateColumnVector = new DateColumnVector().setUsingProlepticCalendar(originalUseProleptic);
+    DateColumnVector dateColumnVector =
+        new DateColumnVector().setUsingProlepticCalendar(originalUseProleptic);
     dateColumnVector.vector[0] = longDay;
 
     dateColumnVector.changeCalendar(newUseProleptic, true);

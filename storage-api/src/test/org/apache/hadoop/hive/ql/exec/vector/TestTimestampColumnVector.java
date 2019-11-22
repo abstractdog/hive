@@ -126,7 +126,7 @@ public class TestTimestampColumnVector {
    */
   @Test
   public void testProlepticCalendar() {
-    int randomMillis = new Random().nextInt(24 * 60 * 60 * 1000 -1);
+    int randomMillis = new Random().nextInt(24 * 60 * 60 * 1000 - 1);
 
     // from hybrid internal representation to proleptic
     setAndVerifyProlepticUpdate(getMillisForDayPlusMillis(16768, randomMillis),

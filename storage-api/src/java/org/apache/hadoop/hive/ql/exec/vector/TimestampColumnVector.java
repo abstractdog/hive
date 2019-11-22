@@ -593,7 +593,7 @@ public class TimestampColumnVector extends ColumnVector {
 
   private void updateDataAccordingProlepticSetting() throws Exception {
     for (int i = 0; i < nanos.length; i++) {
-      if (time[i] >= CUTOVER_MILLIS_EPOCH){ //no need for conversion
+      if (time[i] >= CUTOVER_MILLIS_EPOCH) { // no need for conversion
         continue;
       }
       asScratchTimestamp(i);

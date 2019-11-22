@@ -57,6 +57,10 @@ public class TimestampColumnVector extends ColumnVector {
     PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC.setCalendar(PROLEPTIC_GREGORIAN_CALENDAR_UTC);
     GREGORIAN_TIMESTAMP_FORMATTER_UTC.setCalendar(GREGORIAN_CALENDAR_UTC);
   }
+
+  // it's 1582-10-15 in both calendars
+  private static final int CUTOVER_MILLIS_EPOCH = -141427 * 24 * 60 * 60 * 1000;
+
   /*
    * The storage arrays for this column vector corresponds to the storage of a Timestamp:
    */
@@ -589,6 +593,9 @@ public class TimestampColumnVector extends ColumnVector {
 
   private void updateDataAccordingProlepticSetting() throws Exception {
     for (int i = 0; i < nanos.length; i++) {
+      if (time[i] >= CUTOVER_MILLIS_EPOCH){ //no need for conversion
+        continue;
+      }
       asScratchTimestamp(i);
       long offset = 0;
       String formatted =

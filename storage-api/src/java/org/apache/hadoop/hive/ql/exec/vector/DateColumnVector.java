@@ -30,8 +30,16 @@ public class DateColumnVector extends LongColumnVector {
   private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
   private static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
 
-  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
-  private static final SimpleDateFormat GREGORIAN_DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd");
+  private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER =
+      new SimpleDateFormat("yyyy-MM-dd");
+  private static final SimpleDateFormat GREGORIAN_DATE_FORMATTER =
+      new SimpleDateFormat("yyyy-MM-dd");
+
+  /**
+  * -141427: hybrid: 1582-10-15 proleptic: 1582-10-15
+  * -141428: hybrid: 1582-10-04 proleptic: 1582-10-14
+  */
+  private static final int CUTOVER_DAY_EPOCH = -141427; // it's 1582-10-15 in both calendars
 
   static {
     PROLEPTIC_GREGORIAN_CALENDAR.setGregorianChange(new java.util.Date(Long.MIN_VALUE));
@@ -68,6 +76,9 @@ public class DateColumnVector extends LongColumnVector {
 
   private void updateDataAccordingProlepticSetting() throws Exception {
     for (int i = 0; i < vector.length; i++) {
+      if (vector[i] >= CUTOVER_DAY_EPOCH){ //no need for conversion
+        continue;
+      }
       long millis = TimeUnit.DAYS.toMillis(vector[i]);
       String originalFormatted = usingProlepticCalendar ? GREGORIAN_DATE_FORMATTER.format(millis)
         : PROLEPTIC_GREGORIAN_DATE_FORMATTER.format(millis);

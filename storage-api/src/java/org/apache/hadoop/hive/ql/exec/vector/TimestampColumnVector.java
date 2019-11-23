@@ -41,10 +41,11 @@ import org.apache.hadoop.io.Writable;
  * using the scratch timestamp, and then perhaps update the column vector row with a result.
  */
 public class TimestampColumnVector extends ColumnVector {
+  private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
   private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR_UTC =
-      new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
+      new GregorianCalendar(UTC);
   private static final GregorianCalendar GREGORIAN_CALENDAR_UTC =
-      new GregorianCalendar(TimeZone.getTimeZone("UTC".intern()));
+      new GregorianCalendar(UTC);
 
   private static final SimpleDateFormat PROLEPTIC_GREGORIAN_TIMESTAMP_FORMATTER_UTC =
       new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

@@ -27,8 +27,9 @@ import java.util.concurrent.TimeUnit;
  * DateColumnVector, the elements of vector[] represent the days since 1970-01-01
  */
 public class DateColumnVector extends LongColumnVector {
-  private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar();
-  private static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar();
+  private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
+  private static final GregorianCalendar PROLEPTIC_GREGORIAN_CALENDAR = new GregorianCalendar(UTC);
+  private static final GregorianCalendar GREGORIAN_CALENDAR = new GregorianCalendar(UTC);
 
   private static final SimpleDateFormat PROLEPTIC_GREGORIAN_DATE_FORMATTER =
       new SimpleDateFormat("yyyy-MM-dd");
@@ -85,8 +86,6 @@ public class DateColumnVector extends LongColumnVector {
       millis = (usingProlepticCalendar ? PROLEPTIC_GREGORIAN_DATE_FORMATTER.parse(originalFormatted)
         : GREGORIAN_DATE_FORMATTER.parse(originalFormatted)).getTime();
 
-      // as java.sql.Date.getTime() gives corresponding value in GMT, a correction is needed
-      millis += TimeZone.getDefault().getOffset(millis);
       vector[i] = TimeUnit.MILLISECONDS.toDays(millis);
     }
   }

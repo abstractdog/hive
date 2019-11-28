@@ -457,19 +457,23 @@ abstract class TxnHandler implements TxnStore, TxnStore.MutexAPI {
         close(rs);
         List<Long> openList = new ArrayList<>();
         //need the WHERE clause below to ensure consistent results with READ_COMMITTED
-        s = "select txn_id, txn_state from TXNS where txn_id <= " + hwm + " order by txn_id";
+        s = "select txn_id, txn_state, txn_type from TXNS where txn_id <= " + hwm + " order by txn_id";
         LOG.debug("Going to execute query<" + s + ">");
         rs = stmt.executeQuery(s);
         long minOpenTxn = Long.MAX_VALUE;
         BitSet abortedBits = new BitSet();
         while (rs.next()) {
           long txnId = rs.getLong(1);
-          openList.add(txnId);
-          char c = rs.getString(2).charAt(0);
-          if(c == TXN_OPEN) {
+          char txnState = rs.getString(2).charAt(0);
+          if (txnState == TXN_OPEN) {
             minOpenTxn = Math.min(minOpenTxn, txnId);
-          } else if (c == TXN_ABORTED) {
-            abortedBits.set(openList.size() - 1);
+          }
+          TxnType txnType = TxnType.findByValue(rs.getInt(3));
+          if (txnType != TxnType.READ_ONLY) {
+            openList.add(txnId);
+            if (txnState == TXN_ABORTED) {
+              abortedBits.set(openList.size() - 1);
+            }
           }
         }
         LOG.debug("Going to rollback");
@@ -3911,6 +3915,30 @@ abstract class TxnHandler implements TxnStore, TxnStore.MutexAPI {
     } finally {
       closeStmt(stmt);
     }
+  }
+
+  protected String isWithinCheckInterval(String expr, long interval) throws MetaException {
+    String condition;
+    switch (dbProduct) {
+      case DERBY:
+        condition = " {fn TIMESTAMPDIFF(sql_tsi_second, " + expr + ", current_timestamp)} <= " + interval;
+        break;
+      case MYSQL:
+      case POSTGRES:
+        condition = expr + " => current_timestamp - interval '" + interval + "' second";
+        break;
+      case SQLSERVER:
+        condition = "DATEDIFF(second, " + expr + ", current_timestamp) <= " + interval;
+        break;
+      case ORACLE:
+        condition = expr + " => current_timestamp - numtodsinterval(" + interval + " , 'second')";
+        break;
+      default:
+        String msg = "Unknown database product: " + dbProduct.toString();
+        LOG.error(msg);
+        throw new MetaException(msg);
+    }
+    return condition;
   }
 
   /**

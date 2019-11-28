@@ -59,7 +59,7 @@ import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.metastore.api.TxnType;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.ErrorMsg;
-import org.apache.hadoop.hive.ql.ddl.table.creation.CreateTableDesc;
+import org.apache.hadoop.hive.ql.ddl.table.create.CreateTableDesc;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.hooks.Entity;
 import org.apache.hadoop.hive.ql.hooks.ReadEntity;
@@ -2340,7 +2340,7 @@ public class AcidUtils {
   }
 
   public static String getFullTableName(String dbName, String tableName) {
-    return TableName.getDbTable(dbName.toLowerCase(), tableName.toLowerCase());
+    return TableName.fromString(tableName, null, dbName).getNotEmptyDbTable().toLowerCase();
   }
 
   /**
@@ -2992,10 +2992,11 @@ public class AcidUtils {
    * Determines transaction type based on query AST.
    * @param tree AST
    */
-  public static TxnType getTxnType(ASTNode tree) {
+  public static TxnType getTxnType(Configuration conf, ASTNode tree) {
     final ASTSearcher astSearcher = new ASTSearcher();
 
-    return (tree.getToken().getType() == HiveParser.TOK_QUERY &&
+    return (HiveConf.getBoolVar(conf, ConfVars.HIVE_TXN_READONLY_ENABLED) &&
+      tree.getToken().getType() == HiveParser.TOK_QUERY &&
       Stream.of(
         new int[]{HiveParser.TOK_INSERT_INTO},
         new int[]{HiveParser.TOK_INSERT, HiveParser.TOK_TAB})

@@ -139,6 +139,7 @@ STAGE PLANS:
                         Statistics: Num rows: 9173 Data size: 1942190 Basic stats: COMPLETE Column stats: COMPLETE
                         Reduce Output Operator
                           key expressions: __time_granularity (type: timestamp), __druid_extra_partition_key (type: bigint)
+                          null sort order: aa
                           sort order: ++
                           Map-reduce partition columns: __time_granularity (type: timestamp), __druid_extra_partition_key (type: bigint)
                           Statistics: Num rows: 9173 Data size: 1942190 Basic stats: COMPLETE Column stats: COMPLETE
@@ -168,8 +169,8 @@ STAGE PLANS:
   Stage: Stage-4
     Create Table
       columns: __time timestamp with local time zone, cstring1 string, cstring2 string, cdouble double, cfloat float, ctinyint tinyint, csmallint smallint, cint int, cbigint bigint, cboolean1 boolean, cboolean2 boolean
-      storage handler: org.apache.hadoop.hive.druid.DruidStorageHandler
       name: default.druid_partitioned_table
+      storage handler: org.apache.hadoop.hive.druid.DruidStorageHandler
       table properties:
         druid.query.granularity MINUTE
         druid.segment.granularity HOUR
@@ -345,9 +346,9 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-0
     Unset Properties
+      table name: default.druid_partitioned_table
       properties:
         COLUMN_STATS_ACCURATE 
-      table name: default.druid_partitioned_table
 
   Stage: Stage-1
     Pre-Insert task
@@ -378,6 +379,7 @@ STAGE PLANS:
                         Statistics: Num rows: 9174 Data size: 1942340 Basic stats: COMPLETE Column stats: COMPLETE
                         Reduce Output Operator
                           key expressions: __time_granularity (type: timestamp), __druid_extra_partition_key (type: bigint)
+                          null sort order: aa
                           sort order: ++
                           Map-reduce partition columns: __time_granularity (type: timestamp), __druid_extra_partition_key (type: bigint)
                           Statistics: Num rows: 9174 Data size: 1942340 Basic stats: COMPLETE Column stats: COMPLETE
@@ -486,9 +488,9 @@ STAGE DEPENDENCIES:
 STAGE PLANS:
   Stage: Stage-0
     Unset Properties
+      table name: default.druid_partitioned_table
       properties:
         COLUMN_STATS_ACCURATE 
-      table name: default.druid_partitioned_table
 
   Stage: Stage-1
     Pre-Insert task
@@ -519,6 +521,7 @@ STAGE PLANS:
                         Statistics: Num rows: 9173 Data size: 1942190 Basic stats: COMPLETE Column stats: COMPLETE
                         Reduce Output Operator
                           key expressions: __time_granularity (type: timestamp), __druid_extra_partition_key (type: bigint)
+                          null sort order: aa
                           sort order: ++
                           Map-reduce partition columns: __time_granularity (type: timestamp), __druid_extra_partition_key (type: bigint)
                           Statistics: Num rows: 9173 Data size: 1942190 Basic stats: COMPLETE Column stats: COMPLETE

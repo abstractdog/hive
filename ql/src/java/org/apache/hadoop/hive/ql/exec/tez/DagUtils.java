@@ -259,37 +259,51 @@ public class DagUtils {
       dag.addURIsForCredentials(uris);
     }
 
+    getCredentialsForFileSinks(mapWork, dag);
+  }
+
+  private void addCredentials(ReduceWork reduceWork, DAG dag) {
+    getCredentialsForFileSinks(reduceWork, dag);
+  }
+
+  private void addCredentials(MergeJoinWork mergeJoinWork, DAG dag) {
+    getCredentialsForFileSinks(mergeJoinWork, dag);
+  }
+
+  private void getCredentialsForFileSinks(BaseWork baseWork, DAG dag) {
     Set<URI> fileSinkUris = new HashSet<URI>();
 
-    List<Node> topNodes = new ArrayList<Node>();
-    Map<String, Operator<? extends OperatorDesc>> aliasToWork = mapWork.getAliasToWork();
-    for (Operator<? extends OperatorDesc> operator : aliasToWork.values()) {
-      topNodes.add(operator);
-    }
+    List<Node> topNodes = getTopNodes(baseWork);
+
+    LOG.debug("Collecting file sink uris for {} topnodes: {}", baseWork.getClass(), topNodes);
     collectFileSinkUris(topNodes, fileSinkUris);
 
     if (LOG.isDebugEnabled()) {
       for (URI fileSinkUri: fileSinkUris) {
-        LOG.debug("Marking MapWork output URI as needing credentials: " + fileSinkUri);
+        LOG.debug("Marking {} output URI as needing credentials (filesink): {}", baseWork.getClass(), fileSinkUri);
       }
     }
     dag.addURIsForCredentials(fileSinkUris);
   }
 
-  private void addCredentials(ReduceWork reduceWork, DAG dag) {
-
-    Set<URI> fileSinkUris = new HashSet<URI>();
-
+  private List<Node> getTopNodes(BaseWork work) {
     List<Node> topNodes = new ArrayList<Node>();
-    topNodes.add(reduceWork.getReducer());
-    collectFileSinkUris(topNodes, fileSinkUris);
 
-    if (LOG.isDebugEnabled()) {
-      for (URI fileSinkUri: fileSinkUris) {
-        LOG.debug("Marking ReduceWork output URI as needing credentials: " + fileSinkUri);
+    if (work instanceof MapWork) {
+      Map<String, Operator<? extends OperatorDesc>> aliasToWork = ((MapWork) work).getAliasToWork();
+      for (Operator<? extends OperatorDesc> operator : aliasToWork.values()) {
+        topNodes.add(operator);
+      }
+    } else if (work instanceof ReduceWork) {
+      topNodes.add(((ReduceWork) work).getReducer());
+    } else if (work instanceof MergeJoinWork) {
+      for (Operator<? extends OperatorDesc> operator : ((MergeJoinWork) work)
+          .getAllRootOperators()) {
+        topNodes.add(operator);
       }
     }
-    dag.addURIsForCredentials(fileSinkUris);
+
+    return topNodes;
   }
 
   /*
@@ -1510,6 +1524,8 @@ public class DagUtils {
       addCredentials((MapWork) work, dag);
     } else if (work instanceof ReduceWork) {
       addCredentials((ReduceWork) work, dag);
+    } else if (work instanceof MergeJoinWork) {
+      addCredentials((MergeJoinWork) work, dag);
     }
   }
 

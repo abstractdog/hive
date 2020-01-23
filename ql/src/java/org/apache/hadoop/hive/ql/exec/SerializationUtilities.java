@@ -38,9 +38,11 @@ import java.util.Properties;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.CopyOnFirstWriteProperties;
 import org.apache.hadoop.hive.common.type.TimestampTZ;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
 import org.apache.hadoop.hive.ql.exec.vector.VectorFileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat;
@@ -126,6 +128,7 @@ public class SerializationUtilities {
    */
   private static class KryoWithHooks extends Kryo {
     private Hook globalHook;
+    private Configuration conf;
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static final class SerializerWithHook extends com.esotericsoftware.kryo.Serializer {
@@ -219,6 +222,15 @@ public class SerializationUtilities {
       T result = super.readObject(input, type, serializer);
       return ponderGlobalPostReadHook(hook, result);
     }
+
+    public Kryo withConfig(Configuration conf) {
+      this.conf = conf;
+      return this;
+    }
+
+    public Configuration getConf(){
+      return conf;
+    }
   }
 
   private static final Object FAKE_REFERENCE = new Object();
@@ -277,7 +289,11 @@ public class SerializationUtilities {
    * @return kryo instance
    */
   public static Kryo borrowKryo() {
-    Kryo kryo = kryoPool.borrow();
+    return borrowKryo(null);
+  }
+
+  public static Kryo borrowKryo(Configuration conf) {
+    Kryo kryo = ((KryoWithHooks)kryoPool.borrow()).withConfig(conf);
     kryo.setClassLoader(Thread.currentThread().getContextClassLoader());
     return kryo;
   }
@@ -288,6 +304,7 @@ public class SerializationUtilities {
    * @param kryo - kryo instance to be released
    */
   public static void releaseKryo(Kryo kryo) {
+    ((KryoWithHooks)kryo).getConf().clear(); //cleanup, it's safe as it was copied while borrowing
     kryoPool.release(kryo);
   }
 
@@ -579,10 +596,12 @@ public class SerializationUtilities {
     @Override
     public MapWork read(Kryo kryo, Input input, Class<MapWork> type) {
       MapWork mapWork = super.read(kryo, input, type);
-      // The set methods in MapWork intern the any duplicate strings which is why we call them
-      // during de-serialization
-      mapWork.setPathToPartitionInfo(mapWork.getPathToPartitionInfo());
-      mapWork.setPathToAliases(mapWork.getPathToAliases());
+
+      Configuration conf = ((KryoWithHooks) kryo).getConf();
+      if (conf != null && conf.get(HiveConf.ConfVars.HIVE_EXECUTION_ENGINE.varname, "").equalsIgnoreCase("spark")) {
+        mapWork.internFields();
+      }
+
       return mapWork;
     }
   }

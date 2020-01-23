@@ -913,4 +913,16 @@ public class MapWork extends BaseWork {
     }
     return new MapExplainVectorization(this);
   }
+
+  public void internFields() {
+    LOG.info("interning MapWork fields for optimizing memory consumption");
+    // The set methods in MapWork intern the any duplicate strings which is why we call them
+    // during de-serialization
+    for (Path p : pathToPartitionInfo.keySet()) {
+      StringInternUtils.internUriStringsInPath(p);
+    }
+    for (Path p : pathToAliases.keySet()) {
+      StringInternUtils.internUriStringsInPath(p);
+    }
+  }
 }

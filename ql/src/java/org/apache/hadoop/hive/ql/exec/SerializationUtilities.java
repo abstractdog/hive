@@ -596,12 +596,6 @@ public class SerializationUtilities {
     @Override
     public MapWork read(Kryo kryo, Input input, Class<MapWork> type) {
       MapWork mapWork = super.read(kryo, input, type);
-
-      Configuration conf = ((KryoWithHooks) kryo).getConf();
-      if (conf != null && conf.get(HiveConf.ConfVars.HIVE_EXECUTION_ENGINE.varname, "").equalsIgnoreCase("spark")) {
-        mapWork.internFields();
-      }
-
       return mapWork;
     }
   }

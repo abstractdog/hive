@@ -304,7 +304,6 @@ public class SerializationUtilities {
    * @param kryo - kryo instance to be released
    */
   public static void releaseKryo(Kryo kryo) {
-    ((KryoWithHooks)kryo).getConf().clear(); //cleanup, it's safe as it was copied while borrowing
     kryoPool.release(kryo);
   }
 

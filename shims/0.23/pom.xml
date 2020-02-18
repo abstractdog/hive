@@ -46,16 +46,20 @@
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop.version}</version>
       <optional>true</optional>
-         <exclusions>
-            <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-          </exclusion>
-        </exclusions>
+      <exclusions>
+        <exclusion>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+      </exclusion>
+      <exclusion>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+      </exclusion>
+      <exclusion>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>*</artifactId>
+      </exclusion>
+    </exclusions>
    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -68,6 +72,12 @@
       <artifactId>hadoop-hdfs</artifactId>
       <version>${hadoop.version}</version>
       <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -75,6 +85,12 @@
       <version>${hadoop.version}</version>
       <type>test-jar</type>
       <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -183,6 +199,10 @@
        <exclusion>
          <groupId>org.slf4j</groupId>
          <artifactId>slf4j-log4j12</artifactId>
+       </exclusion>
+       <exclusion>
+         <groupId>org.eclipse.jetty</groupId>
+         <artifactId>*</artifactId>
        </exclusion>
      </exclusions>
    </dependency>

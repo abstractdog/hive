@@ -39,7 +39,7 @@ public enum DatabaseProduct {
       return DERBY;
     } else if (productName.contains("microsoft sql server")) {
       return SQLSERVER;
-    } else if (productName.contains("mysql")) {
+    } else if (productName.contains("mysql") || productName.contains("mariadb")) {
       return MYSQL;
     } else if (productName.contains("oracle")) {
       return ORACLE;

@@ -202,5 +202,3 @@ POSTHOOK: Output: default@t1
 POSTHOOK: Lineage: t1.age SIMPLE [(t5)a.FieldSchema(name:age, type:int, comment:null), ]
 POSTHOOK: Lineage: t1.id SIMPLE [(t5)a.FieldSchema(name:id, type:int, comment:null), ]
 POSTHOOK: Lineage: t1.name SIMPLE [(t5)a.FieldSchema(name:name, type:string, comment:null), ]
-Found 1 items
-#### A masked pattern was here ####

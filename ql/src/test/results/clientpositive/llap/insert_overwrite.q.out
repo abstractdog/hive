@@ -83,7 +83,7 @@ POSTHOOK: query: SELECT count(*) FROM int_non_part
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@int_non_part
 #### A masked pattern was here ####
-0
+2
 PREHOOK: query: drop table int_non_part
 PREHOOK: type: DROPTABLE
 PREHOOK: Input: default@int_non_part
@@ -126,7 +126,7 @@ POSTHOOK: query: SELECT count(*) FROM int_non_part
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@int_non_part
 #### A masked pattern was here ####
-0
+2
 PREHOOK: query: drop table int_non_part
 PREHOOK: type: DROPTABLE
 PREHOOK: Input: default@int_non_part
@@ -180,7 +180,7 @@ POSTHOOK: query: SELECT count(*) FROM int_buck
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@int_buck
 #### A masked pattern was here ####
-0
+4
 PREHOOK: query: SELECT * FROM int_buck
 PREHOOK: type: QUERY
 PREHOOK: Input: default@int_buck
@@ -189,6 +189,10 @@ POSTHOOK: query: SELECT * FROM int_buck
 POSTHOOK: type: QUERY
 POSTHOOK: Input: default@int_buck
 #### A masked pattern was here ####
+fourth
+third
+first
+second
 PREHOOK: query: drop table int_buck
 PREHOOK: type: DROPTABLE
 PREHOOK: Input: default@int_buck
@@ -416,7 +420,7 @@ POSTHOOK: Input: default@int_part@par=1
 POSTHOOK: Input: default@int_part@par=2
 POSTHOOK: Input: default@int_part@par=3
 #### A masked pattern was here ####
-4
+6
 PREHOOK: query: INSERT INTO b VALUES ('third', '1')
 PREHOOK: type: QUERY
 PREHOOK: Input: _dummy_database@_dummy_table
@@ -454,7 +458,7 @@ POSTHOOK: Input: default@int_part@par=1
 POSTHOOK: Input: default@int_part@par=2
 POSTHOOK: Input: default@int_part@par=3
 #### A masked pattern was here ####
-3
+5
 PREHOOK: query: SELECT * FROM int_part ORDER BY par, col
 PREHOOK: type: QUERY
 PREHOOK: Input: default@int_part
@@ -472,6 +476,8 @@ POSTHOOK: Input: default@int_part@par=3
 third	1
 first	2
 second	2
+first	3
+second	3
 PREHOOK: query: drop table int_part
 PREHOOK: type: DROPTABLE
 PREHOOK: Input: default@int_part

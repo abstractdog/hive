@@ -1336,7 +1336,7 @@ public class FileSinkOperator extends TerminalOperator<FileSinkDesc> implements
       Class<?> clazz = conf.getTableInfo().getOutputFileFormatClass();
       boolean isStreaming = StreamingOutputFormat.class.isAssignableFrom(clazz);
 
-      if (!isTez || isStreaming || this.isInsertOverwrite) {
+      if (!isTez && (isStreaming || this.isInsertOverwrite)) {
         createBucketFiles(fsp);
       }
     }

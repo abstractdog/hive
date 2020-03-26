@@ -1015,6 +1015,7 @@
                   <include>org.apache.datasketches:*</include>
                   <include>org.apache.calcite:*</include>
                   <include>org.apache.calcite.avatica:avatica</include>
+                  <include>io.netty:*</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -1049,6 +1050,10 @@
                 <relocation>
                   <pattern>org.apache.datasketches</pattern>
                   <shadedPattern>org.apache.hive.org.apache.datasketches</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>org.apache.hive.io.netty</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>

@@ -295,8 +295,8 @@
                       <shadedPattern>org.apache.hive.druid.org.apache.druid</shadedPattern>
                     </relocation>
                     <relocation>
-                      <pattern>io.netty</pattern>
-                      <shadedPattern>org.apache.hive.druid.io.netty</shadedPattern>
+                      <pattern>org.jboss.netty</pattern>
+                      <shadedPattern>org.apache.hive.druid.org.jboss.netty</shadedPattern>
                     </relocation>
                     <relocation>
                       <pattern>org.apache.calcite</pattern>

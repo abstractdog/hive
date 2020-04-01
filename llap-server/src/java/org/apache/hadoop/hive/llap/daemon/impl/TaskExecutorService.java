@@ -577,8 +577,29 @@ public class TaskExecutorService extends AbstractService
 
     if (evictedTask != null) {
       if (LOG.isInfoEnabled()) {
-        LOG.info("{} evicted from wait queue in favor of {} because of lower priority",
-            evictedTask.getRequestId(), task.getRequestId());
+        FragmentRuntimeInfo evictedInfo =
+            evictedTask.getTaskRunnerCallable().getFragmentRuntimeInfo();
+        FragmentRuntimeInfo taskInfo = task.getFragmentRuntimeInfo();
+
+        int knownPendingTasksForEvicted = evictedInfo.getNumSelfAndUpstreamTasks()
+            - evictedInfo.getNumSelfAndUpstreamCompletedTasks();
+        int knownPendingTasksForCurrent =
+            taskInfo.getNumSelfAndUpstreamTasks() - taskInfo.getNumSelfAndUpstreamCompletedTasks();
+
+        long firstAttemptStartTimeEvicted = evictedInfo.getFirstAttemptStartTime();
+        long firstAttemptStartTimeCurrent = taskInfo.getFirstAttemptStartTime();
+
+        LOG.info(
+            "{} (guaranteed: {}, withinDagPriority: {}, currentAttemptStartTime: {}, "
+                + "firstAttemptStartTime: {}, knownPending: {}) evicted from wait queue"
+                + "in favor of {} (guaranteed: {}, withinDagPriority: {}, currentAttemptStartTime: {},"
+                + "firstAttemptStartTime: {}, knownPending: {})" + "because of lower priority",
+            evictedTask.getRequestId(), evictedTask.isGuaranteed(),
+            evictedInfo.getWithinDagPriority(), evictedInfo.getCurrentAttemptStartTime(),
+            firstAttemptStartTimeEvicted, knownPendingTasksForEvicted, task.getRequestId(),
+            taskWrapper.isGuaranteed(), taskInfo.getWithinDagPriority(),
+            taskInfo.getCurrentAttemptStartTime(), firstAttemptStartTimeCurrent,
+            knownPendingTasksForCurrent);
       }
       try {
         knownTasks.remove(evictedTask.getRequestId());

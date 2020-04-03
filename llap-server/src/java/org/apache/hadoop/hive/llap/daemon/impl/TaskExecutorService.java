@@ -577,6 +577,9 @@ public class TaskExecutorService extends AbstractService
 
     if (evictedTask != null) {
       if (LOG.isInfoEnabled()) {
+        LOG.info("{} evicted from wait queue in favor of {} because of lower priority",
+            evictedTask.getRequestId(), task.getRequestId());
+      } else if (LOG.isDebugEnabled()) { // detailed info about the decision
         FragmentRuntimeInfo evictedInfo =
             evictedTask.getTaskRunnerCallable().getFragmentRuntimeInfo();
         FragmentRuntimeInfo taskInfo = task.getFragmentRuntimeInfo();
@@ -589,7 +592,7 @@ public class TaskExecutorService extends AbstractService
         long firstAttemptStartTimeEvicted = evictedInfo.getFirstAttemptStartTime();
         long firstAttemptStartTimeCurrent = taskInfo.getFirstAttemptStartTime();
 
-        LOG.info(
+        LOG.debug(
             "{} (guaranteed: {}, canFinishForPriority: {}, withinDagPriority: {}, currentAttemptStartTime: {}, "
                 + "firstAttemptStartTime: {}, knownPending: {}) evicted from wait queue"
                 + "in favor of {} (guaranteed: {}, canFinishForPriority: {}, withinDagPriority: {},"

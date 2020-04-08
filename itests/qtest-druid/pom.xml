@@ -65,7 +65,7 @@
               <groupId>com.sun.jersey</groupId>
             </exclusion>
             <exclusion>
-              <groupId>io.netty</groupId>
+              <groupId>org.jboss.netty</groupId>
               <artifactId>*</artifactId>
             </exclusion>
           </exclusions>
@@ -86,6 +86,10 @@
             <exclusion>
               <artifactId>jersey-core</artifactId>
               <groupId>com.sun.jersey</groupId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.jboss.netty</groupId>
+              <artifactId>*</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -269,6 +273,10 @@
                 <relocation>
                   <pattern>org.apache.kafka</pattern>
                   <shadedPattern>org.apache.kafkatests</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.jboss.netty</pattern>
+                  <shadedPattern>org.apache.hive.druid.org.jboss.netty</shadedPattern>
                 </relocation>
               </relocations>
               <filters>

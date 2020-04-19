@@ -37,7 +37,7 @@ import org.apache.tez.runtime.library.common.sort.impl.TezIndexRecord;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.apache.hadoop.hive.llap.shufflehandler.IndexCache.INDEX_CACHE_MB;
+import static org.apache.tez.auxservices.IndexCache.INDEX_CACHE_MB;
 
 import static org.junit.Assert.*;
 

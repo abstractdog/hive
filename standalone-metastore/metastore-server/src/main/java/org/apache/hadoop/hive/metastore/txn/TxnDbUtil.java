@@ -173,7 +173,8 @@ public final class TxnDbUtil {
           " CQ_HIGHEST_WRITE_ID bigint," +
           " CQ_META_INFO varchar(2048) for bit data," +
           " CQ_HADOOP_JOB_ID varchar(32)," +
-          " CQ_ERROR_MESSAGE clob)");
+          " CQ_ERROR_MESSAGE clob," +
+          " CQ_NEXT_TXN_ID bigint)");
 
       stmt.execute("CREATE TABLE NEXT_COMPACTION_QUEUE_ID (NCQ_NEXT bigint NOT NULL)");
       stmt.execute("INSERT INTO NEXT_COMPACTION_QUEUE_ID VALUES(1)");
@@ -636,14 +637,13 @@ public final class TxnDbUtil {
   /**
    * @param stmt Statement which will be used for batching and execution.
    * @param queries List of sql queries to execute in a Statement batch.
-   * @param conf Configuration for retrieving max batch size param
+   * @param batchSize maximum number of queries in a single batch
    * @return A list with the number of rows affected by each query in queries.
    * @throws SQLException Thrown if an execution error occurs.
    */
-  static List<Integer> executeQueriesInBatch(Statement stmt, List<String> queries, Configuration conf) throws SQLException {
+  static List<Integer> executeQueriesInBatch(Statement stmt, List<String> queries, int batchSize) throws SQLException {
     List<Integer> affectedRowsByQuery = new ArrayList<>();
     int queryCounter = 0;
-    int batchSize = MetastoreConf.getIntVar(conf, ConfVars.DIRECT_SQL_MAX_ELEMENTS_VALUES_CLAUSE);
     for (String query : queries) {
       LOG.debug("Adding query to batch: <" + query + ">");
       queryCounter++;

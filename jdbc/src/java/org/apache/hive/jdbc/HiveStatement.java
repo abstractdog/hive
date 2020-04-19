@@ -63,6 +63,7 @@ import java.util.Objects;
 public class HiveStatement implements java.sql.Statement {
   public static final Logger LOG = LoggerFactory.getLogger(HiveStatement.class.getName());
 
+  public static final String QUERY_CANCELLED_MESSAGE = "Query was cancelled.";
   private static final int DEFAULT_FETCH_SIZE =
       HiveConf.ConfVars.HIVE_SERVER2_THRIFT_RESULTSET_DEFAULT_FETCH_SIZE.defaultIntVal;
 
@@ -75,6 +76,7 @@ public class HiveStatement implements java.sql.Statement {
   private final int defaultFetchSize;
   private boolean isScrollableResultset = false;
   private boolean isOperationComplete = false;
+  private boolean closeOnResultSetCompletion = false;
   /**
    * We need to keep a reference to the result set to support the following:
    * <code>
@@ -232,6 +234,13 @@ public class HiveStatement implements java.sql.Statement {
     stmtHandle = null;
   }
 
+  void closeOnResultSetCompletion() throws SQLException {
+    if (closeOnResultSetCompletion) {
+      resultSet = null;
+      close();
+    }
+  }
+
   /*
    * (non-Javadoc)
    *
@@ -253,7 +262,7 @@ public class HiveStatement implements java.sql.Statement {
 
   // JDK 1.7
   public void closeOnCompletion() throws SQLException {
-    throw new SQLFeatureNotSupportedException("Method not supported");
+    closeOnResultSetCompletion = true;
   }
 
   /*
@@ -394,9 +403,9 @@ public class HiveStatement implements java.sql.Statement {
             // 01000 -> warning
             String errMsg = statusResp.getErrorMessage();
             if (errMsg != null && !errMsg.isEmpty()) {
-              throw new SQLException("Query was cancelled. " + errMsg, "01000");
+              throw new SQLException(QUERY_CANCELLED_MESSAGE + " " + errMsg, "01000");
             } else {
-              throw new SQLException("Query was cancelled", "01000");
+              throw new SQLException(QUERY_CANCELLED_MESSAGE, "01000");
             }
           case TIMEDOUT_STATE:
             throw new SQLTimeoutException("Query timed out after " + queryTimeout + " seconds");
@@ -751,7 +760,7 @@ public class HiveStatement implements java.sql.Statement {
 
   // JDK 1.7
   public boolean isCloseOnCompletion() throws SQLException {
-    return false;
+    return closeOnResultSetCompletion;
   }
 
   /*

@@ -582,9 +582,6 @@ public class HiveConf extends Configuration {
         "Comma-separated list of statistics publishers to be invoked on counters on each job. \n" +
         "A client stats publisher is specified as the name of a Java class which implements the \n" +
         "org.apache.hadoop.hive.ql.stats.ClientStatsPublisher interface."),
-    ATSHOOKQUEUECAPACITY("hive.ats.hook.queue.capacity", 64,
-        "Queue size for the ATS Hook executor. If the number of outstanding submissions \n" +
-        "to the ATS executor exceed this amount, the Hive ATS Hook will not try to log queries to ATS."),
     EXECPARALLEL("hive.exec.parallel", false, "Whether to execute jobs in parallel"),
     EXECPARALLETHREADNUMBER("hive.exec.parallel.thread.number", 8,
         "How many jobs at most can be executed in parallel"),
@@ -2457,6 +2454,12 @@ public class HiveConf extends Configuration {
         "The comma-separated list of SerDe classes that are considered when enhancing table-properties \n" +
             "during logical optimization."),
 
+    HIVE_OPTIMIZE_SCAN_PROBEDECODE("hive.optimize.scan.probedecode", false,
+        "Whether to find suitable table scan operators that could reduce the number of decoded rows at runtime by probing extra available information. \n"
+            + "The probe side for the row-level filtering is generated either statically in the case of expressions or dynamically for joins"
+            + "e.g., use the cached MapJoin hashtable created on the small table side to filter out row columns that are not going "
+            + "to be used when reading the large table data. This will result less CPU cycles spent for decoding unused data."),
+
     // CTE
     HIVE_CTE_MATERIALIZE_THRESHOLD("hive.optimize.cte.materialize.threshold", -1,
         "If the number of references to a CTE clause exceeds this threshold, Hive will materialize it\n" +
@@ -2691,6 +2694,11 @@ public class HiveConf extends Configuration {
         "Truststore password when using a client-side certificate with TLS connectivity to ZooKeeper." +
             "Overrides any explicit value set via the zookeeper.ssl.trustStore.password " +
              "system property (note the camelCase)."),
+    HIVE_ZOOKEEPER_KILLQUERY_ENABLE("hive.zookeeper.killquery.enable", true,
+        "Whether enabled kill query coordination with zookeeper, " +
+            "when hive.server2.support.dynamic.service.discovery is enabled."),
+    HIVE_ZOOKEEPER_KILLQUERY_NAMESPACE("hive.zookeeper.killquery.namespace", "killQueries",
+        "When kill query coordination is enabled, uses this namespace for registering queries to kill with zookeeper"),
 
     // Transactions
     HIVE_TXN_MANAGER("hive.txn.manager",

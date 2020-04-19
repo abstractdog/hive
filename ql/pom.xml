@@ -29,7 +29,7 @@
 
   <properties>
     <hive.path.to.root>..</hive.path.to.root>
-    <powermock.version>1.6.6</powermock.version>
+    <powermock.version>2.0.2</powermock.version>
     <reflections.version>0.9.10</reflections.version>
   </properties>
 
@@ -386,6 +386,10 @@
           <artifactId>jackson-core</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.apache.calcite.avatica</groupId>
           <artifactId>avatica-core</artifactId>
         </exclusion>
@@ -398,6 +402,10 @@
         <exclusion>
           <groupId>org.apache.calcite.avatica</groupId>
           <artifactId>avatica-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -762,7 +770,7 @@
     </dependency>
     <dependency>
       <groupId>org.powermock</groupId>
-      <artifactId>powermock-api-mockito</artifactId>
+      <artifactId>powermock-api-mockito2</artifactId>
       <version>${powermock.version}</version>
       <scope>test</scope>
     </dependency>
@@ -799,10 +807,6 @@
     <dependency>
       <groupId>org.codehaus.janino</groupId>
       <artifactId>janino</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.yaml</groupId>
-      <artifactId>snakeyaml</artifactId>
     </dependency>
   </dependencies>
 
@@ -1020,6 +1024,14 @@
                   <include>org.apache.datasketches:*</include>
                   <include>org.apache.calcite:*</include>
                   <include>org.apache.calcite.avatica:avatica</include>
+                  <include>io.netty:*</include>
+                   <!-- some netty-based classes are included in arrow jars with original
+                  io.netty package name (e.g. io.netty.buffer.ArrowBuf in arrow-memory)
+                  so we should include them in the shaded jars in order to make shade plugin
+                  be triggered on them, but we should not relocate arrow (this is why arrow
+                  is not included in relocations)
+                  -->
+                  <include>org.apache.arrow:*</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -1054,6 +1066,10 @@
                 <relocation>
                   <pattern>org.apache.datasketches</pattern>
                   <shadedPattern>org.apache.hive.org.apache.datasketches</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>org.apache.hive.io.netty</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>

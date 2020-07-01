@@ -1,0 +1,41 @@
+PREHOOK: query: create table compaction_in_qtest(key string, val string) clustered by (val) into 2 buckets stored as ORC TBLPROPERTIES ('transactional'='true')
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@compaction_in_qtest
+POSTHOOK: query: create table compaction_in_qtest(key string, val string) clustered by (val) into 2 buckets stored as ORC TBLPROPERTIES ('transactional'='true')
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@compaction_in_qtest
+PREHOOK: query: alter table compaction_in_qtest compact 'major'
+PREHOOK: type: ALTERTABLE_COMPACT
+POSTHOOK: query: alter table compaction_in_qtest compact 'major'
+POSTHOOK: type: ALTERTABLE_COMPACT
+PREHOOK: query: show compactions
+PREHOOK: type: SHOW COMPACTIONS
+POSTHOOK: query: show compactions
+POSTHOOK: type: SHOW COMPACTIONS
+CompactionId	Database	Table	Partition	Type	State	Hostname	Worker	Enqueue Time	Start Time	Duration(ms)	HadoopJobId	Error message
+1	default	compaction_in_qtest	 --- 	MAJOR	initiated	 --- 	 --- 	1593525598234	 --- 	 --- 	 --- 	 --- 
+PREHOOK: query: select reflect("java.lang.Thread", "sleep", bigint(60000))
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: select reflect("java.lang.Thread", "sleep", bigint(60000))
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+null
+PREHOOK: query: show compactions
+PREHOOK: type: SHOW COMPACTIONS
+POSTHOOK: query: show compactions
+POSTHOOK: type: SHOW COMPACTIONS
+CompactionId	Database	Table	Partition	Type	State	Hostname	Worker	Enqueue Time	Start Time	Duration(ms)	HadoopJobId	Error message
+1	default	compaction_in_qtest	 --- 	MAJOR	initiated	 --- 	 --- 	1593525598234	 --- 	 --- 	 --- 	 --- 
+PREHOOK: query: drop table compaction_in_qtest
+PREHOOK: type: DROPTABLE
+PREHOOK: Input: default@compaction_in_qtest
+PREHOOK: Output: default@compaction_in_qtest
+POSTHOOK: query: drop table compaction_in_qtest
+POSTHOOK: type: DROPTABLE
+POSTHOOK: Input: default@compaction_in_qtest
+POSTHOOK: Output: default@compaction_in_qtest

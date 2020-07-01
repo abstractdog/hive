@@ -38,5 +38,13 @@
   <description>Using property defined in HiveConf.ConfVars to test System property overriding</description>
 </property>
 
+<property>
+  <name>hive.compactor.initiator.on</name>
+  <value>true</value>
+</property>
 
+<property>
+  <name>hive.compactor.worker.threads</name>
+  <value>1</value>
+</property>
 </configuration>

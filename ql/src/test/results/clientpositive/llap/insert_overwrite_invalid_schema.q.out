@@ -1,0 +1,480 @@
+PREHOOK: query: CREATE TABLE default.bdaa28846 (
+   cda_id             int,
+   cda_run_id         varchar(255),
+   cda_load_ts        timestamp,
+   global_party_id    string)
+PARTITIONED BY (
+   cda_date           int,
+#### A masked pattern was here ####
+CLUSTERED BY (cda_id) 
+INTO 2 BUCKETS
+STORED AS ORC
+TBLPROPERTIES ('transactional'='true')
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@bdaa28846
+POSTHOOK: query: CREATE TABLE default.bdaa28846 (
+   cda_id             int,
+   cda_run_id         varchar(255),
+   cda_load_ts        timestamp,
+   global_party_id    string)
+PARTITIONED BY (
+   cda_date           int,
+#### A masked pattern was here ####
+CLUSTERED BY (cda_id) 
+INTO 2 BUCKETS
+STORED AS ORC
+TBLPROPERTIES ('transactional'='true')
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@bdaa28846
+PREHOOK: query: DESCRIBE FORMATTED default.bdaa28846
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@bdaa28846
+POSTHOOK: query: DESCRIBE FORMATTED default.bdaa28846
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@bdaa28846
+# col_name            	data_type           	comment             
+cda_id              	int                 	                    
+cda_run_id          	varchar(255)        	                    
+cda_load_ts         	timestamp           	                    
+global_party_id     	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+cda_date            	int                 	                    
+#### A masked pattern was here ####
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+#### A masked pattern was here ####
+Retention:          	0                   	 
+#### A masked pattern was here ####
+Table Type:         	MANAGED_TABLE       	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
+	bucketing_version   	2                   
+	numFiles            	0                   
+	numPartitions       	0                   
+	numRows             	0                   
+	rawDataSize         	0                   
+	totalSize           	0                   
+	transactional       	true                
+	transactional_properties	default             
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.orc.OrcSerde	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.orc.OrcInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	2                   	 
+Bucket Columns:     	[cda_id]            	 
+Sort Columns:       	[]                  	 
+#### A masked pattern was here ####
+SELECT 1 as cda_id,'cda_run_id' as cda_run_id, NULL as cda_load_ts, 'global_party_id' global_party_id
+UNION ALL
+SELECT 2 as cda_id,'cda_run_id' as cda_run_id, NULL as cda_load_ts, 'global_party_id' global_party_id
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+SELECT 1 as cda_id,'cda_run_id' as cda_run_id, NULL as cda_load_ts, 'global_party_id' global_party_id
+UNION ALL
+SELECT 2 as cda_id,'cda_run_id' as cda_run_id, NULL as cda_load_ts, 'global_party_id' global_party_id
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+PREHOOK: query: ALTER TABLE default.bdaa28846 ADD COLUMNS (group_id string) CASCADE
+PREHOOK: type: ALTERTABLE_ADDCOLS
+PREHOOK: Input: default@bdaa28846
+PREHOOK: Output: default@bdaa28846
+#### A masked pattern was here ####
+POSTHOOK: query: ALTER TABLE default.bdaa28846 ADD COLUMNS (group_id string) CASCADE
+POSTHOOK: type: ALTERTABLE_ADDCOLS
+POSTHOOK: Input: default@bdaa28846
+POSTHOOK: Output: default@bdaa28846
+#### A masked pattern was here ####
+SELECT 1 as cda_id,'cda_run_id' as cda_run_id, NULL as cda_load_ts, 'global_party_id' global_party_id, 'group_id' as group_id
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+SELECT 1 as cda_id,'cda_run_id' as cda_run_id, NULL as cda_load_ts, 'global_party_id' global_party_id, 'group_id' as group_id
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+PREHOOK: query: select * from default.bdaa28846 limit 1
+PREHOOK: type: QUERY
+PREHOOK: Input: default@bdaa28846
+#### A masked pattern was here ####
+-- BEGIN ORC FILE DUMP --
+#### A masked pattern was here ####
+File Version: 0.12 with ORC_517
+Rows: 1
+Compression: ZLIB
+Compression size: 262144
+Calendar: Julian/Gregorian
+Type: struct<operation:int,originalTransaction:bigint,bucket:int,rowId:bigint,currentTransaction:bigint,row:struct<cda_id:int,cda_run_id:varchar(255),cda_load_ts:timestamp,global_party_id:string>>
+
+Stripe Statistics:
+  Stripe 1:
+    Column 0: count: 1 hasNull: false
+    Column 1: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+    Column 2: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+    Column 3: count: 1 hasNull: false bytesOnDisk: 9 min: 536870912 max: 536870912 sum: 536870912
+    Column 4: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+    Column 5: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+    Column 6: count: 1 hasNull: false
+    Column 7: count: 1 hasNull: false bytesOnDisk: 6 min: 2 max: 2 sum: 2
+    Column 8: count: 1 hasNull: false bytesOnDisk: 19 min: cda_run_id max: cda_run_id sum: 10
+    Column 9: count: 0 hasNull: true bytesOnDisk: 5
+    Column 10: count: 1 hasNull: false bytesOnDisk: 24 min: global_party_id max: global_party_id sum: 15
+
+File Statistics:
+  Column 0: count: 1 hasNull: false
+  Column 1: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+  Column 2: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+  Column 3: count: 1 hasNull: false bytesOnDisk: 9 min: 536870912 max: 536870912 sum: 536870912
+  Column 4: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+  Column 5: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+  Column 6: count: 1 hasNull: false
+  Column 7: count: 1 hasNull: false bytesOnDisk: 6 min: 2 max: 2 sum: 2
+  Column 8: count: 1 hasNull: false bytesOnDisk: 19 min: cda_run_id max: cda_run_id sum: 10
+  Column 9: count: 0 hasNull: true bytesOnDisk: 5
+  Column 10: count: 1 hasNull: false bytesOnDisk: 24 min: global_party_id max: global_party_id sum: 15
+
+Stripes:
+  Stripe: offset: 3 data: 87 rows: 1 tail: 105 index: 267
+    Stream: column 0 section ROW_INDEX start: 3 length 11
+    Stream: column 1 section ROW_INDEX start: 14 length 24
+    Stream: column 2 section ROW_INDEX start: 38 length 24
+    Stream: column 3 section ROW_INDEX start: 62 length 29
+    Stream: column 4 section ROW_INDEX start: 91 length 24
+    Stream: column 5 section ROW_INDEX start: 115 length 24
+    Stream: column 6 section ROW_INDEX start: 139 length 11
+    Stream: column 7 section ROW_INDEX start: 150 length 24
+    Stream: column 8 section ROW_INDEX start: 174 length 36
+    Stream: column 9 section ROW_INDEX start: 210 length 19
+    Stream: column 10 section ROW_INDEX start: 229 length 41
+    Stream: column 1 section DATA start: 270 length 6
+    Stream: column 2 section DATA start: 276 length 6
+    Stream: column 3 section DATA start: 282 length 9
+    Stream: column 4 section DATA start: 291 length 6
+    Stream: column 5 section DATA start: 297 length 6
+    Stream: column 7 section DATA start: 303 length 6
+    Stream: column 8 section DATA start: 309 length 13
+    Stream: column 8 section LENGTH start: 322 length 6
+    Stream: column 9 section PRESENT start: 328 length 5
+    Stream: column 9 section DATA start: 333 length 0
+    Stream: column 9 section SECONDARY start: 333 length 0
+    Stream: column 10 section DATA start: 333 length 18
+    Stream: column 10 section LENGTH start: 351 length 6
+    Encoding column 0: DIRECT
+    Encoding column 1: DIRECT_V2
+    Encoding column 2: DIRECT_V2
+    Encoding column 3: DIRECT_V2
+    Encoding column 4: DIRECT_V2
+    Encoding column 5: DIRECT_V2
+    Encoding column 6: DIRECT
+    Encoding column 7: DIRECT_V2
+    Encoding column 8: DIRECT_V2
+    Encoding column 9: DIRECT_V2
+    Encoding column 10: DIRECT_V2
+    Row group indices for column 0:
+      Entry 0: count: 1 hasNull: false positions: 
+    Row group indices for column 1:
+      Entry 0: count: 1 hasNull: false min: 0 max: 0 sum: 0 positions: 0,0,0
+    Row group indices for column 2:
+      Entry 0: count: 1 hasNull: false min: 1 max: 1 sum: 1 positions: 0,0,0
+    Row group indices for column 3:
+      Entry 0: count: 1 hasNull: false min: 536870912 max: 536870912 sum: 536870912 positions: 0,0,0
+    Row group indices for column 4:
+      Entry 0: count: 1 hasNull: false min: 0 max: 0 sum: 0 positions: 0,0,0
+    Row group indices for column 5:
+      Entry 0: count: 1 hasNull: false min: 1 max: 1 sum: 1 positions: 0,0,0
+    Row group indices for column 6:
+      Entry 0: count: 1 hasNull: false positions: 
+    Row group indices for column 7:
+      Entry 0: count: 1 hasNull: false min: 2 max: 2 sum: 2 positions: 0,0,0
+    Row group indices for column 8:
+      Entry 0: count: 1 hasNull: false min: cda_run_id max: cda_run_id sum: 10 positions: 0,0,0,0,0
+    Row group indices for column 9:
+      Entry 0: count: 0 hasNull: true positions: 0,0,0,0,0,0,0,0,0,0
+    Row group indices for column 10:
+      Entry 0: count: 1 hasNull: false min: global_party_id max: global_party_id sum: 15 positions: 0,0,0,0,0
+
+File length: 951 bytes
+Padding length: 0 bytes
+Padding ratio: 0%
+
+User Metadata:
+  hive.acid.key.index=1,536870912,0;
+  hive.acid.stats=1,0,0
+  hive.acid.version=2
+________________________________________________________________________________________________________________________
+
+-- END ORC FILE DUMP --
+-- BEGIN ORC FILE DUMP --
+#### A masked pattern was here ####
+File Version: 0.12 with ORC_517
+Rows: 1
+Compression: ZLIB
+Compression size: 262144
+Calendar: Julian/Gregorian
+Type: struct<operation:int,originalTransaction:bigint,bucket:int,rowId:bigint,currentTransaction:bigint,row:struct<cda_id:int,cda_run_id:varchar(255),cda_load_ts:timestamp,global_party_id:string>>
+
+Stripe Statistics:
+  Stripe 1:
+    Column 0: count: 1 hasNull: false
+    Column 1: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+    Column 2: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+    Column 3: count: 1 hasNull: false bytesOnDisk: 9 min: 536936448 max: 536936448 sum: 536936448
+    Column 4: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+    Column 5: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+    Column 6: count: 1 hasNull: false
+    Column 7: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+    Column 8: count: 1 hasNull: false bytesOnDisk: 19 min: cda_run_id max: cda_run_id sum: 10
+    Column 9: count: 0 hasNull: true bytesOnDisk: 5
+    Column 10: count: 1 hasNull: false bytesOnDisk: 24 min: global_party_id max: global_party_id sum: 15
+
+File Statistics:
+  Column 0: count: 1 hasNull: false
+  Column 1: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+  Column 2: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+  Column 3: count: 1 hasNull: false bytesOnDisk: 9 min: 536936448 max: 536936448 sum: 536936448
+  Column 4: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+  Column 5: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+  Column 6: count: 1 hasNull: false
+  Column 7: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+  Column 8: count: 1 hasNull: false bytesOnDisk: 19 min: cda_run_id max: cda_run_id sum: 10
+  Column 9: count: 0 hasNull: true bytesOnDisk: 5
+  Column 10: count: 1 hasNull: false bytesOnDisk: 24 min: global_party_id max: global_party_id sum: 15
+
+Stripes:
+  Stripe: offset: 3 data: 87 rows: 1 tail: 105 index: 269
+    Stream: column 0 section ROW_INDEX start: 3 length 11
+    Stream: column 1 section ROW_INDEX start: 14 length 24
+    Stream: column 2 section ROW_INDEX start: 38 length 24
+    Stream: column 3 section ROW_INDEX start: 62 length 31
+    Stream: column 4 section ROW_INDEX start: 93 length 24
+    Stream: column 5 section ROW_INDEX start: 117 length 24
+    Stream: column 6 section ROW_INDEX start: 141 length 11
+    Stream: column 7 section ROW_INDEX start: 152 length 24
+    Stream: column 8 section ROW_INDEX start: 176 length 36
+    Stream: column 9 section ROW_INDEX start: 212 length 19
+    Stream: column 10 section ROW_INDEX start: 231 length 41
+    Stream: column 1 section DATA start: 272 length 6
+    Stream: column 2 section DATA start: 278 length 6
+    Stream: column 3 section DATA start: 284 length 9
+    Stream: column 4 section DATA start: 293 length 6
+    Stream: column 5 section DATA start: 299 length 6
+    Stream: column 7 section DATA start: 305 length 6
+    Stream: column 8 section DATA start: 311 length 13
+    Stream: column 8 section LENGTH start: 324 length 6
+    Stream: column 9 section PRESENT start: 330 length 5
+    Stream: column 9 section DATA start: 335 length 0
+    Stream: column 9 section SECONDARY start: 335 length 0
+    Stream: column 10 section DATA start: 335 length 18
+    Stream: column 10 section LENGTH start: 353 length 6
+    Encoding column 0: DIRECT
+    Encoding column 1: DIRECT_V2
+    Encoding column 2: DIRECT_V2
+    Encoding column 3: DIRECT_V2
+    Encoding column 4: DIRECT_V2
+    Encoding column 5: DIRECT_V2
+    Encoding column 6: DIRECT
+    Encoding column 7: DIRECT_V2
+    Encoding column 8: DIRECT_V2
+    Encoding column 9: DIRECT_V2
+    Encoding column 10: DIRECT_V2
+    Row group indices for column 0:
+      Entry 0: count: 1 hasNull: false positions: 
+    Row group indices for column 1:
+      Entry 0: count: 1 hasNull: false min: 0 max: 0 sum: 0 positions: 0,0,0
+    Row group indices for column 2:
+      Entry 0: count: 1 hasNull: false min: 1 max: 1 sum: 1 positions: 0,0,0
+    Row group indices for column 3:
+      Entry 0: count: 1 hasNull: false min: 536936448 max: 536936448 sum: 536936448 positions: 0,0,0
+    Row group indices for column 4:
+      Entry 0: count: 1 hasNull: false min: 0 max: 0 sum: 0 positions: 0,0,0
+    Row group indices for column 5:
+      Entry 0: count: 1 hasNull: false min: 1 max: 1 sum: 1 positions: 0,0,0
+    Row group indices for column 6:
+      Entry 0: count: 1 hasNull: false positions: 
+    Row group indices for column 7:
+      Entry 0: count: 1 hasNull: false min: 1 max: 1 sum: 1 positions: 0,0,0
+    Row group indices for column 8:
+      Entry 0: count: 1 hasNull: false min: cda_run_id max: cda_run_id sum: 10 positions: 0,0,0,0,0
+    Row group indices for column 9:
+      Entry 0: count: 0 hasNull: true positions: 0,0,0,0,0,0,0,0,0,0
+    Row group indices for column 10:
+      Entry 0: count: 1 hasNull: false min: global_party_id max: global_party_id sum: 15 positions: 0,0,0,0,0
+
+File length: 947 bytes
+Padding length: 0 bytes
+Padding ratio: 0%
+
+User Metadata:
+  hive.acid.key.index=1,536936448,0;
+  hive.acid.stats=1,0,0
+  hive.acid.version=2
+________________________________________________________________________________________________________________________
+
+-- END ORC FILE DUMP --
+-- BEGIN ORC FILE DUMP --
+#### A masked pattern was here ####
+File Version: 0.12 with ORC_517
+Rows: 0
+Compression: ZLIB
+Compression size: 262144
+Calendar: Julian/Gregorian
+Type: struct<operation:int,originalTransaction:bigint,bucket:int,rowId:bigint,currentTransaction:bigint,row:struct<cda_id:int,cda_run_id:varchar(255),cda_load_ts:timestamp,global_party_id:string,group_id:string>>
+
+Stripe Statistics:
+
+File Statistics:
+  Column 0: count: 0 hasNull: false
+  Column 1: count: 0 hasNull: false sum: 0
+  Column 2: count: 0 hasNull: false sum: 0
+  Column 3: count: 0 hasNull: false sum: 0
+  Column 4: count: 0 hasNull: false sum: 0
+  Column 5: count: 0 hasNull: false sum: 0
+  Column 6: count: 0 hasNull: false
+  Column 7: count: 0 hasNull: false sum: 0
+  Column 8: count: 0 hasNull: false
+  Column 9: count: 0 hasNull: false
+  Column 10: count: 0 hasNull: false
+  Column 11: count: 0 hasNull: false
+
+Stripes:
+
+File length: 262 bytes
+Padding length: 0 bytes
+Padding ratio: 0%
+
+User Metadata:
+  hive.acid.key.index=
+  hive.acid.stats=0,0,0
+________________________________________________________________________________________________________________________
+
+-- END ORC FILE DUMP --
+-- BEGIN ORC FILE DUMP --
+#### A masked pattern was here ####
+File Version: 0.12 with ORC_517
+Rows: 1
+Compression: ZLIB
+Compression size: 262144
+Calendar: Julian/Gregorian
+Type: struct<operation:int,originalTransaction:bigint,bucket:int,rowId:bigint,currentTransaction:bigint,row:struct<cda_id:int,cda_run_id:varchar(255),cda_load_ts:timestamp,global_party_id:string,group_id:string>>
+
+Stripe Statistics:
+  Stripe 1:
+    Column 0: count: 1 hasNull: false
+    Column 1: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+    Column 2: count: 1 hasNull: false bytesOnDisk: 6 min: 3 max: 3 sum: 3
+    Column 3: count: 1 hasNull: false bytesOnDisk: 9 min: 536936448 max: 536936448 sum: 536936448
+    Column 4: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+    Column 5: count: 1 hasNull: false bytesOnDisk: 6 min: 3 max: 3 sum: 3
+    Column 6: count: 1 hasNull: false
+    Column 7: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+    Column 8: count: 1 hasNull: false bytesOnDisk: 19 min: cda_run_id max: cda_run_id sum: 10
+    Column 9: count: 0 hasNull: true bytesOnDisk: 5
+    Column 10: count: 1 hasNull: false bytesOnDisk: 24 min: global_party_id max: global_party_id sum: 15
+    Column 11: count: 1 hasNull: false bytesOnDisk: 17 min: group_id max: group_id sum: 8
+
+File Statistics:
+  Column 0: count: 1 hasNull: false
+  Column 1: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+  Column 2: count: 1 hasNull: false bytesOnDisk: 6 min: 3 max: 3 sum: 3
+  Column 3: count: 1 hasNull: false bytesOnDisk: 9 min: 536936448 max: 536936448 sum: 536936448
+  Column 4: count: 1 hasNull: false bytesOnDisk: 6 min: 0 max: 0 sum: 0
+  Column 5: count: 1 hasNull: false bytesOnDisk: 6 min: 3 max: 3 sum: 3
+  Column 6: count: 1 hasNull: false
+  Column 7: count: 1 hasNull: false bytesOnDisk: 6 min: 1 max: 1 sum: 1
+  Column 8: count: 1 hasNull: false bytesOnDisk: 19 min: cda_run_id max: cda_run_id sum: 10
+  Column 9: count: 0 hasNull: true bytesOnDisk: 5
+  Column 10: count: 1 hasNull: false bytesOnDisk: 24 min: global_party_id max: global_party_id sum: 15
+  Column 11: count: 1 hasNull: false bytesOnDisk: 17 min: group_id max: group_id sum: 8
+
+Stripes:
+  Stripe: offset: 3 data: 104 rows: 1 tail: 116 index: 303
+    Stream: column 0 section ROW_INDEX start: 3 length 11
+    Stream: column 1 section ROW_INDEX start: 14 length 24
+    Stream: column 2 section ROW_INDEX start: 38 length 24
+    Stream: column 3 section ROW_INDEX start: 62 length 31
+    Stream: column 4 section ROW_INDEX start: 93 length 24
+    Stream: column 5 section ROW_INDEX start: 117 length 24
+    Stream: column 6 section ROW_INDEX start: 141 length 11
+    Stream: column 7 section ROW_INDEX start: 152 length 24
+    Stream: column 8 section ROW_INDEX start: 176 length 36
+    Stream: column 9 section ROW_INDEX start: 212 length 19
+    Stream: column 10 section ROW_INDEX start: 231 length 41
+    Stream: column 11 section ROW_INDEX start: 272 length 34
+    Stream: column 1 section DATA start: 306 length 6
+    Stream: column 2 section DATA start: 312 length 6
+    Stream: column 3 section DATA start: 318 length 9
+    Stream: column 4 section DATA start: 327 length 6
+    Stream: column 5 section DATA start: 333 length 6
+    Stream: column 7 section DATA start: 339 length 6
+    Stream: column 8 section DATA start: 345 length 13
+    Stream: column 8 section LENGTH start: 358 length 6
+    Stream: column 9 section PRESENT start: 364 length 5
+    Stream: column 9 section DATA start: 369 length 0
+    Stream: column 9 section SECONDARY start: 369 length 0
+    Stream: column 10 section DATA start: 369 length 18
+    Stream: column 10 section LENGTH start: 387 length 6
+    Stream: column 11 section DATA start: 393 length 11
+    Stream: column 11 section LENGTH start: 404 length 6
+    Encoding column 0: DIRECT
+    Encoding column 1: DIRECT_V2
+    Encoding column 2: DIRECT_V2
+    Encoding column 3: DIRECT_V2
+    Encoding column 4: DIRECT_V2
+    Encoding column 5: DIRECT_V2
+    Encoding column 6: DIRECT
+    Encoding column 7: DIRECT_V2
+    Encoding column 8: DIRECT_V2
+    Encoding column 9: DIRECT_V2
+    Encoding column 10: DIRECT_V2
+    Encoding column 11: DIRECT_V2
+    Row group indices for column 0:
+      Entry 0: count: 1 hasNull: false positions: 
+    Row group indices for column 1:
+      Entry 0: count: 1 hasNull: false min: 0 max: 0 sum: 0 positions: 0,0,0
+    Row group indices for column 2:
+      Entry 0: count: 1 hasNull: false min: 3 max: 3 sum: 3 positions: 0,0,0
+    Row group indices for column 3:
+      Entry 0: count: 1 hasNull: false min: 536936448 max: 536936448 sum: 536936448 positions: 0,0,0
+    Row group indices for column 4:
+      Entry 0: count: 1 hasNull: false min: 0 max: 0 sum: 0 positions: 0,0,0
+    Row group indices for column 5:
+      Entry 0: count: 1 hasNull: false min: 3 max: 3 sum: 3 positions: 0,0,0
+    Row group indices for column 6:
+      Entry 0: count: 1 hasNull: false positions: 
+    Row group indices for column 7:
+      Entry 0: count: 1 hasNull: false min: 1 max: 1 sum: 1 positions: 0,0,0
+    Row group indices for column 8:
+      Entry 0: count: 1 hasNull: false min: cda_run_id max: cda_run_id sum: 10 positions: 0,0,0,0,0
+    Row group indices for column 9:
+      Entry 0: count: 0 hasNull: true positions: 0,0,0,0,0,0,0,0,0,0
+    Row group indices for column 10:
+      Entry 0: count: 1 hasNull: false min: global_party_id max: global_party_id sum: 15 positions: 0,0,0,0,0
+    Row group indices for column 11:
+      Entry 0: count: 1 hasNull: false min: group_id max: group_id sum: 8 positions: 0,0,0,0,0
+
+File length: 1062 bytes
+Padding length: 0 bytes
+Padding ratio: 0%
+
+User Metadata:
+  hive.acid.key.index=3,536936448,0;
+  hive.acid.stats=1,0,0
+  hive.acid.version=2
+________________________________________________________________________________________________________________________
+
+-- END ORC FILE DUMP --
+1	cda_run_id	NULL	global_party_id	group_id	20200601	core_base
+#### A masked pattern was here ####
+PREHOOK: type: QUERY
+PREHOOK: Input: default@bdaa28846
+#### A masked pattern was here ####
+1

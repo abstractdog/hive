@@ -1,0 +1,36 @@
+PREHOOK: query: explain extended select cast(1.204135216E9 as timestamp) Double2TimeStamp, cast(1204135216 as timestamp) Int2TimeStamp
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: explain extended select cast(1.204135216E9 as timestamp) Double2TimeStamp, cast(1204135216 as timestamp) Int2TimeStamp
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+OPTIMIZED SQL: SELECT CAST(TIMESTAMP '2008-02-27 18:00:16.000000000' AS TIMESTAMP) AS `$f0`, CAST(TIMESTAMP '1970-01-14 22:28:55.216000000' AS TIMESTAMP) AS `$f1`
+FROM `_dummy_database`.`_dummy_table`
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        TableScan
+          alias: _dummy_table
+          Row Limit Per Split: 1
+          GatherStats: false
+          Select Operator
+            expressions: TIMESTAMP'2008-02-27 18:00:16' (type: timestamp), TIMESTAMP'1970-01-14 22:28:55.216' (type: timestamp)
+            outputColumnNames: _col0, _col1
+            ListSink
+
+PREHOOK: query: select cast(1.204135216E9 as timestamp) Double2TimeStamp, cast(1204135216 as timestamp) Int2TimeStamp
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: select cast(1.204135216E9 as timestamp) Double2TimeStamp, cast(1204135216 as timestamp) Int2TimeStamp
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+2008-02-27 18:00:16	1970-01-14 22:28:55.216

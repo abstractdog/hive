@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hive.common.util.HiveVersionInfo;
 import org.apache.hive.common.util.ShutdownHookManager;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.tez.common.TezClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,6 +172,7 @@ public class LlapDaemon extends CompositeService implements ContainerRunner, Lla
       throw new RuntimeException(ex);
     }
 
+    TezClassLoader.setupTezClassLoader();
     this.maxJvmMemory = getTotalHeapSize();
     this.llapIoEnabled = ioEnabled;
 

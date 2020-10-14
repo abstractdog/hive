@@ -620,6 +620,8 @@ public class ContainerRunnerImpl extends CompositeService implements ContainerRu
           fragmentInfo.getFragmentIdentifierString());
       executorService.killFragment(fragmentInfo.getFragmentIdentifierString());
     }
+
+    queryTracker.queryFailed(queryIdentifier);
   }
 
   private class KilledTaskHandlerImpl implements KilledTaskHandler {

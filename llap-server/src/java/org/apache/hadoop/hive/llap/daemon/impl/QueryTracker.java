@@ -340,6 +340,17 @@ public class QueryTracker extends AbstractService {
     }
   }
 
+  public void queryFailed(QueryIdentifier queryIdentifier) {
+    QueryInfo queryInfo = null;
+    try {
+      queryInfo = checkPermissionsAndGetQuery(queryIdentifier);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    if (queryInfo != null) {
+      cleanupLocalDirs(queryInfo, 0);
+    }
+  }
 
   private void cleanupLocalDirs(QueryInfo queryInfo, long deleteDelay) {
     String[] localDirs = queryInfo.getLocalDirsNoCreate();

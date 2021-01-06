@@ -1024,6 +1024,7 @@ public class ShuffleHandler implements AttemptRegistrationListener {
       ChannelFuture writeFuture;
       if (ch.pipeline().get(SslHandler.class) == null) {
         boolean canEvictAfterTransfer = true;
+        LOG.info("HIVE-24524: shouldAlwaysEvictOsCache {}, reduce {}", shouldAlwaysEvictOsCache, reduce);
         if (!shouldAlwaysEvictOsCache) {
           canEvictAfterTransfer = (reduce > 0); // e.g broadcast data
         }

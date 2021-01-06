@@ -142,6 +142,8 @@ public class FadvisedFileRegion extends DefaultFileRegion {
    * we don't need the region to be cached anymore.
    */
   public void transferSuccessful() {
+    LOG.info("HIVE-24524 transferSuccessful manageOsCache {} count {} canEvictAfterTransfer {}",
+        manageOsCache, count(), canEvictAfterTransfer);
     if (manageOsCache && count() > 0) {
       try {
         if (canEvictAfterTransfer) {

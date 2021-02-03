@@ -338,6 +338,24 @@ public class Hadoop23Shims extends HadoopShimsSecure {
       conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, 512);
       conf.setInt(MRJobConfig.MR_AM_VMEM_MB, 128);
     }
+
+    // we want this shim to override these values only if the default value is set, otherwise there
+    // is a good chance that the user of the minicluster set another value intentionally
+    protected void overrideIntIfDefaultIsSet(Configuration conf, String key, int defaultVal,
+        int newVal) {
+      if (conf.getInt(key, defaultVal) == defaultVal) {
+        LOG.info("Hadoop23Shims overrides '{}' from {} to {}", key, defaultVal, newVal);
+        conf.setInt(key, newVal);
+      }
+    }
+
+    protected void overrideFloatIfDefaultIsSet(Configuration conf, String key, float defaultVal,
+        float newVal) {
+      if (conf.getFloat(key, defaultVal) == defaultVal) {
+        LOG.info("Hadoop23Shims overrides '{}' from {} to {}", key, defaultVal, newVal);
+        conf.setFloat(key, newVal);
+      }
+    }
   }
 
   @Override
@@ -409,14 +427,22 @@ public class Hadoop23Shims extends HadoopShimsSecure {
       conf.setInt(YarnConfiguration.YARN_MINICLUSTER_NM_PMEM_MB, 512);
       conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
       conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 512);
+
       // Overrides values from the hive/tez-site.
-      conf.setInt("hive.tez.container.size", 128);
-      conf.setInt(TezConfiguration.TEZ_AM_RESOURCE_MEMORY_MB, 128);
-      conf.setInt(TezConfiguration.TEZ_TASK_RESOURCE_MEMORY_MB, 128);
-      conf.setInt(TezRuntimeConfiguration.TEZ_RUNTIME_IO_SORT_MB, 24);
-      conf.setInt(TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB, 10);
-      conf.setFloat(TezRuntimeConfiguration.TEZ_RUNTIME_SHUFFLE_FETCH_BUFFER_PERCENT, 0.4f);
-      conf.setInt(TezConfiguration.TEZ_COUNTERS_MAX, 1024);
+      overrideIntIfDefaultIsSet(conf, "hive.tez.container.size", -1, 128);
+      overrideIntIfDefaultIsSet(conf, TezConfiguration.TEZ_AM_RESOURCE_MEMORY_MB,
+          TezConfiguration.TEZ_AM_RESOURCE_MEMORY_MB_DEFAULT, 128);
+      overrideIntIfDefaultIsSet(conf, TezConfiguration.TEZ_TASK_RESOURCE_MEMORY_MB,
+          TezConfiguration.TEZ_TASK_RESOURCE_MEMORY_MB_DEFAULT, 128);
+      overrideIntIfDefaultIsSet(conf, TezRuntimeConfiguration.TEZ_RUNTIME_IO_SORT_MB,
+          TezRuntimeConfiguration.TEZ_RUNTIME_IO_SORT_MB_DEFAULT, 24);
+      overrideIntIfDefaultIsSet(conf,
+          TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB,
+          TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB_DEFAULT, 10);
+      overrideFloatIfDefaultIsSet(conf,
+          TezRuntimeConfiguration.TEZ_RUNTIME_SHUFFLE_FETCH_BUFFER_PERCENT,
+          TezRuntimeConfiguration.TEZ_RUNTIME_SHUFFLE_FETCH_BUFFER_PERCENT_DEFAULT, 0.4f);
+
       conf.set("fs.defaultFS", nameNode);
       conf.set("tez.am.log.level", "DEBUG");
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/apps_staging_dir");
@@ -446,16 +472,23 @@ public class Hadoop23Shims extends HadoopShimsSecure {
     @Override
     public void setupConfiguration(Configuration conf) {
       Configuration config = mr.getConfig();
-      for (Map.Entry<String, String> pair: config) {
+      for (Map.Entry<String, String> pair : config) {
         conf.set(pair.getKey(), pair.getValue());
       }
       // Overrides values from the hive/tez-site.
-      conf.setInt("hive.tez.container.size", 128);
-      conf.setInt(TezConfiguration.TEZ_AM_RESOURCE_MEMORY_MB, 128);
-      conf.setInt(TezConfiguration.TEZ_TASK_RESOURCE_MEMORY_MB, 128);
-      conf.setInt(TezRuntimeConfiguration.TEZ_RUNTIME_IO_SORT_MB, 24);
-      conf.setInt(TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB, 10);
-      conf.setFloat(TezRuntimeConfiguration.TEZ_RUNTIME_SHUFFLE_FETCH_BUFFER_PERCENT, 0.4f);
+      overrideIntIfDefaultIsSet(conf, "hive.tez.container.size", -1, 128);
+      overrideIntIfDefaultIsSet(conf, TezConfiguration.TEZ_AM_RESOURCE_MEMORY_MB,
+          TezConfiguration.TEZ_AM_RESOURCE_MEMORY_MB_DEFAULT, 128);
+      overrideIntIfDefaultIsSet(conf, TezConfiguration.TEZ_TASK_RESOURCE_MEMORY_MB,
+          TezConfiguration.TEZ_TASK_RESOURCE_MEMORY_MB_DEFAULT, 128);
+      overrideIntIfDefaultIsSet(conf, TezRuntimeConfiguration.TEZ_RUNTIME_IO_SORT_MB,
+          TezRuntimeConfiguration.TEZ_RUNTIME_IO_SORT_MB_DEFAULT, 24);
+      overrideIntIfDefaultIsSet(conf,
+          TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB,
+          TezRuntimeConfiguration.TEZ_RUNTIME_UNORDERED_OUTPUT_BUFFER_SIZE_MB_DEFAULT, 10);
+      overrideFloatIfDefaultIsSet(conf,
+          TezRuntimeConfiguration.TEZ_RUNTIME_SHUFFLE_FETCH_BUFFER_PERCENT,
+          TezRuntimeConfiguration.TEZ_RUNTIME_SHUFFLE_FETCH_BUFFER_PERCENT_DEFAULT, 0.4f);
       if (isLlap) {
         conf.set("hive.llap.execution.mode", "all");
       }

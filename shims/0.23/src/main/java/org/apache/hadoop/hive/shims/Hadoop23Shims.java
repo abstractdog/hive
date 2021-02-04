@@ -343,17 +343,23 @@ public class Hadoop23Shims extends HadoopShimsSecure {
     // is a good chance that the user of the minicluster set another value intentionally
     protected void overrideIntIfDefaultIsSet(Configuration conf, String key, int defaultVal,
         int newVal) {
-      if (conf.getInt(key, defaultVal) == defaultVal) {
+      int val = conf.getInt(key, defaultVal);
+      if (val == defaultVal) {
         LOG.info("Hadoop23Shims overrides '{}' from {} to {}", key, defaultVal, newVal);
         conf.setInt(key, newVal);
+      } else {
+        LOG.info("Hadoop23Shims doesn't touch '{}' value {}", key, val);
       }
     }
 
     protected void overrideFloatIfDefaultIsSet(Configuration conf, String key, float defaultVal,
         float newVal) {
-      if (conf.getFloat(key, defaultVal) == defaultVal) {
+      float val = conf.getFloat(key, defaultVal);
+      if (val == defaultVal) {
         LOG.info("Hadoop23Shims overrides '{}' from {} to {}", key, defaultVal, newVal);
         conf.setFloat(key, newVal);
+      } else {
+        LOG.info("Hadoop23Shims doesn't touch '{}' value {}", key, val);
       }
     }
   }

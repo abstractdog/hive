@@ -98,7 +98,7 @@ public class VectorPTFEvaluatorDoubleLastValue extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public double getDoubleGroupResult() {
+  public Object getGroupResult() {
     return lastValue;
   }
 

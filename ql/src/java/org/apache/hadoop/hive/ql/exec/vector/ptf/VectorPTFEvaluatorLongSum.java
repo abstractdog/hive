@@ -30,10 +30,7 @@ import com.google.common.base.Preconditions;
 /**
  * This class evaluates long sum() for a PTF group.
  */
-public class VectorPTFEvaluatorLongSum extends VectorPTFEvaluatorBase {
-
-  protected boolean isGroupResultNull;
-  protected long sum;
+public class VectorPTFEvaluatorLongSum extends VectorPTFEvaluatorAbstractSum<Long> {
 
   public VectorPTFEvaluatorLongSum(WindowFrameDef windowFrameDef, VectorExpression inputVecExpr,
       int outputColumnNum) {
@@ -110,29 +107,28 @@ public class VectorPTFEvaluatorLongSum extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public boolean streamsResult() {
-    // We must evaluate whole group before producing a result.
-    return false;
-  }
-
-  @Override
-  public boolean isGroupResultNull() {
-    return isGroupResultNull;
-  }
-
-  @Override
   public Type getResultColumnVectorType() {
     return Type.LONG;
   }
 
   @Override
-  public long getLongGroupResult() {
-    return sum;
+  protected Long plus(Long number1, Long number2) {
+    return number1 + number2;
+  }
+
+  @Override
+  protected Long minus(Long number1, Long number2) {
+    return number1 - number2;
+  }
+
+  @Override
+  protected Long computeValue(Object number) {
+    return number == null ? 0L : (long) number;
   }
 
   @Override
   public void resetEvaluator() {
     isGroupResultNull = true;
-    sum = 0;
+    sum = 0L;
   }
 }

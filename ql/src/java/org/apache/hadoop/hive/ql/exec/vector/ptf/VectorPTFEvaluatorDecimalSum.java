@@ -25,6 +25,7 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.VectorExpression;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.ptf.WindowFrameDef;
+import org.apache.hadoop.hive.ql.udf.ptf.Range;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 
 import com.google.common.base.Preconditions;
@@ -32,10 +33,8 @@ import com.google.common.base.Preconditions;
 /**
  * This class evaluates HiveDecimal sum() for a PTF group.
  */
-public class VectorPTFEvaluatorDecimalSum extends VectorPTFEvaluatorBase {
+public class VectorPTFEvaluatorDecimalSum extends VectorPTFEvaluatorAbstractSum<HiveDecimalWritable> {
 
-  protected boolean isGroupResultNull;
-  protected HiveDecimalWritable sum;
   protected HiveDecimalWritable temp;
 
   public VectorPTFEvaluatorDecimalSum(WindowFrameDef windowFrameDef, VectorExpression inputVecExpr,
@@ -116,29 +115,44 @@ public class VectorPTFEvaluatorDecimalSum extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public boolean streamsResult() {
-    // We must evaluate whole group before producing a result.
-    return false;
-  }
-
-  @Override
-  public boolean isGroupResultNull() {
-    return isGroupResultNull;
-  }
-
-  @Override
   public Type getResultColumnVectorType() {
     return Type.DECIMAL;
   }
 
+  protected HiveDecimalWritable computeValue(Object number) {
+    return number == null ? new HiveDecimalWritable(0L)
+      : new HiveDecimalWritable(((HiveDecimalWritable) number).isSet()
+        ? ((HiveDecimalWritable) number) : new HiveDecimalWritable(0L));
+  }
+
   @Override
-  public HiveDecimalWritable getDecimalGroupResult() {
-    return sum;
+  public HiveDecimalWritable plus(HiveDecimalWritable t1, HiveDecimalWritable t2) {
+    HiveDecimalWritable result = new HiveDecimalWritable(t1);
+    result.mutateAdd(t2);
+    return result;
+  }
+
+  @Override
+  public HiveDecimalWritable minus(HiveDecimalWritable t1, HiveDecimalWritable t2) {
+    HiveDecimalWritable result = new HiveDecimalWritable(t2);
+    result.mutateNegate();
+    result.mutateAdd(t1);
+    return result;
+  }
+
+  @Override
+  public void onResultCalculated(Object result, Range range) {
+    if (previousSum != null) {
+      previousSum.set((HiveDecimalWritable) result);
+    } else {
+      previousSum = new HiveDecimalWritable((HiveDecimalWritable) result);
+    }
+    this.previousRange = range;
   }
 
   @Override
   public void resetEvaluator() {
     isGroupResultNull = true;
-    sum.set(HiveDecimal.ZERO);;
+    sum.set(HiveDecimal.ZERO);
   }
 }

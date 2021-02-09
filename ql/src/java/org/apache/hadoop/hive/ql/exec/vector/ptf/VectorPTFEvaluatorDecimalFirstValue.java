@@ -104,9 +104,18 @@ public class VectorPTFEvaluatorDecimalFirstValue extends VectorPTFEvaluatorBase 
     return true;
   }
 
+  public boolean isGroupResultNull() {
+    return isGroupResultNull;
+  }
+
   @Override
   public Type getResultColumnVectorType() {
     return Type.DECIMAL;
+  }
+
+  @Override
+  public Object getGroupResult() {
+    return firstValue;
   }
 
   @Override

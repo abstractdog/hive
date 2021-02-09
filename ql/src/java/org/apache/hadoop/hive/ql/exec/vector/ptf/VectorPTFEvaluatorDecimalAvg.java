@@ -153,7 +153,8 @@ public class VectorPTFEvaluatorDecimalAvg extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public HiveDecimalWritable getDecimalGroupResult() {
+  public Object getGroupResult() {
+    doLastBatchWork(); // make sure we have a fresh avg
     return avg;
   }
 

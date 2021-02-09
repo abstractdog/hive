@@ -144,7 +144,8 @@ public class VectorPTFEvaluatorLongAvg extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public double getDoubleGroupResult() {
+  public Object getGroupResult() {
+    doLastBatchWork(); // make sure we have a fresh avg
     return avg;
   }
 

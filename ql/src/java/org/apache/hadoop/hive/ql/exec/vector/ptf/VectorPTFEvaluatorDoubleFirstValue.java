@@ -101,9 +101,18 @@ public class VectorPTFEvaluatorDoubleFirstValue extends VectorPTFEvaluatorBase {
     return true;
   }
 
+  public boolean isGroupResultNull() {
+    return isGroupResultNull;
+  }
+
   @Override
   public Type getResultColumnVectorType() {
     return Type.DOUBLE;
+  }
+
+  @Override
+  public Object getGroupResult() {
+    return firstValue;
   }
 
   @Override

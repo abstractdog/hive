@@ -22,7 +22,9 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.common.type.DataTypePhysicalVariation;
 import org.apache.hadoop.hive.common.type.HiveIntervalDayTime;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
 import org.apache.hadoop.hive.ql.exec.Operator;
 import org.apache.hadoop.hive.ql.exec.Utilities;
@@ -58,6 +60,8 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class is native vectorized PTF operator class.
  */
@@ -67,6 +71,7 @@ public class VectorPTFOperator extends Operator<PTFDesc>
   private static final long serialVersionUID = 1L;
   private static final String CLASS_NAME = VectorPTFOperator.class.getName();
   private static final Logger LOG = LoggerFactory.getLogger(CLASS_NAME);
+  private int[] scratchColumnPositions;
 
   private VectorizationContext vContext;
   private VectorPTFDesc vectorDesc;
@@ -222,41 +227,66 @@ public class VectorPTFOperator extends Operator<PTFDesc>
   /*
    * Allocate overflow batch columns by hand.
    */
-  private void allocateOverflowBatchColumnVector(VectorizedRowBatch overflowBatch, int outputColumn,
-              String typeName) throws HiveException {
+  private static void allocateOverflowBatchColumnVector(VectorizedRowBatch overflowBatch,
+      int outputColumn, String typeName, DataTypePhysicalVariation dataTypePhysicalVariation)
+      throws HiveException {
 
     if (overflowBatch.cols[outputColumn] == null) {
       typeName = VectorizationContext.mapTypeNameSynonyms(typeName);
 
       TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(typeName);
 
-      overflowBatch.cols[outputColumn] = VectorizedBatchUtil.createColumnVector(typeInfo);
+      overflowBatch.cols[outputColumn] =
+          VectorizedBatchUtil.createColumnVector(typeInfo, dataTypePhysicalVariation);
     }
   }
 
   /*
    * Setup our 2nd batch with the same "column schema" as the output columns plus any scratch
    * columns since the overflow batch will get forwarded to children operators.
+   *
+   * Considering this query below:
+   *
+   * select p_mfgr, p_name,
+   * count(*) over(partition by p_mfgr order by p_date range between 1 preceding and current row) as cs1,
+   * count(*) over(partition by p_mfgr order by p_date range between 3 preceding and current row) as cs2
+   * from vector_ptf_part_simple_orc;
+   *
+   * The overflow batch will have the following column structure:
+   * [0] BytesColumnVector   -> p_mfgr (key)
+   * [1] DateColumnVector    -> p_date (key, ordering col)
+   * [2] BytesColumnVector   -> p_name (non-key)
+   * [3] LongColumnVector    -> scratch
+   * [4] LongColumnVector    -> scratch
    */
-  protected VectorizedRowBatch setupOverflowBatch() throws HiveException {
+  @VisibleForTesting
+  VectorizedRowBatch setupOverflowBatch(int firstOutputColumnIndex, String[] scratchColumnTypeNames,
+      int[] outputProjectionColumnMap, TypeInfo[] outputTypeInfos) throws HiveException {
 
-    int initialColumnCount = vContext.firstOutputColumnIndex();
+    int initialColumnCount = firstOutputColumnIndex;
     VectorizedRowBatch overflowBatch;
 
-    int totalNumColumns = initialColumnCount + vOutContext.getScratchColumnTypeNames().length;
+    int totalNumColumns = initialColumnCount + scratchColumnTypeNames.length;
     overflowBatch = new VectorizedRowBatch(totalNumColumns);
 
     // First, just allocate just the output columns we will be using.
     for (int i = 0; i < outputProjectionColumnMap.length; i++) {
       int outputColumn = outputProjectionColumnMap[i];
       String typeName = outputTypeInfos[i].getTypeName();
-      allocateOverflowBatchColumnVector(overflowBatch, outputColumn, typeName);
+      allocateOverflowBatchColumnVector(overflowBatch, outputColumn, typeName,
+          vOutContext.getDataTypePhysicalVariation(outputColumn));
     }
 
     // Now, add any scratch columns needed for children operators.
     int outputColumn = initialColumnCount;
-    for (String typeName : vOutContext.getScratchColumnTypeNames()) {
-      allocateOverflowBatchColumnVector(overflowBatch, outputColumn++, typeName);
+    int s = 0;
+    scratchColumnPositions = new int[scratchColumnTypeNames.length];
+    for (String typeName : scratchColumnTypeNames) {
+      allocateOverflowBatchColumnVector(overflowBatch, outputColumn, typeName,
+          vOutContext.getDataTypePhysicalVariation(outputColumn));
+      scratchColumnPositions[s] = outputColumn;
+      outputColumn += 1;
+      s += 1;
     }
 
     overflowBatch.projectedColumns = outputProjectionColumnMap;
@@ -280,28 +310,20 @@ public class VectorPTFOperator extends Operator<PTFDesc>
       taskName = work.getName();
     }
 
-    if (!isPartitionOrderBy) {
-      currentPartitionIsNull = null;
-      currentPartitionLongs = null;
-      currentPartitionDoubles = null;
-      currentPartitionByteArrays = null;
-      currentPartitionByteLengths = null;
-      currentPartitionDecimals = null;
-      currentPartitionTimestamps = null;
-      currentPartitionIntervalDayTimes = null;
-    } else {
-      final int partitionKeyCount = vectorDesc.getPartitionExprNodeDescs().length;
-      currentPartitionIsNull = new boolean[partitionKeyCount];
-      currentPartitionLongs = new long[partitionKeyCount];
-      currentPartitionDoubles = new double[partitionKeyCount];
-      currentPartitionByteArrays = new byte[partitionKeyCount][];
-      currentPartitionByteLengths = new int[partitionKeyCount];
-      currentPartitionDecimals = new HiveDecimalWritable[partitionKeyCount];
-      currentPartitionTimestamps = new Timestamp[partitionKeyCount];
-      currentPartitionIntervalDayTimes = new HiveIntervalDayTime[partitionKeyCount];
-    }
+    final int partitionKeyCount = vectorDesc.getPartitionExprNodeDescs().length;
+    currentPartitionIsNull = new boolean[partitionKeyCount];
+    currentPartitionLongs = new long[partitionKeyCount];
+    currentPartitionDoubles = new double[partitionKeyCount];
+    currentPartitionByteArrays = new byte[partitionKeyCount][];
+    currentPartitionByteLengths = new int[partitionKeyCount];
+    currentPartitionDecimals = new HiveDecimalWritable[partitionKeyCount];
+    currentPartitionTimestamps = new Timestamp[partitionKeyCount];
+    currentPartitionIntervalDayTimes = new HiveIntervalDayTime[partitionKeyCount];
 
     evaluators = VectorPTFDesc.getEvaluators(vectorDesc, vectorPTFInfo);
+    for (VectorPTFEvaluatorBase evaluator : evaluators) {
+      evaluator.setNullsLast(HiveConf.getBoolVar(hconf, HiveConf.ConfVars.HIVE_DEFAULT_NULLS_LAST));
+    }
 
     streamingEvaluatorNums = VectorPTFDesc.getStreamingEvaluatorNums(evaluators);
 
@@ -310,7 +332,8 @@ public class VectorPTFOperator extends Operator<PTFDesc>
     /*
      * Setup the overflow batch.
      */
-    overflowBatch = setupOverflowBatch();
+    overflowBatch = setupOverflowBatch(vContext.firstOutputColumnIndex(),
+        vOutContext.getScratchColumnTypeNames(), outputProjectionColumnMap, outputTypeInfos);
 
     groupBatches = new VectorPTFGroupBatches(
         hconf, vectorDesc.getVectorizedPTFMaxMemoryBufferingBatchCount());
@@ -319,9 +342,13 @@ public class VectorPTFOperator extends Operator<PTFDesc>
         evaluators,
         outputProjectionColumnMap,
         outputTypeInfos,
+        orderColumnMap,
+        orderColumnVectorTypes,
         keyInputColumnMap,
         nonKeyInputColumnMap,
         streamingEvaluatorNums,
+        scratchColumnPositions,
+        vOutContext.getScratchColumnTypeNames(),
         overflowBatch);
 
     isFirstPartition = true;
@@ -362,51 +389,88 @@ public class VectorPTFOperator extends Operator<PTFDesc>
       }
     }
 
-     if (isPartitionOrderBy) {
-
-      // Check for PARTITION BY key change when we have ORDER BY keys.
-      if (isFirstPartition) {
-        isFirstPartition = false;
-        setCurrentPartition(batch);
-      } else if (isPartitionChanged(batch)) {
-        setCurrentPartition(batch);
-        groupBatches.resetEvaluators();
+    if (isFirstPartition) {
+      isFirstPartition = false;
+      setCurrentPartition(batch);
+    } else if (isPartitionChanged(batch)) {
+      /*
+       * We should take care of evaluating the previous partition, but only if not all the
+       * evaluators are streaming. If they are all streaming, are supposed to put their results into
+       * the column vectors on the fly (in a streaming manner), this is handled later on by calling
+       * groupBatches.evaluateStreamingGroupBatch for every single batch.
+       */
+      if (!allEvaluatorsAreStreaming){
+        finishPartition(getPartitionKey());
       }
+      setCurrentPartition(batch);
+      groupBatches.resetEvaluators();
     }
 
     if (allEvaluatorsAreStreaming) {
-
       // We can process this batch immediately.
       groupBatches.evaluateStreamingGroupBatch(batch, isLastGroupBatch);
       forward(batch, null);
-
     } else {
-
-      // Evaluate the aggregation functions over the group batch.
-      groupBatches.evaluateGroupBatch(batch, isLastGroupBatch);
-
-      if (!isLastGroupBatch) {
-
-        // The group spans a VectorizedRowBatch.  Swap the relevant columns into our batch buffers,
-        // or write the batch to temporary storage.
-        groupBatches.bufferGroupBatch(batch);
-        return;
-      }
-
-      /*
-       * Last group batch.
-       *
-       * Take the (non-streaming) group aggregation values and write output columns for all
-       * rows of every batch of the group.  As each group batch is finished being written, they are
-       * forwarded to the next operator.
-       */
-      groupBatches.fillGroupResultsAndForward(this, batch);
+      // only collecting the batch for later evaluation
+      groupBatches.bufferGroupBatch(batch, isLastGroupBatch);
     }
 
     // If we are only processing a PARTITION BY and isLastGroupBatch, reset our evaluators.
     if (!isPartitionOrderBy && isLastGroupBatch) {
       groupBatches.resetEvaluators();
     }
+  }
+
+  private Object[] getPartitionKey() {
+    final int count = partitionColumnMap.length;
+    Object[] key = new Object[count];
+
+    for (int i = 0; i < count; i++) {
+      if (currentPartitionIsNull[i]) {
+        key[i] = null;
+        continue;
+      }
+      switch (partitionColumnVectorTypes[i]) {
+      case LONG:
+        key[i] = currentPartitionLongs[i];
+        break;
+      case DOUBLE:
+        key[i] = currentPartitionDoubles[i];
+        break;
+      case BYTES:
+        key[i] = new byte[currentPartitionByteLengths[i]];
+        System.arraycopy(currentPartitionByteArrays[i], 0, key[i], 0,
+            currentPartitionByteLengths[i]);
+        break;
+      case DECIMAL:
+        key[i] = currentPartitionDecimals[i];
+        break;
+      case TIMESTAMP:
+        key[i] = currentPartitionTimestamps[i];
+        break;
+      case INTERVAL_DAY_TIME:
+        key[i] = currentPartitionIntervalDayTimes[i];
+        break;
+      default:
+        throw new RuntimeException(
+            "Unexpected column vector type " + partitionColumnVectorTypes[i]);
+      }
+    }
+
+    return key;
+  }
+
+  private void finishPartition(Object[] partitionKey) throws HiveException {
+    /*
+     * Last group batch.
+     *
+     * Take the (non-streaming) group aggregation values and write output columns for all
+     * rows of every batch of the group.  As each group batch is finished being written, they are
+     * forwarded to the next operator.
+     */
+    groupBatches.finishPartition();
+    groupBatches.fillGroupResultsAndForward(this, partitionKey);
+    groupBatches.cleanupPartition();
   }
 
   private boolean isPartitionChanged(VectorizedRowBatch batch) {
@@ -534,17 +598,30 @@ public class VectorPTFOperator extends Operator<PTFDesc>
     }
   }
 
-  @Override
-  public void forward(Object row, ObjectInspector rowInspector) throws HiveException {
-    super.forward(row, rowInspector);
+  /**
+   * This package visible method can be called from VectorPTFGroupBatches. The usage of
+   * vectorForward instead of forward is important in order to count the runtime rows (EXPLAIN
+   * ANALYZE) correctly.
+   *
+   * @param batch
+   * @throws HiveException
+   */
+  void forwardBatch(VectorizedRowBatch batch) throws HiveException {
+    super.vectorForward(batch);
   }
 
   @Override
   protected void closeOp(boolean abort) throws HiveException {
+    /*
+     * Why would finishPartition be skipped here?
+     * 1. abort: obviously
+     * 2. allEvaluatorsAreStreaming: if all evaluators are streaming, we already evaluated
+     * 3. isFirstPartition: if it's true, we haven't seen any records/batches in the operator
+     */
+    if (!abort && !allEvaluatorsAreStreaming && !isFirstPartition){
+      finishPartition(getPartitionKey());
+    }
     super.closeOp(abort);
-
-    // We do not try to finish and flush an in-progress group because correct values require the
-    // last group batch.
   }
 
   /**

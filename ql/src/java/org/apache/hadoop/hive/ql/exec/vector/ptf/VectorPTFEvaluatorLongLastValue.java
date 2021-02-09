@@ -99,7 +99,7 @@ public class VectorPTFEvaluatorLongLastValue extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public long getLongGroupResult() {
+  public Object getGroupResult() {
     return lastValue;
   }
 

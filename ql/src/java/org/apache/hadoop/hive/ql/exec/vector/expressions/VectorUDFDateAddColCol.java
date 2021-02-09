@@ -36,7 +36,6 @@ import org.apache.hive.common.util.DateParser;
 public class VectorUDFDateAddColCol extends VectorExpression {
   private static final long serialVersionUID = 1L;
 
-  private final int colNum1;
   private final int colNum2;
 
   protected boolean isPositive = true;
@@ -48,8 +47,7 @@ public class VectorUDFDateAddColCol extends VectorExpression {
   private transient PrimitiveCategory primitiveCategory;
 
   public VectorUDFDateAddColCol(int colNum1, int colNum2, int outputColumnNum) {
-    super(outputColumnNum);
-    this.colNum1 = colNum1;
+    super(colNum1, outputColumnNum);
     this.colNum2 = colNum2;
   }
 
@@ -57,7 +55,6 @@ public class VectorUDFDateAddColCol extends VectorExpression {
     super();
 
     // Dummy final assignments.
-    colNum1 = -1;
     colNum2 = -1;
   }
 
@@ -76,7 +73,7 @@ public class VectorUDFDateAddColCol extends VectorExpression {
       super.evaluateChildren(batch);
     }
 
-    ColumnVector inputColVector1 = batch.cols[colNum1];
+    ColumnVector inputColVector1 = batch.cols[inputColumnNum];
     LongColumnVector inputColVector2 = (LongColumnVector) batch.cols[colNum2];
     int[] sel = batch.selected;
     int n = batch.size;
@@ -333,7 +330,7 @@ public class VectorUDFDateAddColCol extends VectorExpression {
 
   @Override
   public String vectorExpressionParameters() {
-    return getColumnParamString(0, colNum1) + ", " + getColumnParamString(1, colNum2);
+    return getColumnParamString(0, inputColumnNum) + ", " + getColumnParamString(1, colNum2);
   }
 
   @Override

@@ -101,9 +101,18 @@ public class VectorPTFEvaluatorLongFirstValue extends VectorPTFEvaluatorBase {
     return true;
   }
 
+  public boolean isGroupResultNull() {
+    return isGroupResultNull;
+  }
+
   @Override
   public Type getResultColumnVectorType() {
     return Type.LONG;
+  }
+
+  @Override
+  public Object getGroupResult() {
+    return firstValue;
   }
 
   @Override

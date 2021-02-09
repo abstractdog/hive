@@ -3405,7 +3405,7 @@ public class GenVectorCode extends Task {
     if (type.equals("date")) {
       return
           "Date dt = Date.ofEpochMilli(DateWritableV2.daysToMillis((int) value));\n" +
-          "    return  \"date \" + dt.toString() + \", \" + getColumnParamString(0, colNum);";
+          "    return  \"date \" + dt.toString() + \", \" + getColumnParamString(0, inputColumnNum);";
     } else {
       return
           "    return super.vectorExpressionParameters();";
@@ -3416,7 +3416,7 @@ public class GenVectorCode extends Task {
     if (type.equals("date")) {
       return
           "Date dt = Date.ofEpochMilli(DateWritableV2.daysToMillis((int) value));\n" +
-          "    return getColumnParamString(0, colNum) + \", date \" + dt.toString();";
+          "    return getColumnParamString(0, inputColumnNum) + \", date \" + dt.toString();";
     } else {
       return
           "    return super.vectorExpressionParameters();";

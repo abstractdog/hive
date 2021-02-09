@@ -57,37 +57,6 @@ public class BasePartitionEvaluator {
   protected final boolean nullsLast;
 
   /**
-   * Internal class to represent a window range in a partition by searching the
-   * relative position (ROWS) or relative value (RANGE) of the current row
-   */
-  protected static class Range
-  {
-    int start;
-    int end;
-    PTFPartition p;
-
-    public Range(int start, int end, PTFPartition p)
-    {
-      this.start = start;
-      this.end = end;
-      this.p = p;
-    }
-
-    public PTFPartitionIterator<Object> iterator()
-    {
-      return p.range(start, end);
-    }
-
-    public int getDiff(Range prevRange) {
-      return this.start - prevRange.start + this.end - prevRange.end;
-    }
-
-    public int getSize() {
-      return end - start;
-    }
-  }
-
-  /**
    * Define some type specific operation to used in the subclass
    */
   private static abstract class TypeOperationBase<ResultType> {
@@ -209,7 +178,7 @@ public class BasePartitionEvaluator {
    * @throws HiveException
    */
   public Object iterate(int currentRow, LeadLagInfo leadLagInfo) throws HiveException {
-    Range range = getRange(winFrame, currentRow, partition, nullsLast);
+    Range range = PTFRangeUtil.getRange(winFrame, currentRow, partition, nullsLast);
     PTFPartitionIterator<Object> pItr = range.iterator();
     return calcFunctionValue(pItr, leadLagInfo);
   }
@@ -243,67 +212,6 @@ public class BasePartitionEvaluator {
 
     // The object is reused during evaluating, make a copy here
     return ObjectInspectorUtils.copyToStandardObject(wrappedEvaluator.evaluate(aggBuffer), outputOI);
-  }
-
-  protected static Range getRange(WindowFrameDef winFrame, int currRow, PTFPartition p,
-      boolean nullsLast) throws HiveException {
-    BoundaryDef startB = winFrame.getStart();
-    BoundaryDef endB = winFrame.getEnd();
-
-    int start, end;
-    if (winFrame.getWindowType() == WindowType.ROWS) {
-      start = getRowBoundaryStart(startB, currRow);
-      end = getRowBoundaryEnd(endB, currRow, p);
-    } else {
-      ValueBoundaryScanner vbs = ValueBoundaryScanner.getScanner(winFrame, nullsLast);
-      vbs.handleCache(currRow, p);
-      start = vbs.computeStart(currRow, p);
-      end = vbs.computeEnd(currRow, p);
-    }
-    start = start < 0 ? 0 : start;
-    end = end > p.size() ? p.size() : end;
-    return new Range(start, end, p);
-  }
-
-  private static int getRowBoundaryStart(BoundaryDef b, int currRow) throws HiveException {
-    Direction d = b.getDirection();
-    int amt = b.getAmt();
-    switch(d) {
-    case PRECEDING:
-      if (amt == BoundarySpec.UNBOUNDED_AMOUNT) {
-        return 0;
-      }
-      else {
-        return currRow - amt;
-      }
-    case CURRENT:
-      return currRow;
-    case FOLLOWING:
-      return currRow + amt;
-    }
-    throw new HiveException("Unknown Start Boundary Direction: " + d);
-  }
-
-  private static int getRowBoundaryEnd(BoundaryDef b, int currRow, PTFPartition p) throws HiveException {
-    Direction d = b.getDirection();
-    int amt = b.getAmt();
-    switch(d) {
-    case PRECEDING:
-      if ( amt == 0 ) {
-        return currRow + 1;
-      }
-      return currRow - amt + 1;
-    case CURRENT:
-      return currRow + 1;
-    case FOLLOWING:
-      if (amt == BoundarySpec.UNBOUNDED_AMOUNT) {
-        return p.size();
-      }
-      else {
-        return currRow + amt + 1;
-      }
-    }
-    throw new HiveException("Unknown End Boundary Direction: " + d);
   }
 
   /**
@@ -341,7 +249,7 @@ public class BasePartitionEvaluator {
         return super.iterate(currentRow, leadLagInfo);
       }
 
-      Range currentRange = getRange(winFrame, currentRow, partition, nullsLast);
+      Range currentRange = PTFRangeUtil.getRange(winFrame, currentRow, partition, nullsLast);
       ResultType result;
       if (currentRow == 0 ||  // Reset for the new partition
           sumAgg.prevRange == null ||
@@ -459,7 +367,7 @@ public class BasePartitionEvaluator {
         return super.iterate(currentRow, leadLagInfo);
       }
 
-      Range currentRange = getRange(winFrame, currentRow, partition, nullsLast);
+      Range currentRange = PTFRangeUtil.getRange(winFrame, currentRow, partition, nullsLast);
       if (currentRow == 0 ||  // Reset for the new partition
           avgAgg.prevRange == null ||
           currentRange.getSize() <= currentRange.getDiff(avgAgg.prevRange)) {

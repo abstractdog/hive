@@ -21,7 +21,6 @@ package org.apache.hadoop.hive.ql.exec.vector.ptf;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector.Type;
 import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.VectorExpression;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.ptf.WindowFrameDef;
 
@@ -33,7 +32,7 @@ import org.apache.hadoop.hive.ql.plan.ptf.WindowFrameDef;
  */
 public class VectorPTFEvaluatorDenseRank extends VectorPTFEvaluatorBase {
 
-  private int denseRank;
+  private long denseRank;
 
   public VectorPTFEvaluatorDenseRank(WindowFrameDef windowFrameDef, int outputColumnNum) {
     super(windowFrameDef, outputColumnNum);
@@ -41,8 +40,7 @@ public class VectorPTFEvaluatorDenseRank extends VectorPTFEvaluatorBase {
   }
 
   @Override
-  public void evaluateGroupBatch(VectorizedRowBatch batch)
-      throws HiveException {
+  public void evaluateGroupBatch(VectorizedRowBatch batch) throws HiveException {
 
     // We don't evaluate input columns...
 
@@ -64,8 +62,18 @@ public class VectorPTFEvaluatorDenseRank extends VectorPTFEvaluatorBase {
   }
 
   @Override
+  public boolean isGroupResultNull() {
+    return false;
+  }
+
+  @Override
   public Type getResultColumnVectorType() {
     return Type.LONG;
+  }
+
+  @Override
+  public Object getGroupResult() {
+    return denseRank;
   }
 
   @Override

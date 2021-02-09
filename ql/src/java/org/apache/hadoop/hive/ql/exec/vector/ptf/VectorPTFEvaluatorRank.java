@@ -21,7 +21,6 @@ package org.apache.hadoop.hive.ql.exec.vector.ptf;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector.Type;
 import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
-import org.apache.hadoop.hive.ql.exec.vector.expressions.VectorExpression;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.ptf.WindowFrameDef;
 
@@ -33,7 +32,7 @@ import org.apache.hadoop.hive.ql.plan.ptf.WindowFrameDef;
  */
 public class VectorPTFEvaluatorRank extends VectorPTFEvaluatorBase {
 
-  private int rank;
+  private long rank;
   private int groupCount;
 
   public VectorPTFEvaluatorRank(WindowFrameDef windowFrameDef, int outputColumnNum) {
@@ -50,7 +49,6 @@ public class VectorPTFEvaluatorRank extends VectorPTFEvaluatorBase {
     /*
      * Do careful maintenance of the outputColVector.noNulls flag.
      */
-
     LongColumnVector longColVector = (LongColumnVector) batch.cols[outputColumnNum];
     longColVector.isRepeating = true;
     longColVector.isNull[0] = false;
@@ -71,8 +69,18 @@ public class VectorPTFEvaluatorRank extends VectorPTFEvaluatorBase {
   }
 
   @Override
+  public boolean isGroupResultNull() {
+    return false;
+  }
+
+  @Override
   public Type getResultColumnVectorType() {
     return Type.LONG;
+  }
+
+  @Override
+  public Object getGroupResult() {
+    return rank;
   }
 
   @Override

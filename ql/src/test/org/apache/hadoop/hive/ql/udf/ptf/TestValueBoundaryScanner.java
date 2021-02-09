@@ -86,7 +86,7 @@ public class TestValueBoundaryScanner {
     DateValueBoundaryScanner scanner =
         new DateValueBoundaryScanner(null, null, new OrderExpressionDef(argDef), false);
     Date date = new Date();
-    date.setTimeInMillis(1000);
+    date.setTimeInMillis(86400000); //epoch+1 day
     DateWritableV2 w1 = new DateWritableV2(date);
     DateWritableV2 w2 = new DateWritableV2(date);
     DateWritableV2 w3 = new DateWritableV2(); // empty
@@ -96,8 +96,8 @@ public class TestValueBoundaryScanner {
 
     // empty == epoch
     Assert.assertTrue(scanner.isEqual(w3, new DateWritableV2(new Date())));
-    // empty == another
-    Assert.assertTrue(scanner.isEqual(w1, w3));
+    // empty != another non-epoch
+    Assert.assertFalse(scanner.isEqual(w3, w1));
 
     Assert.assertFalse(scanner.isEqual(null, w2));
     Assert.assertFalse(scanner.isEqual(w1, null));
@@ -124,8 +124,8 @@ public class TestValueBoundaryScanner {
 
     // empty == epoch
     Assert.assertTrue(scanner.isEqual(w3, new TimestampWritableV2(new Timestamp())));
-    // empty == another
-    Assert.assertFalse(scanner.isEqual(w1, w3));
+    // empty != another non-epoch
+    Assert.assertFalse(scanner.isEqual(w3, w1));
 
     Assert.assertFalse(scanner.isEqual(null, w2));
     Assert.assertFalse(scanner.isEqual(w1, null));
@@ -155,7 +155,7 @@ public class TestValueBoundaryScanner {
     TimestampTZ epoch = new TimestampTZ();
     epoch.set(0, 0, ZoneId.of("UTC"));
     Assert.assertTrue(scanner.isEqual(w3, new TimestampLocalTZWritable(epoch)));
-    // empty == another
+    // empty != another non-epoch
     Assert.assertFalse(scanner.isEqual(w1, w3));
 
     Assert.assertFalse(scanner.isEqual(null, w2));

@@ -523,7 +523,7 @@ public class TestVectorPTFGroupBatches {
     Assert.assertEquals(20 * batchSize, groupBatches.size());
 
     for (int i = 0; i < groupBatches.size(); i++) {
-      Assert.assertEquals("failed to assert at index: " + i, (long) i, groupBatches.getAt(i));
+      Assert.assertEquals("failed to assert at index: " + i, (long) i, ((Object[])groupBatches.getAt(i))[0]);
     }
   }
 
@@ -550,7 +550,7 @@ public class TestVectorPTFGroupBatches {
     Assert.assertEquals(allSize, groupBatches.size());
 
     for (int i = 0; i < groupBatches.size(); i++) {
-      Assert.assertEquals((long) i, groupBatches.getAt(i));
+      Assert.assertEquals((long) i, ((Object[])groupBatches.getAt(i))[0]);
     }
   }
 

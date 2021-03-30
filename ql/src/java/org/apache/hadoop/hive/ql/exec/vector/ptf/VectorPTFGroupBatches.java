@@ -400,6 +400,15 @@ public class VectorPTFGroupBatches extends PTFPartition {
         evaluator.inputColumnNum = IntStream.range(0, bufferedColumnMap.length)
             .filter(j -> bufferedColumnMap[j] == evaluator.inputColumnNum).findFirst()
             .orElseGet(() -> evaluator.inputColumnNum);
+
+        if (evaluator.inputVecExpr != null) {
+          evaluator.inputVecExpr.outputColumnNum = IntStream.range(0, bufferedColumnMap.length)
+              .filter(j -> bufferedColumnMap[j] == evaluator.inputVecExpr.outputColumnNum)
+              .findFirst().orElseGet(() -> evaluator.inputVecExpr.outputColumnNum);
+          evaluator.inputVecExpr.inputColumnNum = IntStream.range(0, bufferedColumnMap.length)
+              .filter(j -> bufferedColumnMap[j] == evaluator.inputVecExpr.inputColumnNum)
+              .findFirst().orElseGet(() -> evaluator.inputVecExpr.inputColumnNum);
+        }
       }
     }
 

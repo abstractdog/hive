@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public abstract class VectorPTFEvaluatorBase {
 
   final WindowFrameDef windowFrameDef;
-  private final VectorExpression inputVecExpr;
+  VectorExpression inputVecExpr;
   protected int inputColumnNum;
   protected final int outputColumnNum;
   private boolean nullsLast;

@@ -216,7 +216,9 @@ public abstract class ValueBoundaryScanner {
 
     if (cache != null) {
       floorEntry = cache.floorEntry(r);
-      ceilingEntry = cache.ceilingEntry(r);
+      if (floorEntry != null){
+        ceilingEntry = cache.ceilingEntry(r);
+      }
     }
 
     if (floorEntry != null && ceilingEntry != null) {

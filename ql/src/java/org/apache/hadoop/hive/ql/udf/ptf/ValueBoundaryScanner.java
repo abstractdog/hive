@@ -39,9 +39,12 @@ import org.apache.hadoop.hive.serde2.io.TimestampWritableV2;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class ValueBoundaryScanner {
   BoundaryDef start, end;
+  public static final Logger LOG = LoggerFactory.getLogger(ValueBoundaryScanner.class);
 
   public ValueBoundaryScanner(BoundaryDef start, BoundaryDef end) {
     this.start = start;
@@ -226,6 +229,7 @@ public abstract class ValueBoundaryScanner {
       r = floorEntry.getKey() - 1;
       floorEntry = cache.floorEntry(r);
       if (floorEntry != null) {
+        r = floorEntry.getKey();
         rowVal = floorEntry.getValue();
       } else if (r >= 0){
         rowVal = computeValue(p.getAt(r));
@@ -236,6 +240,7 @@ public abstract class ValueBoundaryScanner {
         rowVal = computeValue(p.getAt(r));
       }
     }
+
     return new ImmutablePair<>(r, rowVal);
   }
 
@@ -401,6 +406,10 @@ abstract class SingleValueBoundaryScanner extends ValueBoundaryScanner {
 
     // Use Case 4.
     if ( expressionDef.getOrder() == Order.DESC ) {
+      Pair<Integer, Object> start = binaryPreSearchBack(r, p, sortKey, rowVal, amt);
+      //start again with linear search from the last point where !isDistanceGreater was true
+      r = start.getLeft();
+      rowVal = start.getRight();
       while (r >= 0 && !isDistanceGreater(rowVal, sortKey, amt) ) {
         Pair<Integer, Object> stepResult = skipOrStepBack(r, p);
         r = stepResult.getLeft();
@@ -409,14 +418,33 @@ abstract class SingleValueBoundaryScanner extends ValueBoundaryScanner {
       return r + 1;
     }
     else { // Use Case 5.
+      Pair<Integer, Object> start = binaryPreSearchBack(r, p, sortKey, rowVal, amt);
+      //start again with linear search from the last point where !isDistanceGreater was true
+      r = start.getLeft();
+      rowVal = start.getRight();
       while (r >= 0 && !isDistanceGreater(sortKey, rowVal, amt) ) {
         Pair<Integer, Object> stepResult = skipOrStepBack(r, p);
         r = stepResult.getLeft();
         rowVal = stepResult.getRight();
       }
-
       return r + 1;
     }
+  }
+
+  private Pair<Integer, Object> binaryPreSearchBack(int r, PTFPartition p, Object sortKey,
+      Object rowVal, int amt) throws HiveException {
+    // binary pre-search
+    int lastR = r;
+    Object lastRowVal = rowVal;
+    while (r >= 0 && !isDistanceGreater(sortKey, rowVal, amt)) {
+      lastR = r;
+      lastRowVal = rowVal;
+      r = (int) Math.ceil(r / 2); // let's half the rows
+      Pair<Integer, Object> stepResult = skipOrStepBack(r, p);
+      r = stepResult.getLeft();
+      rowVal = stepResult.getRight();
+    }
+    return new ImmutablePair<Integer, Object>(lastR, lastRowVal);
   }
 
   protected int computeStartCurrentRow(int rowIdx, PTFPartition p) throws HiveException {

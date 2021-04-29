@@ -48,6 +48,7 @@ import org.apache.hadoop.hive.ql.plan.ptf.WindowTableFunctionDef;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.AggregationBuffer;
 import org.apache.hadoop.hive.ql.udf.generic.ISupportStreamingModeForWindowing;
+import org.apache.hadoop.hive.ql.util.PeriodicLoggerWithStopwatch;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
@@ -144,7 +145,13 @@ public class WindowingTableFunction extends TableFunctionEvaluator {
       throws HiveException {
     BasePartitionEvaluator partitionEval = wFn.getWFnEval()
         .getPartitionWindowingEvaluator(wFn.getWindowFrame(), partition, wFn.getArgs(), wFn.getOI());
-    return partitionEval.iterate(rowToProcess, ptfDesc.getLlInfo());
+    PeriodicLoggerWithStopwatch periodicLogger = partitionEval.getPeriodicLogger();
+    if (rowToProcess == 0) {
+      periodicLogger.reset();
+    }
+    Object result = partitionEval.iterate(rowToProcess, ptfDesc.getLlInfo());
+    periodicLogger.increment();
+    return result;
   }
 
   // Evaluate the result given a partition

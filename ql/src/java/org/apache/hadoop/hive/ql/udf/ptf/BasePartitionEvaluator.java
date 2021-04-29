@@ -37,6 +37,7 @@ import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.AbstractAggregationBuffer;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFEvaluator.AggregationBuffer;
 import org.apache.hadoop.hive.ql.udf.generic.GenericUDAFSum.GenericUDAFSumEvaluator;
+import org.apache.hadoop.hive.ql.util.PeriodicLoggerWithStopwatch;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
@@ -59,6 +60,7 @@ public class BasePartitionEvaluator {
   protected final List<PTFExpressionDef> parameters;
   protected final ObjectInspector outputOI;
   protected final boolean isCountEvaluator;
+  protected final PeriodicLoggerWithStopwatch stopwatch;
 
   /**
    * Internal class to represent a window range in a partition by searching the
@@ -197,6 +199,9 @@ public class BasePartitionEvaluator {
     this.parameters = parameters;
     this.outputOI = outputOI;
     this.isCountEvaluator = wrappedEvaluator instanceof GenericUDAFCount.GenericUDAFCountEvaluator;
+    // use a periodic logger which ignores very small partitions
+    this.stopwatch = new PeriodicLoggerWithStopwatch(
+        "BasePartitionEvaluator(" + wrappedEvaluator.getClass().getSimpleName() + ")").min(100).start();
     LOG.info("isCountEvaluator: {}, parameters count: {}", isCountEvaluator,
         (parameters != null) ? parameters.size() : 0);
   }
@@ -517,5 +522,9 @@ public class BasePartitionEvaluator {
       super(wrappedEvaluator, winFrame, partition, parameters, outputOI);
       this.typeOperation = new TypeOperationHiveDecimalWritable();
     }
+  }
+
+  public PeriodicLoggerWithStopwatch getPeriodicLogger() {
+    return stopwatch;
   }
 }

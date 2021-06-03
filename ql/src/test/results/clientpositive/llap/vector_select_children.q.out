@@ -1,0 +1,66 @@
+PREHOOK: query: create table sourceTable (product_id int)
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@sourceTable
+POSTHOOK: query: create table sourceTable (product_id int)
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@sourceTable
+PREHOOK: query: create table targetTable (product_id bigint)
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@targetTable
+POSTHOOK: query: create table targetTable (product_id bigint)
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@targetTable
+PREHOOK: query: insert into sourceTable values(1)
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@sourcetable
+POSTHOOK: query: insert into sourceTable values(1)
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@sourcetable
+POSTHOOK: Lineage: sourcetable.product_id SCRIPT []
+PREHOOK: query: insert overwrite table targetTable select UDFToLong(COALESCE(product_id,-1)) from sourceTable
+PREHOOK: type: QUERY
+PREHOOK: Input: default@sourcetable
+PREHOOK: Output: default@targettable
+POSTHOOK: query: insert overwrite table targetTable select UDFToLong(COALESCE(product_id,-1)) from sourceTable
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@sourcetable
+POSTHOOK: Output: default@targettable
+POSTHOOK: Lineage: targettable.product_id EXPRESSION [(sourcetable)sourcetable.FieldSchema(name:product_id, type:int, comment:null), ]
+PREHOOK: query: select * from targetTable
+PREHOOK: type: QUERY
+PREHOOK: Input: default@targettable
+#### A masked pattern was here ####
+POSTHOOK: query: select * from targetTable
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@targettable
+#### A masked pattern was here ####
+1
+PREHOOK: query: explain select UDFToLong(COALESCE(product_id,-1)) from targetTable
+PREHOOK: type: QUERY
+PREHOOK: Input: default@targettable
+#### A masked pattern was here ####
+POSTHOOK: query: explain select UDFToLong(COALESCE(product_id,-1)) from targetTable
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@targettable
+#### A masked pattern was here ####
+STAGE DEPENDENCIES:
+  Stage-0 is a root stage
+
+STAGE PLANS:
+  Stage: Stage-0
+    Fetch Operator
+      limit: -1
+      Processor Tree:
+        TableScan
+          alias: targettable
+          Select Operator
+            expressions: CASE WHEN (product_id is not null) THEN (product_id) ELSE (-1L) END (type: bigint)
+            outputColumnNames: _col0
+            ListSink
+

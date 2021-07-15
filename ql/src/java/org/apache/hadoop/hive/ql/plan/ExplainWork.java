@@ -250,4 +250,8 @@ public class ExplainWork implements Serializable {
   public boolean isDDL() {
     return config.isDDL();
   }
+
+  public boolean isTez() {
+    return config.isTez();
+  }
 }

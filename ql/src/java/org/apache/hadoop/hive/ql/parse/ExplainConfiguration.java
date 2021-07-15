@@ -54,6 +54,7 @@ public class ExplainConfiguration {
   private boolean ast = false;
   private boolean debug = false;
   private boolean ddl = false;
+  private boolean tez = false;
 
   private Path explainRootPath;
   private Map<String, Long> opIdToRuntimeNumRows;
@@ -214,5 +215,13 @@ public class ExplainConfiguration {
 
   public boolean isDDL() {
     return this.ddl;
+  }
+
+  public void setTez(boolean tez) {
+    this.tez = tez;
+  }
+
+  public boolean isTez() {
+    return this.tez;
   }
 }

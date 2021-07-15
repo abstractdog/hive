@@ -127,6 +127,8 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
         config.setDDL(true);
         config.setCbo(true);
         config.setVectorization(true);
+      } else if (explainOptions == HiveParser.KW_TEZ) {
+        config.setTez(true);
       } else {
         // UNDONE: UNKNOWN OPTION?
       }
@@ -200,6 +202,7 @@ public class ExplainSemanticAnalyzer extends BaseSemanticAnalyzer {
         && !config.isLogical()
         && !config.isVectorization()
         && !config.isAuthorize()
+        && !config.isTez()
         && (
              (
                HiveConf.getBoolVar(ctx.getConf(), HiveConf.ConfVars.HIVE_EXPLAIN_USER)

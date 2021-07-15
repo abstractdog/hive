@@ -643,6 +643,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
     xlateMap.put("KW_FUNCTIONS", "FUNCTIONS");
     xlateMap.put("KW_EXPLAIN", "EXPLAIN");
     xlateMap.put("KW_DDL", "DDL");
+    xlateMap.put("KW_TEZ", "TEZ");
     xlateMap.put("KW_EXTENDED", "EXTENDED");
     xlateMap.put("KW_DEBUG", "DEBUG");
     xlateMap.put("KW_SERDE", "SERDE");
@@ -906,6 +907,7 @@ explainOption
     | (KW_VECTORIZATION vectorizationOnly? vectorizatonDetail?)
     | KW_DEBUG
     | KW_DDL
+    | KW_TEZ
     ;
 
 vectorizationOnly

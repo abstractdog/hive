@@ -223,7 +223,7 @@ public class TestShuffleHandler {
   public void testSocketKeepAlive() throws Exception {
     Configuration conf = new Configuration();
     conf.set(HADOOP_TMP_DIR, TEST_DIR.getAbsolutePath());
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 25551);
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
     // try setting to -ve keep alive timeout.
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
@@ -231,7 +231,7 @@ public class TestShuffleHandler {
     MockShuffleHandler2 shuffleHandler = new MockShuffleHandler2(conf);
     try {
       shuffleHandler.start();
-
+      Thread.sleep(100000000);
       String shuffleBaseURL = "http://127.0.0.1:"
           + conf.get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
       URL url = new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&dag=1&reduce=1&"

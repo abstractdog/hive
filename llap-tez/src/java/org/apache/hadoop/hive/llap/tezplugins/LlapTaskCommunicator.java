@@ -180,8 +180,11 @@ public class LlapTaskCommunicator extends TezTaskCommunicatorImpl {
     if (credentials != null) {
       token = (Token<LlapTokenIdentifier>) credentials.getToken(LlapTokenIdentifier.KIND_NAME);
     }
+    // supposed to have a token only if security is enabled (any mismatch here implies a configuration problem)
     Preconditions.checkState((token != null) == UserGroupInformation.isSecurityEnabled());
-    LOG.info("Task communicator with a token {}", token);
+    if (token != null) {
+      LOG.info("Task communicator with a token {}", token);
+    }
     return token;
   }
 
@@ -195,7 +198,7 @@ public class LlapTaskCommunicator extends TezTaskCommunicatorImpl {
     Throwable cause = t;
     while (cause != null) {
       if (isInvalidTokenError(cause)) {
-        handleInvalidToken(cause);
+        handleInvalidToken();
         return;
       }
       cause = cause.getCause();
@@ -209,10 +212,9 @@ public class LlapTaskCommunicator extends TezTaskCommunicatorImpl {
      * "Current (LLAP_TOKEN; LLAP_TOKEN owner=hive/***, renewer=hive, realUser=, issueDate=1670317803579, maxDate=1671527403579,
      * sequenceNumber=297, masterKeyId=296, cluster ***, app ID , signing false) can't be found in cache"
      */
-    return cause.getMessage().contains(LLAP_TOKEN_NAME)
-        && ((cause instanceof InvalidToken && cause.getMessage() != null) || (cause instanceof RemoteException
-            && cause.getCause() == null && cause.getMessage() != null && (cause.getMessage().contains("InvalidToken")
-                || cause.getMessage().contains("can't be found in cache"))));
+    return ((cause instanceof InvalidToken && cause.getMessage() != null) || (cause instanceof RemoteException
+        && cause.getCause() == null && cause.getMessage() != null && cause.getMessage().contains(LLAP_TOKEN_NAME)
+        && (cause.getMessage().contains("InvalidToken") || cause.getMessage().contains("can't be found in cache"))));
   }
 
   @Override
@@ -588,7 +590,7 @@ public class LlapTaskCommunicator extends TezTaskCommunicatorImpl {
    * task attempt is already failed, but usually there are at least 3 task attempts before failing the task and dag, therefore
    * fetching an LLAP_TOKEN synchronously here definitely solves the invalid token problem (as the next task attempt will use it).
    */
-  private void handleInvalidToken(Throwable t) {
+  private void handleInvalidToken() {
     this.communicator.refreshToken();
   }
 

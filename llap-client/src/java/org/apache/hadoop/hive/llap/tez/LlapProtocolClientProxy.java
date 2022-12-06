@@ -117,9 +117,7 @@ public class LlapProtocolClientProxy
     LOG.info("Initializing periodic token refresh in AM, will run in every {}s", interval);
     tokenClient = new LlapTokenClient(conf);
 
-    newTokenChecker.scheduleAtFixedRate(() -> {
-      fetchToken();
-    }, 0, interval, TimeUnit.SECONDS);
+    newTokenChecker.scheduleAtFixedRate(this::fetchToken, 0, interval, TimeUnit.SECONDS);
   }
 
   private synchronized void fetchToken() {

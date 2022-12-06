@@ -114,7 +114,7 @@ public class DefaultLlapTokenManager implements LlapTokenManager {
     long tokenRenewInterval =
         HiveConf.getTimeVar(conf, ConfVars.LLAP_DELEGATION_TOKEN_RENEW_INTERVAL, TimeUnit.SECONDS);
     // if the tokenRenewInterval is low (e.g. testing), let's use the half of it as interval instead of the constant
-    long interval = Math.min(tokenRenewInterval / 2, LLAP_TOKEN_CHECK_INTERVAL_IN_DEAMON_SECONDS);
+    long interval = Math.min(tokenRenewInterval / 2, LLAP_TOKEN_CHECK_INTERVAL_IN_DAEMON_SECONDS);
 
     LOG.info("Initializing periodic token refresh in daemon, will run in every {}s",
         interval);

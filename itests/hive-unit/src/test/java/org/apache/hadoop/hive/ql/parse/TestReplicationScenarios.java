@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.ql.parse.repl.metric.event.Status;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hive.hcatalog.listener.DbNotificationListener;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.apache.hadoop.hive.metastore.*;
 import org.apache.hadoop.hive.metastore.InjectableBehaviourObjectStore.BehaviourInjection;
 import org.apache.hadoop.hive.metastore.MetaStoreTestUtils;
@@ -106,9 +107,11 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
@@ -150,6 +153,13 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class TestReplicationScenarios {
+  // this test sets up its own clusters, we can avoid the other one coming from HiveTestEnvSetup
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT =
+      new HiveTestEnvSetup.Builder().runTezCluster(false).build();
+
+  @Rule
+  public TestRule methodRule = ENVIRONMENT.getMethodRule();
 
   @Rule
   public final TestName testName = new TestName();
@@ -192,7 +202,7 @@ public class TestReplicationScenarios {
 
   static void internalBeforeClassSetup(Map<String, String> additionalProperties)
       throws Exception {
-    hconf = new HiveConf(TestReplicationScenarios.class);
+    hconf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
     String metastoreUri = System.getProperty("test."+MetastoreConf.ConfVars.THRIFT_URIS.getHiveName());
     if (metastoreUri != null) {
       hconf.set(MetastoreConf.ConfVars.THRIFT_URIS.getHiveName(), metastoreUri);

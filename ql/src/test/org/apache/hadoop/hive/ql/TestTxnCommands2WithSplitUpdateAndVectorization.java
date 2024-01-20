@@ -19,7 +19,6 @@
 package org.apache.hadoop.hive.ql;
 
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.junit.Before;
 import org.junit.Test;
 
 /**

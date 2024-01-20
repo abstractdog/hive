@@ -49,13 +49,17 @@ import org.apache.hadoop.hive.ql.txn.compactor.CompactorTestUtilities.CompactorT
 import org.apache.hadoop.hive.ql.txn.compactor.CompactorThread;
 import org.apache.hadoop.hive.ql.txn.compactor.Initiator;
 import org.apache.hadoop.hive.ql.txn.compactor.Worker;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +68,15 @@ public abstract class TxnCommandsBaseForTests {
   
   //bucket count for test tables; set it to 1 for easier debugging
   final static int BUCKET_COUNT = 2;
+
+  @ClassRule
+  @RegisterExtension
+  public static HiveTestEnvSetup ENVIRONMENT = new HiveTestEnvSetup();
+
+  @Rule
+  @RegisterExtension
+  public TestRule methodRule = ENVIRONMENT.getMethodRule();
+
   @Rule
   public TestName testName = new TestName();
   
@@ -104,9 +117,11 @@ public abstract class TxnCommandsBaseForTests {
       HiveMetaStoreClientWithLocalCache.init(hiveConf);
     }
   }
+
   void initHiveConf() {
-    hiveConf = new HiveConf(this.getClass());
+    hiveConf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
   }
+
   void setUpInternal() throws Exception {
     initHiveConf();
     Path workDir = new Path(System.getProperty("test.tmp.dir",

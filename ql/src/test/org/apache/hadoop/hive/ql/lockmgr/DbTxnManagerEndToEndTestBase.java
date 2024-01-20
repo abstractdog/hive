@@ -29,10 +29,12 @@ import org.apache.hadoop.hive.ql.Driver;
 import org.apache.hadoop.hive.ql.QueryState;
 import org.apache.hadoop.hive.ql.metadata.HiveMetaStoreClientWithLocalCache;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 
 import java.io.File;
 
@@ -46,7 +48,10 @@ public abstract class DbTxnManagerEndToEndTestBase {
       DbTxnManagerEndToEndTestBase.class.getCanonicalName() + "-" + System.currentTimeMillis())
     .getPath().replaceAll("\\\\", "/");
 
-  protected static HiveConf conf = new HiveConf(Driver.class);
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT = new HiveTestEnvSetup();
+
+  protected static HiveConf conf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
   protected HiveTxnManager txnMgr;
   protected Context ctx;
   protected Driver driver, driver2;

@@ -68,6 +68,7 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -87,6 +88,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -98,10 +100,12 @@ public class TestHive {
   protected static Hive hm;
   protected static HiveConf hiveConf;
 
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT = new HiveTestEnvSetup();
+
   @BeforeClass
   public static void setUp() throws Exception {
-
-    hiveConf = new HiveConf(TestHive.class);
+    hiveConf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
     hm = setUpImpl(hiveConf);
   }
 

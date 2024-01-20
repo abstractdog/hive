@@ -33,8 +33,10 @@ import java.util.Set;
 
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.session.SessionState.ResourceType;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -44,12 +46,16 @@ import static org.junit.Assert.assertEquals;
 public class TestAddResource {
 
   private static final String TEST_JAR_DIR = System.getProperty("test.tmp.dir", ".") + File.separator;
+
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT = new HiveTestEnvSetup();
+
   private HiveConf conf;
   private ResourceType t;
 
   @Before
   public void setup() throws IOException {
-    conf = new HiveConf();
+    conf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
     t = ResourceType.JAR;
 
     //Generate test jar files

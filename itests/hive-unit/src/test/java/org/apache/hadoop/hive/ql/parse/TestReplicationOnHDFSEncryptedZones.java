@@ -24,12 +24,15 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.shims.Utils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +49,15 @@ import static org.apache.hadoop.hive.common.repl.ReplConst.SOURCE_OF_REPLICATION
 public class TestReplicationOnHDFSEncryptedZones {
   private static String jksFile = System.getProperty("java.io.tmpdir") + "/test.jks";
   private static String jksFile2 = System.getProperty("java.io.tmpdir") + "/test2.jks";
+
+  // this test sets up its own clusters, we can avoid the other one coming from HiveTestEnvSetup
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT =
+      new HiveTestEnvSetup.Builder().runTezCluster(false).build();
+
+  @Rule
+  public TestRule methodRule = ENVIRONMENT.getMethodRule();
+
   @Rule
   public final TestName testName = new TestName();
 
@@ -60,7 +72,7 @@ public class TestReplicationOnHDFSEncryptedZones {
     System.setProperty("jceks.key.serialFilter", "java.lang.Enum;java.security.KeyRep;" +
         "java.security.KeyRep$Type;javax.crypto.spec.SecretKeySpec;" +
         "org.apache.hadoop.crypto.key.JavaKeyStoreProvider$KeyMetadata;!*");
-    conf = new Configuration();
+    conf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
     conf.set("dfs.client.use.datanode.hostname", "true");
     conf.set("hadoop.proxyuser." + Utils.getUGI().getShortUserName() + ".hosts", "*");
     conf.set("hadoop.security.key.provider.path", "jceks://file" + jksFile);

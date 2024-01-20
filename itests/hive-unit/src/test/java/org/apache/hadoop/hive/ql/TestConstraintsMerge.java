@@ -26,12 +26,15 @@ import org.apache.hadoop.hive.metastore.utils.TestTxnDbUtil;
 import org.apache.hadoop.hive.ql.exec.errors.DataConstraintViolationError;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat;
 import org.apache.hadoop.hive.ql.session.SessionState;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.apache.tez.mapreduce.hadoop.MRJobConfig;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+import org.junit.rules.TestRule;
 
 import java.io.File;
 
@@ -49,6 +52,13 @@ import static org.junit.Assert.assertTrue;
 public class TestConstraintsMerge {
   //bucket count for test tables; set it to 1 for easier debugging
   private static int BUCKET_COUNT = 2;
+
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT = new HiveTestEnvSetup.Builder().build();
+
+  @Rule
+  public TestRule methodRule = ENVIRONMENT.getMethodRule();
+
   @Rule
   public TestName testName = new TestName();
   private HiveConf hiveConf;
@@ -70,7 +80,7 @@ public class TestConstraintsMerge {
 
   @Before
   public void setUp() throws Exception {
-    hiveConf = new HiveConf(this.getClass());
+    hiveConf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
     hiveConf.set(ConfVars.PRE_EXEC_HOOKS.varname, "");
     hiveConf.set(ConfVars.POST_EXEC_HOOKS.varname, "");
     hiveConf.set(ConfVars.METASTORE_WAREHOUSE.varname, TEST_WAREHOUSE_DIR);

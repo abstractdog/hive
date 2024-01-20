@@ -41,11 +41,14 @@ import org.apache.hive.service.cli.operation.ClassicTableTypeMapping;
 import org.apache.hive.service.cli.operation.ClassicTableTypeMapping.ClassicTableTypes;
 import org.apache.hive.service.cli.operation.HiveTableTypeMapping;
 import org.apache.hive.service.cli.operation.TableTypeMappingFactory.TableTypeMappings;
+import org.apache.hive.testutils.HiveTestEnvSetup;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,6 +104,12 @@ import static org.junit.Assert.fail;
  *
  */
 public class TestJdbcDriver2 {
+  @ClassRule
+  public static HiveTestEnvSetup ENVIRONMENT = new HiveTestEnvSetup.Builder().build();
+
+  @Rule
+  public TestRule methodRule = ENVIRONMENT.getMethodRule();
+
   private static final Logger LOG = LoggerFactory.getLogger(TestJdbcDriver2.class);
   private static final String driverName = "org.apache.hive.jdbc.HiveDriver";
   private static final String testDbName = "testjdbcdriver";
@@ -132,7 +141,10 @@ public class TestJdbcDriver2 {
 
   private static Connection getConnection(String postfix) throws SQLException {
     Connection con1;
-    con1 = DriverManager.getConnection("jdbc:hive2:///" + postfix, "", "");
+    String connString = "jdbc:hive2:///" + postfix + "?" + ENVIRONMENT.getTestCtx().getConfAsQueryString();
+    LOG.info("Connection string: {}",connString);
+    con1 = DriverManager
+        .getConnection(connString, "", "");
     assertNotNull("Connection is null", con1);
     assertFalse("Connection should not be closed", con1.isClosed());
     return con1;
@@ -193,10 +205,9 @@ public class TestJdbcDriver2 {
   @SuppressWarnings("deprecation")
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf = new HiveConf(TestJdbcDriver2.class);
-    HiveConf initConf = new HiveConf(conf);
-    TestTxnDbUtil.setConfValues(initConf);
-    TestTxnDbUtil.prepDb(initConf);
+    conf = new HiveConf(ENVIRONMENT.getTestCtx().hiveConf);
+    TestTxnDbUtil.setConfValues(conf);
+    TestTxnDbUtil.prepDb(conf);
     dataFileDir = conf.get("test.data.files").replace('\\', '/')
         .replace("c:", "");
     dataFilePath = new Path(dataFileDir, "kv1.txt");
@@ -211,6 +222,7 @@ public class TestJdbcDriver2 {
     System.setProperty(ConfVars.HIVE_SERVER2_PARALLEL_OPS_IN_SESSION.varname, "false");
     System.setProperty(ConfVars.REPL_CM_ENABLED.varname, "true");
     System.setProperty(ConfVars.REPL_CM_DIR.varname, "cmroot");
+
     con = getConnection(defaultDbName + ";create=true");
     Statement stmt = con.createStatement();
     assertNotNull("Statement is null", stmt);
@@ -224,7 +236,7 @@ public class TestJdbcDriver2 {
 
 
   @Test
-  public void testExceucteUpdateCounts() throws Exception {
+  public void testExecuteUpdateCounts() throws Exception {
     Statement stmt =  con.createStatement();
     stmt.execute("set " + ConfVars.HIVE_SUPPORT_CONCURRENCY.varname + "=true");
     stmt.execute("set " + ConfVars.HIVE_TXN_MANAGER.varname +
@@ -255,16 +267,16 @@ public class TestJdbcDriver2 {
   }
 
   @Test
-  public void testExceucteMergeCounts() throws Exception {
-    testExceucteMergeCounts(true);
+  public void testExecuteMergeCounts() throws Exception {
+    testExecuteMergeCounts(true);
   }
 
   @Test
-  public void testExceucteMergeCountsNoSplitUpdate() throws Exception {
-    testExceucteMergeCounts(false);
+  public void testExecuteMergeCountsNoSplitUpdate() throws Exception {
+    testExecuteMergeCounts(false);
   }
 
-  private void testExceucteMergeCounts(boolean splitUpdateEarly) throws Exception {
+  private void testExecuteMergeCounts(boolean splitUpdateEarly) throws Exception {
 
     Statement stmt =  con.createStatement();
     stmt.execute("set " + ConfVars.SPLIT_UPDATE.varname + "=" + splitUpdateEarly);

@@ -1733,6 +1733,7 @@ public class Hive {
         request.setValidWriteIdList(validWriteIdList != null ? validWriteIdList.toString() : null);
       }
       tTable = getMSC().getTable(request);
+      LOG.info("METASTORE_DEBUG: table retrieved: {}, trace: {}", tpart, new RuntimeException("METASTORE_DEBUG"));
     } catch (NoSuchObjectException e) {
       if (throwException) {
         throw new InvalidTableException(tableName);
@@ -3693,6 +3694,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
       String userName = getUserName();
       tpart = getSynchronizedMSC().getPartitionWithAuthInfo(tbl.getDbName(),
           tbl.getTableName(), pvals, userName, getGroupNames());
+      LOG.info("METASTORE_DEBUG: partition retrieved: {}, trace: {}", tpart, new RuntimeException("METASTORE_DEBUG"));
     } catch (NoSuchObjectException nsoe) {
       // this means no partition exists for the given partition
       // key value pairs - thrift cannot handle null return values, hence
@@ -3715,6 +3717,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
             tpart = getSynchronizedMSC().getPartitionWithAuthInfo(tbl.getDbName(),
               tbl.getTableName(), pvals, userName, getGroupNames());
             alterPartitionSpec(tbl, partSpec, tpart, inheritTableSpecs, partPath);
+            LOG.info("METASTORE_DEBUG: partition retrieved: {}, trace: {}", tpart, new RuntimeException("METASTORE_DEBUG"));
           } catch (Exception e) {
             if (CheckJDOException.isJDODataStoreException(e)) {
               // Using utility method above, so that JDODataStoreException doesn't
@@ -3724,6 +3727,7 @@ private void constructOneLBLocationMap(FileStatus fSta,
               String userName = getUserName();
               tpart = getSynchronizedMSC().getPartitionWithAuthInfo(tbl.getDbName(),
                 tbl.getTableName(), pvals, userName, getGroupNames());
+              LOG.info("METASTORE_DEBUG: partition retrieved: {}, trace: {}", tpart, new RuntimeException("METASTORE_DEBUG"));
               if (tpart == null) {
                 // This means the exception was caused by something other than a race condition
                 // in creating the partition, since the partition still doesn't exist.

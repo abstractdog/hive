@@ -1,0 +1,666 @@
+PREHOOK: query: create external table test_parquet (a string, b string) partitioned by (pt string) STORED AS PARQUET
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@test_parquet
+POSTHOOK: query: create external table test_parquet (a string, b string) partitioned by (pt string) STORED AS PARQUET
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@test_parquet
+PREHOOK: query: insert into test_parquet PARTITION(pt='1111') values ("aaaa","bbbb")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_parquet@pt=1111
+POSTHOOK: query: insert into test_parquet PARTITION(pt='1111') values ("aaaa","bbbb")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_parquet@pt=1111
+POSTHOOK: Lineage: test_parquet PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_parquet PARTITION(pt=1111).b SCRIPT []
+PREHOOK: query: alter table test_parquet add columns (c string)
+PREHOOK: type: ALTERTABLE_ADDCOLS
+PREHOOK: Input: default@test_parquet
+PREHOOK: Output: default@test_parquet
+POSTHOOK: query: alter table test_parquet add columns (c string)
+POSTHOOK: type: ALTERTABLE_ADDCOLS
+POSTHOOK: Input: default@test_parquet
+POSTHOOK: Output: default@test_parquet
+PREHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on table should return all columns, including the newly added c: a,b,c
+PREHOOK: query: desc formatted test_parquet
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_parquet
+POSTHOOK: query: desc formatted test_parquet
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_parquet
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+c                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+#### A masked pattern was here ####
+Retention:          	0                   	 
+#### A masked pattern was here ####
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
+	EXTERNAL            	TRUE                
+	bucketing_version   	2                   
+#### A masked pattern was here ####
+	numFiles            	1                   
+	numPartitions       	1                   
+	numRows             	1                   
+	rawDataSize         	74                  
+	totalSize           	596                 
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+PREHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on partition should return only original columns: a,b
+PREHOOK: query: desc formatted test_parquet PARTITION(pt='1111')
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_parquet
+POSTHOOK: query: desc formatted test_parquet PARTITION(pt='1111')
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_parquet
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[1111]              	 
+Database:           	default             	 
+Table:              	test_parquet        	 
+#### A masked pattern was here ####
+Partition Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"a\":\"true\",\"b\":\"true\"}}
+	numFiles            	1                   
+	numRows             	1                   
+	rawDataSize         	74                  
+	totalSize           	596                 
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+PREHOOK: query: select * from test_parquet
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_parquet
+PREHOOK: Input: default@test_parquet@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_parquet
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_parquet
+POSTHOOK: Input: default@test_parquet@pt=1111
+#### A masked pattern was here ####
+aaaa	bbbb	NULL	1111
+PREHOOK: query: insert overwrite table test_parquet PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_parquet@pt=1111
+POSTHOOK: query: insert overwrite table test_parquet PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_parquet@pt=1111
+POSTHOOK: Lineage: test_parquet PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_parquet PARTITION(pt=1111).b SCRIPT []
+POSTHOOK: Lineage: test_parquet PARTITION(pt=1111).c SCRIPT []
+PREHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword
+PREHOOK: query: select * from test_parquet
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_parquet
+PREHOOK: Input: default@test_parquet@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_parquet
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_parquet
+POSTHOOK: Input: default@test_parquet@pt=1111
+#### A masked pattern was here ####
+aaa	bbb	NULL	1111
+PREHOOK: query: create external table test_orc (a string, b string) partitioned by (pt string) STORED AS ORC
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@test_orc
+POSTHOOK: query: create external table test_orc (a string, b string) partitioned by (pt string) STORED AS ORC
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@test_orc
+PREHOOK: query: insert into test_orc PARTITION(pt='1111') values ("aaaa","bbbb")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_orc@pt=1111
+POSTHOOK: query: insert into test_orc PARTITION(pt='1111') values ("aaaa","bbbb")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_orc@pt=1111
+POSTHOOK: Lineage: test_orc PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_orc PARTITION(pt=1111).b SCRIPT []
+PREHOOK: query: alter table test_orc add columns (c string)
+PREHOOK: type: ALTERTABLE_ADDCOLS
+PREHOOK: Input: default@test_orc
+PREHOOK: Output: default@test_orc
+POSTHOOK: query: alter table test_orc add columns (c string)
+POSTHOOK: type: ALTERTABLE_ADDCOLS
+POSTHOOK: Input: default@test_orc
+POSTHOOK: Output: default@test_orc
+PREHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on table should return all columns, including the newly added c: a,b,c
+PREHOOK: query: desc formatted test_orc
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_orc
+POSTHOOK: query: desc formatted test_orc
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_orc
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+c                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+#### A masked pattern was here ####
+Retention:          	0                   	 
+#### A masked pattern was here ####
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
+	EXTERNAL            	TRUE                
+	bucketing_version   	2                   
+#### A masked pattern was here ####
+	numFiles            	1                   
+	numPartitions       	1                   
+	numRows             	1                   
+	rawDataSize         	176                 
+	totalSize           	299                 
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.orc.OrcSerde	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.orc.OrcInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+PREHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on partition should return only original columns: a,b
+PREHOOK: query: desc formatted test_orc PARTITION(pt='1111')
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_orc
+POSTHOOK: query: desc formatted test_orc PARTITION(pt='1111')
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_orc
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[1111]              	 
+Database:           	default             	 
+Table:              	test_orc            	 
+#### A masked pattern was here ####
+Partition Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"a\":\"true\",\"b\":\"true\"}}
+	numFiles            	1                   
+	numRows             	1                   
+	rawDataSize         	176                 
+	totalSize           	299                 
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.ql.io.orc.OrcSerde	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.orc.OrcInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+PREHOOK: query: select * from test_orc
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_orc
+PREHOOK: Input: default@test_orc@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_orc
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_orc
+POSTHOOK: Input: default@test_orc@pt=1111
+#### A masked pattern was here ####
+aaaa	bbbb	NULL	1111
+PREHOOK: query: insert overwrite table test_orc PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_orc@pt=1111
+POSTHOOK: query: insert overwrite table test_orc PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_orc@pt=1111
+POSTHOOK: Lineage: test_orc PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_orc PARTITION(pt=1111).b SCRIPT []
+POSTHOOK: Lineage: test_orc PARTITION(pt=1111).c SCRIPT []
+PREHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword
+PREHOOK: query: select * from test_orc
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_orc
+PREHOOK: Input: default@test_orc@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_orc
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_orc
+POSTHOOK: Input: default@test_orc@pt=1111
+#### A masked pattern was here ####
+aaa	bbb	ccc	1111
+PREHOOK: query: create external table test_avro (a string, b string) partitioned by (pt string) STORED AS AVRO
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@test_avro
+POSTHOOK: query: create external table test_avro (a string, b string) partitioned by (pt string) STORED AS AVRO
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@test_avro
+PREHOOK: query: insert into test_avro PARTITION(pt='1111') values ("aaaa","bbbb")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_avro@pt=1111
+POSTHOOK: query: insert into test_avro PARTITION(pt='1111') values ("aaaa","bbbb")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_avro@pt=1111
+POSTHOOK: Lineage: test_avro PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_avro PARTITION(pt=1111).b SCRIPT []
+PREHOOK: query: alter table test_avro add columns (c string)
+PREHOOK: type: ALTERTABLE_ADDCOLS
+PREHOOK: Input: default@test_avro
+PREHOOK: Output: default@test_avro
+POSTHOOK: query: alter table test_avro add columns (c string)
+POSTHOOK: type: ALTERTABLE_ADDCOLS
+POSTHOOK: Input: default@test_avro
+POSTHOOK: Output: default@test_avro
+PREHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on table should return all columns, including the newly added c: a,b,c
+PREHOOK: query: desc formatted test_avro
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_avro
+POSTHOOK: query: desc formatted test_avro
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_avro
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+c                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+#### A masked pattern was here ####
+Retention:          	0                   	 
+#### A masked pattern was here ####
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
+	EXTERNAL            	TRUE                
+	bucketing_version   	2                   
+#### A masked pattern was here ####
+	numFiles            	1                   
+	numPartitions       	1                   
+	numRows             	1                   
+	rawDataSize         	0                   
+	totalSize           	328                 
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.avro.AvroSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+PREHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on partition should return only original columns: a,b
+PREHOOK: query: desc formatted test_avro PARTITION(pt='1111')
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_avro
+POSTHOOK: query: desc formatted test_avro PARTITION(pt='1111')
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_avro
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[1111]              	 
+Database:           	default             	 
+Table:              	test_avro           	 
+#### A masked pattern was here ####
+Partition Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"a\":\"true\",\"b\":\"true\"}}
+	numFiles            	1                   
+	numRows             	1                   
+	rawDataSize         	0                   
+	totalSize           	328                 
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.avro.AvroSerDe	 
+InputFormat:        	org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   
+PREHOOK: query: select * from test_avro
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_avro
+PREHOOK: Input: default@test_avro@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_avro
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_avro
+POSTHOOK: Input: default@test_avro@pt=1111
+#### A masked pattern was here ####
+aaaa	bbbb	NULL	1111
+PREHOOK: query: insert overwrite table test_avro PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_avro@pt=1111
+POSTHOOK: query: insert overwrite table test_avro PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_avro@pt=1111
+POSTHOOK: Lineage: test_avro PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_avro PARTITION(pt=1111).b SCRIPT []
+POSTHOOK: Lineage: test_avro PARTITION(pt=1111).c SCRIPT []
+PREHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword
+PREHOOK: query: select * from test_avro
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_avro
+PREHOOK: Input: default@test_avro@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_avro
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_avro
+POSTHOOK: Input: default@test_avro@pt=1111
+#### A masked pattern was here ####
+aaa	bbb	NULL	1111
+PREHOOK: query: create external table test_text (a string, b string) partitioned by (pt string) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@test_text
+POSTHOOK: query: create external table test_text (a string, b string) partitioned by (pt string) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@test_text
+PREHOOK: query: insert into test_text PARTITION(pt='1111') values ("aaaa","bbbb")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_text@pt=1111
+POSTHOOK: query: insert into test_text PARTITION(pt='1111') values ("aaaa","bbbb")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_text@pt=1111
+POSTHOOK: Lineage: test_text PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_text PARTITION(pt=1111).b SCRIPT []
+PREHOOK: query: alter table test_text add columns (c string)
+PREHOOK: type: ALTERTABLE_ADDCOLS
+PREHOOK: Input: default@test_text
+PREHOOK: Output: default@test_text
+POSTHOOK: query: alter table test_text add columns (c string)
+POSTHOOK: type: ALTERTABLE_ADDCOLS
+POSTHOOK: Input: default@test_text
+POSTHOOK: Output: default@test_text
+PREHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on table should return all columns, including the newly added c: a,b,c"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on table should return all columns, including the newly added c: a,b,c
+PREHOOK: query: desc formatted test_text
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_text
+POSTHOOK: query: desc formatted test_text
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_text
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+c                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Table Information	 	 
+Database:           	default             	 
+#### A masked pattern was here ####
+Retention:          	0                   	 
+#### A masked pattern was here ####
+Table Type:         	EXTERNAL_TABLE      	 
+Table Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\"}
+	EXTERNAL            	TRUE                
+	bucketing_version   	2                   
+#### A masked pattern was here ####
+	numFiles            	1                   
+	numPartitions       	1                   
+	numRows             	1                   
+	rawDataSize         	9                   
+	totalSize           	10                  
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	\t                  
+	serialization.format	\t                  
+PREHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "describe formatted on partition should return only original columns: a,b"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+describe formatted on partition should return only original columns: a,b
+PREHOOK: query: desc formatted test_text PARTITION(pt='1111')
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@test_text
+POSTHOOK: query: desc formatted test_text PARTITION(pt='1111')
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@test_text
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+pt                  	string              	                    
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[1111]              	 
+Database:           	default             	 
+Table:              	test_text           	 
+#### A masked pattern was here ####
+Partition Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"a\":\"true\",\"b\":\"true\"}}
+	numFiles            	1                   
+	numRows             	1                   
+	rawDataSize         	9                   
+	totalSize           	10                  
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	\t                  
+	serialization.format	\t                  
+PREHOOK: query: select * from test_text
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_text
+PREHOOK: Input: default@test_text@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_text
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_text
+POSTHOOK: Input: default@test_text@pt=1111
+#### A masked pattern was here ####
+aaaa	bbbb	NULL	1111
+PREHOOK: query: insert overwrite table test_text PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@test_text@pt=1111
+POSTHOOK: query: insert overwrite table test_text PARTITION(pt='1111') values ("aaa", "bbb", "ccc")
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@test_text@pt=1111
+POSTHOOK: Lineage: test_text PARTITION(pt=1111).a SCRIPT []
+POSTHOOK: Lineage: test_text PARTITION(pt=1111).b SCRIPT []
+POSTHOOK: Lineage: test_text PARTITION(pt=1111).c SCRIPT []
+PREHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+POSTHOOK: query: SELECT "select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword"
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+#### A masked pattern was here ####
+select should return aaa bbb NULL 1111, as the partition schema didn't change in the absence of CASCADE keyword
+PREHOOK: query: select * from test_text
+PREHOOK: type: QUERY
+PREHOOK: Input: default@test_text
+PREHOOK: Input: default@test_text@pt=1111
+#### A masked pattern was here ####
+POSTHOOK: query: select * from test_text
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@test_text
+POSTHOOK: Input: default@test_text@pt=1111
+#### A masked pattern was here ####
+aaa	bbb	NULL	1111

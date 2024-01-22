@@ -81,38 +81,42 @@ public class AvroSerDe extends AbstractSerDe {
    @Override
   public void initialize(Configuration configuration, Properties tableProperties, Properties partitionProperties)
       throws SerDeException {
-    /*
-     * Avro should always use the table properties for initialization (see
-     * HIVE-6835). The tableProperties is modified directly by this SerDe when
-     * the user supplies a schema file so do not make a copy.
-     */
-    super.initialize(configuration, tableProperties, null);
+    // Avro should use the table properties for initialization (see HIVE-6835),
+    // in case the partition schema is an external one, otherwise it should be the one
+    // stored in metastore (so if caller provides partition specific one, it will be chosen
+    boolean usePartitionProperties = partitionProperties != null && !hasExternalSchema(tableProperties);
+    Properties properties = usePartitionProperties ? partitionProperties : tableProperties;
+    super.initialize(configuration, tableProperties, properties);
 
+    initialize(configuration, properties);
+  }
+
+  private void initialize(Configuration configuration, Properties properties) {
     // Reset member variables so we don't get in a half-constructed state
     if (schema != null) {
       LOG.debug("Resetting already initialized AvroSerDe");
     }
 
     LOG.debug("AvroSerde::initialize(): Preset value of avro.schema.literal == "
-        + tableProperties.get(AvroSerdeUtils.AvroTableProperties.SCHEMA_LITERAL.getPropName()));
+        + properties.get(AvroSerdeUtils.AvroTableProperties.SCHEMA_LITERAL.getPropName()));
 
     schema = null;
     oi = null;
     columnNames = null;
     columnTypes = null;
 
-    final String columnNameProperty = tableProperties.getProperty(serdeConstants.LIST_COLUMNS);
-    final String columnTypeProperty = tableProperties.getProperty(serdeConstants.LIST_COLUMN_TYPES);
-    final String columnCommentProperty = tableProperties.getProperty(LIST_COLUMN_COMMENTS, "");
-    final String columnNameDelimiter = tableProperties.containsKey(serdeConstants.COLUMN_NAME_DELIMITER)
-        ? tableProperties.getProperty(serdeConstants.COLUMN_NAME_DELIMITER)
+    final String columnNameProperty = properties.getProperty(serdeConstants.LIST_COLUMNS);
+    final String columnTypeProperty = properties.getProperty(serdeConstants.LIST_COLUMN_TYPES);
+    final String columnCommentProperty = properties.getProperty(LIST_COLUMN_COMMENTS, "");
+    final String columnNameDelimiter = properties.containsKey(serdeConstants.COLUMN_NAME_DELIMITER)
+        ? properties.getProperty(serdeConstants.COLUMN_NAME_DELIMITER)
         : String.valueOf(SerDeUtils.COMMA);
 
     boolean gotColTypesFromColProps = true;
-    if (hasExternalSchema(tableProperties)
+    if (hasExternalSchema(properties)
         || columnNameProperty == null || columnNameProperty.isEmpty()
         || columnTypeProperty == null || columnTypeProperty.isEmpty()) {
-      schema = determineSchemaOrReturnErrorSchema(configuration, tableProperties);
+      schema = determineSchemaOrReturnErrorSchema(configuration, properties);
       gotColTypesFromColProps = false;
     } else {
       // Get column names and sort order
@@ -120,10 +124,10 @@ public class AvroSerDe extends AbstractSerDe {
           Arrays.asList(columnNameProperty.split(columnNameDelimiter)));
       columnTypes = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
 
-      schema = getSchemaFromCols(tableProperties, columnNames, columnTypes, columnCommentProperty);
+      schema = getSchemaFromCols(properties, columnNames, columnTypes, columnCommentProperty);
     }
 
-    tableProperties.setProperty(AvroSerdeUtils.AvroTableProperties.SCHEMA_LITERAL.getPropName(), schema.toString());
+    properties.setProperty(AvroSerdeUtils.AvroTableProperties.SCHEMA_LITERAL.getPropName(), schema.toString());
 
     LOG.debug("Avro schema is: {}", schema);
 
@@ -144,8 +148,8 @@ public class AvroSerDe extends AbstractSerDe {
     // these properties may be used
     if (!gotColTypesFromColProps) {
       LOG.info("Updating column name/type properties based on current schema");
-      tableProperties.setProperty(serdeConstants.LIST_COLUMNS, String.join(",", columnNames));
-      tableProperties.setProperty(serdeConstants.LIST_COLUMN_TYPES, String.join(",", TypeInfoUtils.getTypeStringsFromTypeInfo(columnTypes)));
+      properties.setProperty(serdeConstants.LIST_COLUMNS, String.join(",", columnNames));
+      properties.setProperty(serdeConstants.LIST_COLUMN_TYPES, String.join(",", TypeInfoUtils.getTypeStringsFromTypeInfo(columnTypes)));
     }
 
     if (badSchema) {

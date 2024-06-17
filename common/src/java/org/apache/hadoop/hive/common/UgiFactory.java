@@ -15,8 +15,11 @@
 package org.apache.hadoop.hive.common;
 
 import java.io.IOException;
+
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public interface UgiFactory {
-  UserGroupInformation createUgi() throws IOException;
+  UserGroupInformation createUgi(String queryIdentifier, String vertexUser, Credentials credentials) throws IOException;
+  void closeAllFileSystemsForDag(String queryIdentifier);
 }

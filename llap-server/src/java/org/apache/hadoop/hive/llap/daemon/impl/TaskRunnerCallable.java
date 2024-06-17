@@ -226,10 +226,6 @@ public class TaskRunnerCallable extends CallableWithNdc<TaskRunner2Result> {
 
       // TODO Consolidate this code with TezChild.
       runtimeWatch.start();
-      if (fsTaskUgi == null) {
-        fsTaskUgi = UserGroupInformation.createRemoteUser(vertex.getUser());
-      }
-      fsTaskUgi.addCredentials(credentials);
 
       Map<String, ByteBuffer> serviceConsumerMetadata = new HashMap<>();
       serviceConsumerMetadata.put(TezConstants.TEZ_SHUFFLE_HANDLER_SERVICE_ID,

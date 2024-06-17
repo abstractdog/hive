@@ -127,6 +127,7 @@ public class LlapDaemon extends CompositeService implements ContainerRunner, Lla
   private final DaemonId daemonId;
   private final SocketFactory socketFactory;
   private final LlapTokenManager llapTokenManager;
+  private final UgiFactory fsUgiFactory;
 
   // TODO Not the best way to share the address
   private final AtomicReference<InetSocketAddress> srvAddress = new AtomicReference<>(),
@@ -336,7 +337,6 @@ public class LlapDaemon extends CompositeService implements ContainerRunner, Lla
     this.server = new LlapProtocolServerImpl(secretManager, numHandlers, this, srvAddress, mngAddress, srvPort,
         externalClientsRpcPort, mngPort, daemonId, metrics).withTokenManager(this.llapTokenManager);
 
-    UgiFactory fsUgiFactory = null;
     try {
       fsUgiFactory = LlapUgiFactoryFactory.createFsUgiFactory(daemonConf);
     } catch (IOException e) {

@@ -38,6 +38,7 @@ class QueryExecutionBreakdownSummary implements PrintSummary {
   private final Long dagSubmitStartTime;
   private final Long submitToRunningDuration;
   private final Long getSessionDuration;
+  private final Long moveFilesDuration;
 
   QueryExecutionBreakdownSummary(PerfLogger perfLogger) {
     this.perfLogger = perfLogger;
@@ -45,6 +46,7 @@ class QueryExecutionBreakdownSummary implements PrintSummary {
     this.dagSubmitStartTime = perfLogger.getStartTime(PerfLogger.TEZ_SUBMIT_DAG);
     this.submitToRunningDuration = perfLogger.getDuration(PerfLogger.TEZ_SUBMIT_TO_RUNNING);
     this.getSessionDuration = perfLogger.getDuration(PerfLogger.TEZ_GET_SESSION);
+    this.moveFilesDuration = perfLogger.getDuration(PerfLogger.FILE_MOVES);
   }
 
   private String formatNumber(long number) {
@@ -88,7 +90,9 @@ class QueryExecutionBreakdownSummary implements PrintSummary {
       startToEnd = perfLogger.getEndTime(PerfLogger.TEZ_RUN_DAG) -
           perfLogger.getEndTime(PerfLogger.TEZ_SUBMIT_TO_RUNNING);
     }
+
     console.printInfo(format("Run DAG", startToEnd));
+    console.printInfo(format("Moving Files", moveFilesDuration));
     console.printInfo(SEPARATOR);
     console.printInfo("");
   }

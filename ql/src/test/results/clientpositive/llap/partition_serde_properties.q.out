@@ -1,0 +1,111 @@
+PREHOOK: query: create table t (a string, b string) partitioned by (p string) stored as textfile
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@t
+POSTHOOK: query: create table t (a string, b string) partitioned by (p string) stored as textfile
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@t
+PREHOOK: query: alter table t add partition (p="p")
+PREHOOK: type: ALTERTABLE_ADDPARTS
+PREHOOK: Output: default@t
+POSTHOOK: query: alter table t add partition (p="p")
+POSTHOOK: type: ALTERTABLE_ADDPARTS
+POSTHOOK: Output: default@t
+POSTHOOK: Output: default@t@p=p
+PREHOOK: query: alter table t partition (p="p") set serdeproperties('field.delim' = ',')
+PREHOOK: type: ALTERPARTITION_SERDEPROPERTIES
+PREHOOK: Input: default@t
+PREHOOK: Output: default@t@p=p
+POSTHOOK: query: alter table t partition (p="p") set serdeproperties('field.delim' = ',')
+POSTHOOK: type: ALTERPARTITION_SERDEPROPERTIES
+POSTHOOK: Input: default@t
+POSTHOOK: Input: default@t@p=p
+POSTHOOK: Output: default@t@p=p
+PREHOOK: query: describe formatted t partition (p="p")
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@t
+POSTHOOK: query: describe formatted t partition (p="p")
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@t
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+p                   	string              	                    
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[p]                 	 
+Database:           	default             	 
+Table:              	t                   	 
+#### A masked pattern was here ####
+Partition Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"a\":\"true\",\"b\":\"true\"}}
+#### A masked pattern was here ####
+	numFiles            	0                   
+	numRows             	0                   
+	rawDataSize         	0                   
+	totalSize           	#Masked#
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	field.delim         	,                   
+	serialization.format	1                   
+PREHOOK: query: insert into t partition (p="p") values (1, 2)
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@t@p=p
+POSTHOOK: query: insert into t partition (p="p") values (1, 2)
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@t@p=p
+POSTHOOK: Lineage: t PARTITION(p=p).a SCRIPT []
+POSTHOOK: Lineage: t PARTITION(p=p).b SCRIPT []
+PREHOOK: query: describe formatted t partition (p="p")
+PREHOOK: type: DESCTABLE
+PREHOOK: Input: default@t
+POSTHOOK: query: describe formatted t partition (p="p")
+POSTHOOK: type: DESCTABLE
+POSTHOOK: Input: default@t
+# col_name            	data_type           	comment             
+a                   	string              	                    
+b                   	string              	                    
+	 	 
+# Partition Information	 	 
+# col_name            	data_type           	comment             
+p                   	string              	                    
+	 	 
+# Detailed Partition Information	 	 
+Partition Value:    	[p]                 	 
+Database:           	default             	 
+Table:              	t                   	 
+#### A masked pattern was here ####
+Partition Parameters:	 	 
+	COLUMN_STATS_ACCURATE	{\"BASIC_STATS\":\"true\",\"COLUMN_STATS\":{\"a\":\"true\",\"b\":\"true\"}}
+#### A masked pattern was here ####
+	numFiles            	1                   
+	numRows             	1                   
+	rawDataSize         	3                   
+	totalSize           	#Masked#
+#### A masked pattern was here ####
+	 	 
+# Storage Information	 	 
+SerDe Library:      	org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe	 
+InputFormat:        	org.apache.hadoop.mapred.TextInputFormat	 
+OutputFormat:       	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat	 
+Compressed:         	No                  	 
+Num Buckets:        	-1                  	 
+Bucket Columns:     	[]                  	 
+Sort Columns:       	[]                  	 
+Storage Desc Params:	 	 
+	serialization.format	1                   

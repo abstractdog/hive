@@ -56,6 +56,8 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import dev.langchain4j.model.openai.OpenAiChatModel;
+
 import org.apache.hadoop.hive.common.cli.ShellCmdExecutor;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveVariableSource;
@@ -1971,5 +1973,19 @@ public class Commands {
 
   public boolean delimiter(String line) {
     return set("set " + line);
+  }
+
+  public boolean ai(String line) {
+    String prompt = line.substring(3);
+
+    OpenAiChatModel model = OpenAiChatModel.builder()
+        .apiKey(System.getenv("OPENAI_API_KEY"))
+        .modelName("gpt-4o-mini")
+        .build();
+
+    String response = model.chat(prompt);
+
+    beeLine.output(">> " + response);
+    return true;
   }
 }

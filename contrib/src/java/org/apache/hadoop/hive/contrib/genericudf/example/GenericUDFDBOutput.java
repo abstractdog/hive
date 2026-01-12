@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hive.contrib.genericudf.example;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -108,6 +112,13 @@ public class GenericUDFDBOutput extends GenericUDF {
     return PrimitiveObjectInspectorFactory.writableIntObjectInspector;
   }
 
+  private static String getAllThreadStacksAsString() {
+    // dump stack traces with info about locks
+    ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+    ThreadInfo[] infos = bean.dumpAllThreads(true, true);
+    return Arrays.stream(infos).map(Object::toString).collect(Collectors.joining());
+  }
+
   /**
    * @return 0 on success -1 on failure
    */
@@ -125,6 +136,7 @@ public class GenericUDFDBOutput extends GenericUDF {
       connection = DriverManager.getConnection(url, user, pass);
     } catch (SQLException ex) {
       LOG.error("Driver loading or connection issue", ex);
+      LOG.info("Stack traces:\n\n" + getAllThreadStacksAsString());
       result.set(2);
     }
 

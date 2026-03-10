@@ -20,15 +20,17 @@ set -eux
 HIVE_VERSION=
 HADOOP_VERSION=
 TEZ_VERSION=
+BUILD_AM=false
 usage() {
     cat <<EOF 1>&2
-Usage: $0 [-h] [-hadoop <Hadoop version>] [-tez <Tez version>] [-hive <Hive version>] [-repo <Docker repo>]
-Build the Hive Docker image
+Usage: $0 [-h] [-hadoop <Hadoop version>] [-tez <Tez version>] [-hive <Hive version>] [-repo <Docker repo>] [-am]
+Build the Hive Docker image (and optionally the Tez AM image)
 -help                Display help
 -hadoop              Build image with the specified Hadoop version
 -tez                 Build image with the specified Tez version
 -hive                Build image with the specified Hive version
 -repo                Docker repository
+-am                  Additionally build the Tez ApplicationMaster image
 EOF
 }
 
@@ -56,6 +58,10 @@ while [ $# -gt 0 ]; do
     -repo)
       shift
       REPO=$1
+      shift
+      ;;
+    -am)
+      BUILD_AM=true
       shift
       ;;
     *)
@@ -131,4 +137,14 @@ docker build \
         --build-arg "HADOOP_VERSION=$HADOOP_VERSION" \
         --build-arg "TEZ_VERSION=$TEZ_VERSION" \
 
+if [ "$BUILD_AM" = true ]; then
+  cp "$SOURCE_DIR/packaging/src/docker/entrypoint-am.sh" "$WORK_DIR/"
+  cp "$SOURCE_DIR/packaging/src/docker/Dockerfile-am" "$WORK_DIR/"
+  docker build \
+          "$WORK_DIR" \
+          -f "$WORK_DIR/Dockerfile-am" \
+          -t "$repo/hive-tez-am:$TEZ_VERSION" \
+          --build-arg "HADOOP_VERSION=$HADOOP_VERSION" \
+          --build-arg "TEZ_VERSION=$TEZ_VERSION"
+fi
 rm -r "${WORK_DIR}"

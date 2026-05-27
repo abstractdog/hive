@@ -183,6 +183,7 @@ public class TestTezTask {
     when(session.submitDAG(any(DAG.class)))
       .thenThrow(new SessionNotRunning(""))
       .thenReturn(mock(DAGClient.class));
+    throw new RuntimeException("this will fail");
   }
 
   @After

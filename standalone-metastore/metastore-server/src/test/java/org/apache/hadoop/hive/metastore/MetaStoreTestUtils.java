@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.metastore.utils.ThreadDumpUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -256,7 +257,7 @@ public class MetaStoreTestUtils {
     // print the stack from all threads for debugging purposes
     LOG.error("Unable to connect to metastore server: " + exc.getMessage());
     LOG.info("Printing all thread stack traces for debugging before throwing exception.");
-    LOG.info(MetaStoreTestUtils.getAllThreadStacksAsString());
+    LOG.info(ThreadDumpUtils.getAllThreadStacksAsString());
     throw exc;
   }
 
@@ -295,24 +296,6 @@ public class MetaStoreTestUtils {
   }
 
 
-  private static String getAllThreadStacksAsString() {
-    Map<Thread, StackTraceElement[]> threadStacks = Thread.getAllStackTraces();
-    StringBuilder sb = new StringBuilder();
-    for (Map.Entry<Thread, StackTraceElement[]> entry : threadStacks.entrySet()) {
-      Thread t = entry.getKey();
-      sb.append(System.lineSeparator());
-      sb.append("Name: ").append(t.getName()).append(" State: ").append(t.getState());
-      MetaStoreTestUtils.addStackString(entry.getValue(), sb);
-    }
-    return sb.toString();
-  }
-
-  private static void addStackString(StackTraceElement[] stackElems, StringBuilder sb) {
-    sb.append(System.lineSeparator());
-    for (StackTraceElement stackElem : stackElems) {
-      sb.append(stackElem).append(System.lineSeparator());
-    }
-  }
 
   /**
    * Finds a free port on the machine.

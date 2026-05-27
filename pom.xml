@@ -1868,7 +1868,14 @@
           <additionalClasspathElements>
             <additionalClasspathElement>${test.conf.dir}</additionalClasspathElement>
             <additionalClasspathElement>${basedir}/${hive.path.to.root}/conf</additionalClasspathElement>
+            <additionalClasspathElement>${basedir}/${hive.path.to.root}/testutils/target/hive-testutils-${project.version}.jar</additionalClasspathElement>
           </additionalClasspathElements>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hive.testutils.junit.extensions.ThreadDumpOnFailureRunListener</value>
+            </property>
+          </properties>
           <environmentVariables>
             <HIVE_CLUSTER_ID>hive-test-cluster-id-env</HIVE_CLUSTER_ID>
             <TZ>US/Pacific</TZ>

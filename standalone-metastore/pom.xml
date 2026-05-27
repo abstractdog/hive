@@ -695,6 +695,15 @@
             <argLine>${maven.test.jvm.args}</argLine>
             <enableOutErrElements>false</enableOutErrElements>
             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+            <additionalClasspathElements>
+              <additionalClasspathElement>${basedir}/${standalone.metastore.path.to.root}/../testutils/target/hive-testutils-${hive.version}.jar</additionalClasspathElement>
+            </additionalClasspathElements>
+            <properties>
+              <property>
+                <name>listener</name>
+                <value>org.apache.hive.testutils.junit.extensions.ThreadDumpOnFailureRunListener</value>
+              </property>
+            </properties>
           </configuration>
         </plugin>
         <plugin>

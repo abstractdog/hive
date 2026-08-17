@@ -119,6 +119,11 @@ services:
         -Dhive.execution.mode=${HIVE_EXECUTION_MODE:-container}
         -Dhive.zookeeper.quorum=${HIVE_ZOOKEEPER_QUORUM:-}
         -Dhive.llap.daemon.service.hosts=${HIVE_LLAP_DAEMON_SERVICE_HOSTS:-}
+
+        -Xlog:class+load=info:file=/opt/hive/diag/hs2-classload.log:time,uptime:filecount=0
+        -Xlog:cds=info:file=/opt/hive/diag/hs2-cds.log:time,uptime:filecount=0
+        -Xlog:startuptime:file=/opt/hive/diag/hs2-startup.log:time,uptime:filecount=0
+        -XX:StartFlightRecording=duration=120s,filename=/opt/hive/diag/hs2.jfr,settings=profile,+jdk.ClassLoad#enabled=true,+jdk.ClassLoad#threshold=0ms,+jdk.ClassDefine#enabled=true
       IS_RESUME: 'true'
       SERVICE_NAME: 'hiveserver2'
 
@@ -136,6 +141,8 @@ services:
         target: /opt/hive/lib/postgres.jar
       # Mount local jars to a temporary staging area (Read-Only)
       - ./jars:/tmp/ext-jars:ro
+      # JVM diagnostics output (class loading, CDS, startup timing, JFR)
+      - ./diag:/opt/hive/diag
     networks:
       - hive
     healthcheck:

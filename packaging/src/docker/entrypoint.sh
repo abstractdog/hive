@@ -78,6 +78,18 @@ function initialize_hive {
   fi
 }
 
+# jline's FFM terminal provider calls restricted java.lang.foreign methods, which
+# warn on Java 25 and are blocked outright in a future release unless native
+# access is granted explicitly.
+# Note: -Djava.security.manager=allow must NOT be added here.  Java 25 rejects it
+# with "Enabling a Security Manager is not supported" and refuses to start the VM.
+# Hadoop's UserGroupInformation needs no such flag from Hadoop 3.4.3 onwards,
+# where SubjectUtil.current()/doAs() replaced the Subject.getSubject() call that
+# JEP 486 made unconditionally throw.
+JDK_OPTS=(
+  "--enable-native-access=ALL-UNNAMED"
+)
+
 function append_java_opens {
   local -n _opts=$1
   local opens=(
@@ -93,6 +105,7 @@ function append_java_opens {
     "--add-opens=java.sql/java.sql=ALL-UNNAMED"
     "--add-opens=java.base/java.text=ALL-UNNAMED"
     "-Dnet.bytebuddy.experimental=true"
+    "${JDK_OPTS[@]}"
   )
   for opt in "${opens[@]}"; do
     if [[ " ${_opts} " != *" ${opt} "* ]]; then
@@ -181,7 +194,7 @@ if [ -d "${HIVE_CUSTOM_CONF_DIR:-}" ]; then
 fi
 
 # default heap first so user-provided -Xmx wins (last one applies)
-export HADOOP_CLIENT_OPTS="-Xmx1G ${HADOOP_CLIENT_OPTS:-} ${SERVICE_OPTS:-}"
+export HADOOP_CLIENT_OPTS="-Xmx1G ${JDK_OPTS[*]} ${HADOOP_CLIENT_OPTS:-} ${SERVICE_OPTS:-}"
 if [[ "${SKIP_SCHEMA_INIT}" == "false" && ( "${SERVICE_NAME}" == "hiveserver2" || "${SERVICE_NAME}" == "metastore" ) ]]; then
   # handles schema initialization
   initialize_hive

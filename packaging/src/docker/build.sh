@@ -21,15 +21,19 @@ HIVE_VERSION=
 HADOOP_VERSION=
 TEZ_VERSION=
 TEZ_SNAPSHOT_VERSION=
+AWS_SDK_VERSION=
+SKIP_AWS_SDK=false
 usage() {
     cat <<EOF 1>&2
-Usage: $0 [-h] [-hadoop <Hadoop version>] -tez <Tez release version> [-tez-snapshot [<Maven snapshot version>]] [-hive <Hive version>] [-repo <Docker repo>]
+Usage: $0 [-h] [-hadoop <Hadoop version>] -tez <Tez release version> [-tez-snapshot [<Maven snapshot version>]] [-hive <Hive version>] [-aws-sdk <AWS SDK version>] [-no-aws-sdk] [-repo <Docker repo>]
 Build the Hive Docker image (reused for LLAP too)
 -help                Display help
 -hadoop              Build image with the specified Hadoop version (default: from Maven pom)
 -tez                 Required. Tez release tarball version (apache-tez-\$TEZ_VERSION-bin.tar.gz from archive)
 -tez-snapshot <ver>  Optional. When a snapshot version is given, fetch Tez Maven snapshot jars into the image. With no version, snapshot prefetch is skipped.
 -hive                Build image with the specified Hive version
+-aws-sdk <ver>       Optional. AWS SDK v2 bundle version for s3a:// support (default: from Maven pom)
+-no-aws-sdk          Optional. Omit the AWS SDK v2 bundle, keeping the image ~650MB smaller. s3a:// paths then fail at runtime.
 -repo                Docker repository
 EOF
 }
@@ -61,6 +65,15 @@ while [ $# -gt 0 ]; do
       shift
       HIVE_VERSION=$1
       shift
+      ;;
+    -aws-sdk)
+      shift
+      AWS_SDK_VERSION=$1
+      shift
+      ;;
+    -no-aws-sdk)
+      shift
+      SKIP_AWS_SDK=true
       ;;
     -repo)
       shift
@@ -108,6 +121,32 @@ if [ ! -f "$CACHE_DIR/$TEZ_FILE_NAME" ]; then
     exit 1
   fi
   mv "$CACHE_DIR/$TEZ_FILE_NAME.tmp" "$CACHE_DIR/$TEZ_FILE_NAME"
+fi
+
+# Hadoop 3.4.3 moved hadoop-aws from share/hadoop/tools/lib (off the default
+# classpath) into share/hadoop/common/lib (on it), but stopped shipping the AWS
+# SDK v2 jar that hadoop-aws links against.  S3AFileSystem therefore always
+# resolves now and always fails to link, so anything touching s3a:// -- including
+# the fs.s3a.* defaults in conf/core-site.xml.template -- dies with
+# NoClassDefFoundError: software/amazon/awssdk/core/exception/SdkException.
+# The bundle is a ~650MB fat jar, hence the -no-aws-sdk opt-out.
+AWS_SDK_DIR="$WORK_DIR/aws-jars"
+mkdir -p "$AWS_SDK_DIR"
+if [ "$SKIP_AWS_SDK" = "false" ]; then
+  AWS_SDK_VERSION=${AWS_SDK_VERSION:-$(mvn -f "$SOURCE_DIR/pom.xml" -q help:evaluate -Dexpression=aws-java-sdk.version -DforceStdout)}
+  AWS_SDK_FILE_NAME="bundle-$AWS_SDK_VERSION.jar"
+  AWS_SDK_URL=${AWS_SDK_URL:-"https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/$AWS_SDK_VERSION/$AWS_SDK_FILE_NAME"}
+  if [ ! -f "$CACHE_DIR/$AWS_SDK_FILE_NAME" ]; then
+    echo "Downloading AWS SDK v2 bundle from $AWS_SDK_URL..."
+    if ! curl --fail -L "$AWS_SDK_URL" -o "$CACHE_DIR/$AWS_SDK_FILE_NAME.tmp"; then
+      echo "Failed to download the AWS SDK v2 bundle, exiting..."
+      exit 1
+    fi
+    mv "$CACHE_DIR/$AWS_SDK_FILE_NAME.tmp" "$CACHE_DIR/$AWS_SDK_FILE_NAME"
+  fi
+  cp "$CACHE_DIR/$AWS_SDK_FILE_NAME" "$AWS_SDK_DIR/"
+else
+  echo "-no-aws-sdk given. Skipping the AWS SDK v2 bundle; s3a:// will not work in this image."
 fi
 
 if [ -n "$HIVE_VERSION" ]; then

@@ -70,7 +70,7 @@ RUN tar -xzv \
       -C /opt; \
     mkdir -p /opt/tez-snapshot;
 
-FROM eclipse-temurin:21-jdk-ubi9-minimal AS run
+FROM eclipse-temurin:25-jdk-ubi10-minimal AS run
 
 ARG UID=1000
 ARG HADOOP_VERSION
@@ -129,6 +129,11 @@ RUN set -eux; \
     fi; \
     rm -rf /opt/tez-snapshot-download
 
+# Hadoop 3.4.3 puts hadoop-aws on the default classpath but no longer ships the
+# AWS SDK v2 bundle it links against, so s3a:// access needs the bundle supplied
+# here.  build.sh stages it under aws-jars, and leaves that directory empty when
+# -no-aws-sdk was passed, which makes this COPY a no-op.
+COPY --chown=hive aws-jars/ $HIVE_HOME/lib/
 
 COPY --chown=hive entrypoint.sh /
 COPY --chown=hive conf $HIVE_HOME/conf

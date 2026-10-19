@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.exec.tez;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorDeserializeRow;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedBatchUtil;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatchCtx;
+import org.apache.hadoop.hive.ql.exec.vector.shuffle.ColumnarShuffleBlock;
 import org.apache.hadoop.hive.ql.log.PerfLogger;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils.ObjectInspectorCopyOption;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -113,6 +116,10 @@ public class ReduceRecordSource implements RecordSource {
 
   // an unordered input has no key groups: its rows share batches across keys
   private boolean unordered;
+  // the input ships columnar blocks (VectorReduceSinkColumnarOperator): the key and value columns of the batch
+  private ColumnVector[] blockColumns;
+  // their types, to which the decoded values are narrowed
+  private TypeInfo[] blockTypes;
 
   private ObjectInspector valueObjectInspector;
 
@@ -186,6 +193,10 @@ public class ReduceRecordSource implements RecordSource {
             valueStructInspectors);
         this.batchContext = batchContext;
         batch = batchContext.createVectorizedRowBatch();
+        if (Boolean.parseBoolean(valueTableDesc.getProperties().getProperty(ColumnarShuffleBlock.INPUT_PROPERTY))) {
+          blockColumns = Arrays.copyOf(batch.cols, totalColumns);
+          blockTypes = Arrays.copyOf(batchContext.getRowColumnTypeInfos(), totalColumns);
+        }
 
         // Setup vectorized deserialization for the key and value.
         BinarySortableSerDe binarySortableSerDe = (BinarySortableSerDe) inputKeySerDe;
@@ -396,6 +407,9 @@ public class ReduceRecordSource implements RecordSource {
 
   private boolean pushRecordVector() {
     try {
+      if (blockColumns != null) {
+        return processColumnarBlock();
+      }
       if (unordered) {
         return processVectorRecords();
       }
@@ -418,6 +432,30 @@ public class ReduceRecordSource implements RecordSource {
         throw new RuntimeException(e);
       }
     }
+  }
+
+  /** Decodes the next block of a columnar input into the key and value columns of the batch and processes it. */
+  private boolean processColumnarBlock() throws HiveException, IOException {
+    if (!reader.next()) {
+      return false;
+    }
+    for (Object value : reader.getCurrentValues()) {
+      BytesWritable block = (BytesWritable) value;
+      // the batch's bytes values reference the block, which the reader reuses: a batch the reducer keeps needs a copy
+      byte[] bytes = block.getBytes();
+      if (reducer.batchNeedsClone()) {
+        batch = batchContext.createVectorizedRowBatch();
+        System.arraycopy(batch.cols, 0, blockColumns, 0, blockColumns.length);
+        bytes = Arrays.copyOf(bytes, block.getLength());
+      }
+      batch.size = ColumnarShuffleBlock.decode(ByteBuffer.wrap(bytes, 0, block.getLength()), blockColumns);
+      ColumnarShuffleBlock.narrow(blockColumns, blockTypes, batch.size);
+      reducer.process(batch, tag);
+      if (!reducer.batchNeedsClone()) {
+        batch.reset();
+      }
+    }
+    return true;
   }
 
   /**

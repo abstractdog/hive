@@ -1,0 +1,133 @@
+PREHOOK: query: create table csn (d double, a int, b int)
+PREHOOK: type: CREATETABLE
+PREHOOK: Output: database:default
+PREHOOK: Output: default@csn
+POSTHOOK: query: create table csn (d double, a int, b int)
+POSTHOOK: type: CREATETABLE
+POSTHOOK: Output: database:default
+POSTHOOK: Output: default@csn
+PREHOOK: query: insert into csn values
+  (0.1, 2147483647, 1), (0.1000000001, -2147483648, 0), (0.1, 2147483647, 1), (0.2, 5, 6), (0.2000000001, 5, 6)
+PREHOOK: type: QUERY
+PREHOOK: Input: _dummy_database@_dummy_table
+PREHOOK: Output: default@csn
+POSTHOOK: query: insert into csn values
+  (0.1, 2147483647, 1), (0.1000000001, -2147483648, 0), (0.1, 2147483647, 1), (0.2, 5, 6), (0.2000000001, 5, 6)
+POSTHOOK: type: QUERY
+POSTHOOK: Input: _dummy_database@_dummy_table
+POSTHOOK: Output: default@csn
+POSTHOOK: Lineage: csn.a SCRIPT []
+POSTHOOK: Lineage: csn.b SCRIPT []
+POSTHOOK: Lineage: csn.d SCRIPT []
+PREHOOK: query: select cast(d as float), count(*) from csn group by cast(d as float) order by 1, 2
+PREHOOK: type: QUERY
+PREHOOK: Input: default@csn
+#### A masked pattern was here ####
+POSTHOOK: query: select cast(d as float), count(*) from csn group by cast(d as float) order by 1, 2
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@csn
+#### A masked pattern was here ####
+0.1	3
+0.2	2
+PREHOOK: query: select a + b, count(*) from csn group by a + b order by 1, 2
+PREHOOK: type: QUERY
+PREHOOK: Input: default@csn
+#### A masked pattern was here ####
+POSTHOOK: query: select a + b, count(*) from csn group by a + b order by 1, 2
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@csn
+#### A masked pattern was here ####
+-2147483648	3
+11	2
+PREHOOK: query: explain vectorization only operator
+select cast(d as float), count(*) from csn group by cast(d as float)
+PREHOOK: type: QUERY
+PREHOOK: Input: default@csn
+#### A masked pattern was here ####
+POSTHOOK: query: explain vectorization only operator
+select cast(d as float), count(*) from csn group by cast(d as float)
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@csn
+#### A masked pattern was here ####
+PLAN VECTORIZATION:
+  enabled: true
+  enabledConditionsMet: [hive.vectorized.execution.enabled IS true]
+
+STAGE DEPENDENCIES:
+  Stage-1 is a root stage
+  Stage-0 depends on stages: Stage-1
+
+STAGE PLANS:
+  Stage: Stage-1
+    Tez
+      Edges:
+        Reducer 2 <- Map 1 (SIMPLE_EDGE)
+      Vertices:
+        Map 1 
+            Map Operator Tree:
+                  TableScan Vectorization:
+                      native: true
+                    Select Vectorization:
+                        className: VectorSelectOperator
+                        native: true
+                      Group By Vectorization:
+                          className: VectorGroupByOperator
+                          groupByMode: HASH
+                          native: false
+                          vectorProcessingMode: HASH
+                        Reduce Sink Vectorization:
+                            className: VectorReduceSinkMultiKeyOperator
+                            native: true
+                            nativeConditionsMet: hive.vectorized.execution.reducesink.new.enabled IS true, hive.execution.engine tez IN [tez] IS true, No PTF TopN IS true, No DISTINCT columns IS true, BinarySortableSerDe for keys IS true, LazyBinarySerDe for values IS true
+            Execution mode: vectorized, llap
+            LLAP IO: all inputs
+            Map Vectorization:
+                enabled: true
+                enabledConditionsMet: hive.vectorized.use.vector.serde.deserialize IS true
+                inputFormatFeatureSupport: [DECIMAL_64]
+                featureSupportInUse: [DECIMAL_64]
+                inputFileFormats: org.apache.hadoop.mapred.TextInputFormat
+                allNative: false
+                usesVectorUDFAdaptor: false
+                vectorized: true
+        Reducer 2 
+            Execution mode: vectorized, llap
+            Reduce Vectorization:
+                enabled: true
+                enableConditionsMet: hive.vectorized.execution.reduce.enabled IS true, hive.execution.engine tez IN [tez] IS true
+                allNative: false
+                usesVectorUDFAdaptor: false
+                vectorized: true
+            Reduce Operator Tree:
+                Group By Vectorization:
+                    className: VectorGroupByOperator
+                    groupByMode: MERGEPARTIAL
+                    native: false
+                    vectorProcessingMode: MERGE_PARTIAL
+                  File Sink Vectorization:
+                      className: VectorFileSinkOperator
+                      native: false
+
+  Stage: Stage-0
+    Fetch Operator
+
+PREHOOK: query: select cast(d as float), count(*) from csn group by cast(d as float) order by 1, 2
+PREHOOK: type: QUERY
+PREHOOK: Input: default@csn
+#### A masked pattern was here ####
+POSTHOOK: query: select cast(d as float), count(*) from csn group by cast(d as float) order by 1, 2
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@csn
+#### A masked pattern was here ####
+0.1	3
+0.2	2
+PREHOOK: query: select a + b, count(*) from csn group by a + b order by 1, 2
+PREHOOK: type: QUERY
+PREHOOK: Input: default@csn
+#### A masked pattern was here ####
+POSTHOOK: query: select a + b, count(*) from csn group by a + b order by 1, 2
+POSTHOOK: type: QUERY
+POSTHOOK: Input: default@csn
+#### A masked pattern was here ####
+-2147483648	3
+11	2

@@ -21,13 +21,24 @@ package org.apache.hadoop.hive.ql.optimizer.physical;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.common.StatsSetupConst;
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.conf.HiveConfForTest;
+import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
+import org.apache.hadoop.hive.ql.Context;
 import org.apache.hadoop.hive.ql.exec.*;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor;
 import org.apache.hadoop.hive.ql.exec.vector.VectorExpressionDescriptor.Mode;
@@ -37,11 +48,17 @@ import org.apache.hadoop.hive.ql.exec.vector.VectorGroupByOperator;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizationContext;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.aggregates.VectorUDAFCountStar;
 import org.apache.hadoop.hive.ql.exec.vector.expressions.aggregates.gen.VectorUDAFSumLong;
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat;
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat;
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.optimizer.physical.Vectorizer.VectorizerCannotVectorizeException;
 import org.apache.hadoop.hive.ql.plan.*;
 import org.apache.hadoop.hive.ql.plan.VectorGroupByDesc.ProcessingMode;
+import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.hadoop.hive.ql.udf.generic.*;
+import org.apache.hadoop.hive.serde.serdeConstants;
+import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.junit.Before;
@@ -286,5 +303,103 @@ public class TestVectorizer {
     Assert.assertArrayEquals(new int[] {-1, 0, 0, 1}, Vectorizer.groupingSetParents(Arrays.asList(0L, 1L, 2L, 3L)));
     // GROUPING SETS ((a, b), (a, c), (a), ()) over a, b, c: two sets no other contains
     Assert.assertArrayEquals(new int[] {-1, -1, 0, 2}, Vectorizer.groupingSetParents(Arrays.asList(1L, 2L, 3L, 7L)));
+  }
+
+  /**
+   * Counts initializations: validating a partition's schema costs the Vectorizer one.
+   */
+  public static class CountingParquetHiveSerDe extends ParquetHiveSerDe {
+    static final AtomicInteger INITIALIZE_COUNT = new AtomicInteger();
+
+    @Override
+    public void initialize(Configuration configuration, Properties tableProperties, Properties partitionProperties)
+        throws SerDeException {
+      INITIALIZE_COUNT.incrementAndGet();
+      super.initialize(configuration, tableProperties, partitionProperties);
+    }
+  }
+
+  private static final String ALIAS = "t";
+
+  @Test
+  public void testPartitionsSharingASchemaAreValidatedOnce() throws Exception {
+    HiveConf conf = new HiveConfForTest(getClass());
+    conf.setBoolVar(HiveConf.ConfVars.HIVE_VECTORIZATION_ENABLED, true);
+    conf.setBoolVar(HiveConf.ConfVars.HIVE_VECTORIZATION_USE_VECTORIZED_INPUT_FILE_FORMAT, true);
+    // LLAP I/O rejects partitions that need type conversion, like the evolved one below
+    conf.set(HiveConf.ConfVars.LLAP_IO_ENABLED.varname, "false");
+    SessionState sessionState = SessionState.start(conf);
+    try {
+      Properties tableProps = new Properties();
+      tableProps.setProperty(serdeConstants.SERIALIZATION_LIB, CountingParquetHiveSerDe.class.getName());
+      tableProps.setProperty(serdeConstants.LIST_COLUMNS, "c1,c2");
+      tableProps.setProperty(serdeConstants.LIST_COLUMN_TYPES, "int:string");
+      tableProps.setProperty(hive_metastoreConstants.META_TABLE_PARTITION_COLUMNS, "p");
+      TableDesc tableDesc = new TableDesc(MapredParquetInputFormat.class, MapredParquetOutputFormat.class, tableProps);
+
+      MapWork mapWork = new MapWork();
+      Map<String, Operator<? extends OperatorDesc>> aliasToWork = new LinkedHashMap<>();
+      aliasToWork.put(ALIAS, createTableScan());
+      mapWork.setAliasToWork(aliasToWork);
+      // three partitions that differ only in location, basic stats and DDL time, then one whose
+      // first column evolved from int to bigint
+      List<PartitionDesc> sameSchema = new ArrayList<>();
+      for (int i = 0; i < 3; i++) {
+        sameSchema.add(addPartition(mapWork, tableDesc, i, "int:string"));
+      }
+      PartitionDesc evolved = addPartition(mapWork, tableDesc, 3, "bigint:string");
+
+      MapredWork mapredWork = new MapredWork();
+      mapredWork.setMapWork(mapWork);
+      List<Task<?>> rootTasks = Collections.singletonList(TaskFactory.get(mapredWork));
+      CountingParquetHiveSerDe.INITIALIZE_COUNT.set(0);
+      new Vectorizer().resolve(new PhysicalContext(conf, null, new Context(conf), rootTasks, null));
+
+      Assert.assertTrue(mapWork.getVectorizationEnabled());
+      Assert.assertEquals("SerDe initializations: one per distinct schema",
+          2, CountingParquetHiveSerDe.INITIALIZE_COUNT.get());
+      VectorPartitionDesc shared = sameSchema.get(0).getVectorPartitionDesc();
+      Assert.assertNotNull(shared);
+      for (PartitionDesc partDesc : sameSchema) {
+        Assert.assertSame(shared, partDesc.getVectorPartitionDesc());
+      }
+      Assert.assertNotNull(evolved.getVectorPartitionDesc());
+      Assert.assertNotSame(shared, evolved.getVectorPartitionDesc());
+      Assert.assertEquals(2, mapWork.getVectorPartitionDescList().size());
+    } finally {
+      sessionState.close();
+    }
+  }
+
+  private static TableScanOperator createTableScan() {
+    TableScanOperator ts =
+        (TableScanOperator) OperatorFactory.get(new CompilationOpContext(), new TableScanDesc(ALIAS, null));
+    ts.setSchema(new RowSchema(Arrays.asList(
+        new ColumnInfo("c1", TypeInfoFactory.intTypeInfo, ALIAS, false),
+        new ColumnInfo("c2", TypeInfoFactory.stringTypeInfo, ALIAS, false),
+        new ColumnInfo("p", TypeInfoFactory.stringTypeInfo, ALIAS, true))));
+    ts.setNeededColumns(Arrays.asList("c1", "c2"));
+    ts.setNeededColumnIDs(Arrays.asList(0, 1));
+    return ts;
+  }
+
+  private static PartitionDesc addPartition(MapWork mapWork, TableDesc tableDesc, int i, String columnTypes) {
+    Path path = new Path("file:///warehouse/t/p=" + i);
+    Properties props = new Properties();
+    props.putAll(tableDesc.getProperties());
+    props.setProperty(serdeConstants.LIST_COLUMN_TYPES, columnTypes);
+    props.setProperty(hive_metastoreConstants.META_TABLE_LOCATION, path.toString());
+    props.setProperty(hive_metastoreConstants.DDL_TIME, String.valueOf(1_700_000_000L + i));
+    props.setProperty(StatsSetupConst.NUM_FILES, String.valueOf(1 + i));
+    props.setProperty(StatsSetupConst.ROW_COUNT, String.valueOf(1000 + i));
+    props.setProperty(StatsSetupConst.TOTAL_SIZE, String.valueOf(50_000 + i));
+    Map<String, String> partSpec = new LinkedHashMap<>();
+    partSpec.put("p", String.valueOf(i));
+    PartitionDesc partDesc = new PartitionDesc(tableDesc, partSpec);
+    partDesc.setInputFileFormatClass(MapredParquetInputFormat.class);
+    partDesc.setProperties(props);
+    mapWork.addPathToAlias(path, ALIAS);
+    mapWork.addPathToPartitionInfo(path, partDesc);
+    return partDesc;
   }
 }

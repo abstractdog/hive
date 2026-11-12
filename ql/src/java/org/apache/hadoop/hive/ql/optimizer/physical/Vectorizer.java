@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Stack;
@@ -63,10 +64,12 @@ import org.apache.hadoop.hive.serde2.lazybinary.LazyBinarySerDe2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.common.type.DataTypePhysicalVariation;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.llap.io.api.LlapProxy;
+import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
 import org.apache.hadoop.hive.ql.exec.*;
 import org.apache.hadoop.hive.ql.exec.mr.MapRedTask;
@@ -1696,6 +1699,60 @@ public class Vectorizer implements PhysicalPlanResolver {
       mapWork.setVectorizationEnabledConditionsNotMet(enabledConditionsNotMetList);
     }
 
+    /**
+     * What vectorization validation of a partition depends on: its input format, SerDe, table and
+     * partition properties, minus the per-partition instance values (location, basic stats, DDL
+     * time) that neither the SerDe nor the validation reads. The TableDesc is compared by identity,
+     * which is how a MapWork's partitions share it; a different but equal one only costs a miss.
+     */
+    private static final class PartitionSchemaKey {
+      private static final Set<String> INSTANCE_PROPERTIES = Set.of(
+          hive_metastoreConstants.META_TABLE_LOCATION, hive_metastoreConstants.DDL_TIME,
+          StatsSetupConst.NUM_FILES, StatsSetupConst.NUM_ERASURE_CODED_FILES, StatsSetupConst.ROW_COUNT,
+          StatsSetupConst.RAW_DATA_SIZE, StatsSetupConst.TOTAL_SIZE, StatsSetupConst.COLUMN_STATS_ACCURATE);
+
+      private final Class<?> inputFileFormatClass;
+      private final String deserializerClassName;
+      private final TableDesc tableDesc;
+      private final Map<String, String> schemaProperties;
+      private final int hash;
+
+      PartitionSchemaKey(PartitionDesc partDesc) {
+        inputFileFormatClass = partDesc.getInputFileFormatClass();
+        deserializerClassName = partDesc.getDeserializerClassName();
+        tableDesc = partDesc.getTableDesc();
+        Properties props = partDesc.getProperties();
+        schemaProperties = new HashMap<>();
+        // stringPropertyNames() includes defaults, which the SerDe sees through getProperty()
+        for (String name : props.stringPropertyNames()) {
+          if (!INSTANCE_PROPERTIES.contains(name)) {
+            schemaProperties.put(name, props.getProperty(name));
+          }
+        }
+        hash = Objects.hash(inputFileFormatClass, deserializerClassName, System.identityHashCode(tableDesc),
+            schemaProperties);
+      }
+
+      @Override
+      public boolean equals(Object o) {
+        if (this == o) {
+          return true;
+        }
+        if (!(o instanceof PartitionSchemaKey other)) {
+          return false;
+        }
+        return hash == other.hash && tableDesc == other.tableDesc
+            && Objects.equals(inputFileFormatClass, other.inputFileFormatClass)
+            && Objects.equals(deserializerClassName, other.deserializerClassName)
+            && schemaProperties.equals(other.schemaProperties);
+      }
+
+      @Override
+      public int hashCode() {
+        return hash;
+      }
+    }
+
     private ImmutablePair<Boolean, Boolean> validateInputFormatAndSchemaEvolution(MapWork mapWork, String alias,
         TableScanOperator tableScanOperator, VectorTaskColumnInfo vectorTaskColumnInfo)
             throws SemanticException {
@@ -1740,6 +1797,11 @@ public class Vectorizer implements PhysicalPlanResolver {
       Set<Support> inputFormatSupportSet = new TreeSet<Support>();
       boolean outsideLoopIsFirstPartition = true;
 
+      // Partitions of a table nearly always share one schema. Validating a partition costs a SerDe
+      // initialization and a type string parse, which dominates compilation over thousands of
+      // partitions, and its outcome depends only on what PartitionSchemaKey captures.
+      Map<PartitionSchemaKey, VectorPartitionDesc> validatedSchemas = new HashMap<>();
+
       for (Entry<Path, List<String>> entry: pathToAliases.entrySet()) {
         final boolean isFirstPartition = outsideLoopIsFirstPartition;
         outsideLoopIsFirstPartition = false;
@@ -1755,6 +1817,15 @@ public class Vectorizer implements PhysicalPlanResolver {
         PartitionDesc partDesc = pathToPartitionInfo.get(path);
         if (partDesc.getVectorPartitionDesc() != null) {
           // We've seen this already.
+          continue;
+        }
+        PartitionSchemaKey schemaKey = new PartitionSchemaKey(partDesc);
+        VectorPartitionDesc validated = validatedSchemas.get(schemaKey);
+        if (validated != null) {
+          // A partition with the same schema passed every check below. Repeating them would only
+          // re-add the same entries to the sets, so just share its (immutable) VectorPartitionDesc,
+          // as addVectorPartitionDesc does for equal descriptors.
+          partDesc.setVectorPartitionDesc(validated);
           continue;
         }
         Set<Support> newSupportSet = new TreeSet<Support>();
@@ -1929,6 +2000,7 @@ public class Vectorizer implements PhysicalPlanResolver {
               enabledConditionsMetSet, enabledConditionsNotMetList);
           return new ImmutablePair<Boolean,Boolean>(false, true);
         }
+        validatedSchemas.put(schemaKey, vectorPartDesc);
       }
 
       // For now, we don't know which virtual columns are going to be included.  We'll add them
